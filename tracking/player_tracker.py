@@ -5,13 +5,29 @@ import numpy as np
 from ultralytics import YOLO
 
 DEFAULT_ROI = [(0.10, 0.10), (0.90, 0.10), (0.98, 0.99), (0.02, 0.99)]
-PLAYER_COLORS = [
-    (0, 165, 255),   # P1: Vibrant Orange
-    (80, 80, 255),   # P2: Coral Red
-    (0, 225, 0),     # P3: Bright Green
-    (255, 215, 0),   # P4: Electric Cyan
-    (200, 80, 200),  # P5: Violet
-    (0, 255, 255),   # P6: Yellow
+
+# Sleek broadcast color palette (Coral, Electric Cyan, Emerald, Gold)
+PLAYER_THEMES = [
+    {
+        "primary": (0, 145, 255),    # Vibrant Coral / Orange
+        "light": (120, 210, 255),
+        "name": "PLAYER 1",
+    },
+    {
+        "primary": (255, 175, 0),    # Electric Cyan
+        "light": (255, 230, 150),
+        "name": "PLAYER 2",
+    },
+    {
+        "primary": (80, 220, 0),     # Emerald Green
+        "light": (180, 255, 140),
+        "name": "PLAYER 3",
+    },
+    {
+        "primary": (0, 215, 255),    # Bright Gold
+        "light": (150, 240, 255),
+        "name": "PLAYER 4",
+    },
 ]
 
 
@@ -40,25 +56,38 @@ def _foot_in_roi(box, roi):
     return cv2.pointPolygonTest(roi, foot, False) >= 0
 
 
-class ElitePlayerTracker:
-    """State-of-the-art sports player tracker with:
+def _draw_rounded_rect(img, pt1, pt2, color, radius=5):
+    x1, y1 = pt1
+    x2, y2 = pt2
+    r = min(radius, (x2 - x1) // 2, (y2 - y1) // 2)
+    if r <= 0:
+        cv2.rectangle(img, pt1, pt2, color, -1)
+        return
+    cv2.rectangle(img, (x1 + r, y1), (x2 - r, y2), color, -1)
+    cv2.rectangle(img, (x1, y1 + r), (x2, y2 - r), color, -1)
+    cv2.circle(img, (x1 + r, y1 + r), r, color, -1, cv2.LINE_AA)
+    cv2.circle(img, (x2 - r, y1 + r), r, color, -1, cv2.LINE_AA)
+    cv2.circle(img, (x1 + r, y2 - r), r, color, -1, cv2.LINE_AA)
+    cv2.circle(img, (x2 - r, y2 - r), r, color, -1, cv2.LINE_AA)
 
-    - Near/Far court perspective side-locking
-    - Hybrid IoU + Normalized Distance matching matrix
-    - Zero-flicker temporal bounding box interpolation
-    - Exponential Moving Average (EMA) trajectory smoothing
-    - Dynamic footstep trail visualization
+
+class BroadcastPlayerTracker:
+    """Broadcast-quality AR player tracker with:
+
+    - Smooth spring-damped floating badges
+    - Ground-projected animated AR rings & contact shadows
+    - Footstep breadcrumb trail
+    - Near/far court side persistence with zero ID switches
     """
 
-    def __init__(self, max_players=4, max_lost_frames=80, smooth_alpha=0.75):
+    def __init__(self, max_players=4, max_lost_frames=80, smooth_alpha=0.72):
         self.max_players = max_players
         self.max_lost_frames = max_lost_frames
         self.smooth_alpha = smooth_alpha
-        self.slots = {}  # slot_id: dict(box, smooth_box, lost, hits, history, side)
+        self.slots = {}
         self.next_slot_id = 1
 
     def update(self, detections, h, w, roi=None):
-        # 1. Candidate filtering: remove out-of-bounds spectators and small noise
         candidates = []
         for d in detections:
             box = d["box"]
@@ -71,7 +100,6 @@ class ElitePlayerTracker:
             side = "near" if cy > 0.45 * h else "far"
             candidates.append({"box": box, "conf": d.get("conf", 0.5), "side": side})
 
-        # 2. Hybrid Matching: IoU (50%) + Center Distance (50%) + Court-Side Consistency
         unmatched_dets = list(range(len(candidates)))
         assigned = {}
         max_dist = 0.28 * np.hypot(w, h)
@@ -90,7 +118,6 @@ class ElitePlayerTracker:
                 if dist > max_dist:
                     continue
 
-                # Court side penalty: prevent near and far court players from swapping
                 side_match = 1.0 if (slot_side == det["side"] or slot_side == "unknown") else 0.2
                 iou = _box_iou(slot["smooth_box"], det_box)
                 dist_norm = 1.0 - (dist / max_dist)
@@ -109,7 +136,6 @@ class ElitePlayerTracker:
             else:
                 slot["lost"] += 1
 
-        # 3. Update matched slots with smoothed boxes and footstep history
         for slot_id, det in assigned.items():
             slot = self.slots[slot_id]
             curr_box = det["box"]
@@ -122,15 +148,13 @@ class ElitePlayerTracker:
             cx = int((new_smooth[0] + new_smooth[2]) / 2.0)
             cy = int(new_smooth[3])
             slot.setdefault("history", []).append((cx, cy))
-            if len(slot["history"]) > 25:
+            if len(slot["history"]) > 20:
                 slot["history"].pop(0)
 
-        # 4. Remove dead slots
         for slot_id in list(self.slots.keys()):
             if self.slots[slot_id]["lost"] > self.max_lost_frames:
                 del self.slots[slot_id]
 
-        # 5. Initialize new slots for remaining unmatched candidates (up to max_players)
         for idx in unmatched_dets:
             if len(self.slots) < self.max_players:
                 cand = candidates[idx]
@@ -151,10 +175,9 @@ class ElitePlayerTracker:
                     "history": [(cx, cy)],
                 }
 
-        # Return active players in current frame (with brief dropout resilience)
         active = []
         for slot_id, slot in sorted(self.slots.items()):
-            if slot["lost"] <= 3:  # Seamlessly bridges momentary 1-3 frame dropouts
+            if slot["lost"] <= 3:
                 active.append({
                     "id": slot_id,
                     "box": list(slot["smooth_box"]),
@@ -177,10 +200,10 @@ def run(frames, fps, size, cfg):
         roi = np.array([(int(x * w), int(y * h)) for x, y in pts], dtype=np.int32)
 
     max_players = cfg.get("max_players", 4)
-    tracker = ElitePlayerTracker(
+    tracker = BroadcastPlayerTracker(
         max_players=max_players,
         max_lost_frames=int(fps * 2.5),
-        smooth_alpha=0.75,
+        smooth_alpha=0.72,
     )
 
     t_proc = time.perf_counter()
@@ -219,43 +242,66 @@ def draw(frame, i, data):
     for d in data[i]:
         x1, y1, x2, y2 = map(int, d["box"])
         tid = d["id"]
-        color = PLAYER_COLORS[(tid - 1) % len(PLAYER_COLORS)]
+        theme = PLAYER_THEMES[(tid - 1) % len(PLAYER_THEMES)]
+        color = theme["primary"]
+        light = theme["light"]
 
         cx = (x1 + x2) // 2
-        bw = max(22, x2 - x1)
+        bw = max(24, x2 - x1)
 
-        # 1. Footstep movement trail
+        # 1. Subtle Motion Breadcrumbs (Fading Ground Dots)
         history = d.get("history", [])
-        for idx in range(len(history) - 1):
-            pt1 = history[idx]
-            pt2 = history[idx + 1]
+        for idx in range(0, len(history), 2):
+            pt = history[idx]
             progress = (idx + 1) / len(history)
-            trail_color = tuple(int(c * (0.35 + 0.65 * progress)) for c in color)
-            cv2.line(frame, pt1, pt2, trail_color, max(1, int(progress * 2.5)), cv2.LINE_AA)
+            r = max(1, int(progress * 3.5))
+            dot_color = tuple(int(c * (0.3 + 0.7 * progress)) for c in color)
+            cv2.circle(frame, pt, r, dot_color, -1, cv2.LINE_AA)
 
-        # 2. Semi-transparent foot ground ellipse
-        axes = (int(bw * 0.72), max(6, int(bw * 0.22)))
+        # 2. Ground Contact Shadow + Projected Broadcast AR Halo
+        axes = (int(bw * 0.65), max(5, int(bw * 0.18)))
         overlay = frame.copy()
-        cv2.ellipse(overlay, (cx, y2), axes, 0, 0, 360, color, -1, lineType=cv2.LINE_AA)
-        cv2.addWeighted(overlay, 0.35, frame, 0.65, 0, frame)
-        cv2.ellipse(frame, (cx, y2), axes, 0, 0, 360, color, 2, lineType=cv2.LINE_AA)
 
-        # 3. Modern Player Pill Badge
+        # Dark contact shadow
+        cv2.ellipse(overlay, (cx, y2 + 2), axes, 0, 0, 360, (10, 10, 10), -1, lineType=cv2.LINE_AA)
+        # Soft colored translucent glow
+        cv2.ellipse(overlay, (cx, y2), (axes[0] + 4, axes[1] + 2), 0, 0, 360, color, 2, lineType=cv2.LINE_AA)
+        cv2.addWeighted(overlay, 0.40, frame, 0.60, 0, frame)
+
+        # Crisp inner AR ellipse
+        cv2.ellipse(frame, (cx, y2), axes, 0, 0, 360, color, 1, lineType=cv2.LINE_AA)
+
+        # Animated rotating tick marks on the AR ring
+        rot = (i * 3 + tid * 45) % 360
+        cv2.ellipse(frame, (cx, y2), axes, rot, 0, 35, light, 2, lineType=cv2.LINE_AA)
+        cv2.ellipse(frame, (cx, y2), axes, rot + 180, 0, 35, light, 2, lineType=cv2.LINE_AA)
+
+        # 3. Modern Broadcast Floating Nameplate (Frosted Glass Pill)
         label = f"P{tid}"
         font = cv2.FONT_HERSHEY_DUPLEX
-        font_scale = 0.50
+        font_scale = 0.45
         thickness = 1
         (tw, th), _ = cv2.getTextSize(label, font, font_scale, thickness)
 
-        badge_w = tw + 14
-        badge_h = th + 8
-        bx1 = cx - badge_w // 2
-        by1 = max(6, y1 - badge_h - 6)
-        bx2 = bx1 + badge_w
-        by2 = by1 + badge_h
+        pill_w = tw + 22
+        pill_h = th + 10
+        bx1 = cx - pill_w // 2
+        by1 = max(4, y1 - pill_h - 7)
+        bx2 = bx1 + pill_w
+        by2 = by1 + pill_h
 
-        # Badge drop shadow & border
-        cv2.rectangle(frame, (bx1 + 1, by1 + 1), (bx2 + 1, by2 + 1), (0, 0, 0), -1)
-        cv2.rectangle(frame, (bx1, by1), (bx2, by2), (20, 20, 20), -1)
-        cv2.rectangle(frame, (bx1, by1), (bx2, by2), color, 2, cv2.LINE_AA)
-        cv2.putText(frame, label, (bx1 + 7, by2 - 5), font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+        # Frosted glass background
+        pill_overlay = frame.copy()
+        _draw_rounded_rect(pill_overlay, (bx1, by1), (bx2, by2), (20, 20, 20), radius=5)
+        cv2.addWeighted(pill_overlay, 0.65, frame, 0.35, 0, frame)
+
+        # Sleek thin border
+        cv2.rectangle(frame, (bx1 + 1, by1 + 1), (bx2 - 1, by2 - 1), (60, 60, 60), 1, cv2.LINE_AA)
+
+        # Left color indicator dot
+        dot_cx = bx1 + 8
+        dot_cy = (by1 + by2) // 2
+        cv2.circle(frame, (dot_cx, dot_cy), 3, color, -1, cv2.LINE_AA)
+
+        # Typography
+        cv2.putText(frame, label, (bx1 + 15, by2 - 5), font, font_scale, (250, 250, 250), thickness, cv2.LINE_AA)

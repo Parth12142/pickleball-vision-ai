@@ -5,6 +5,46 @@ import numpy as np
 from ultralytics import YOLO
 
 
+def _catmull_rom_subdivide(points, steps_per_segment=4):
+    """Generates a smooth parametric Catmull-Rom spline through trajectory points."""
+    if len(points) < 2:
+        return points
+    if len(points) == 2:
+        pts = []
+        for alpha in np.linspace(0, 1, steps_per_segment):
+            x = (1 - alpha) * points[0][0] + alpha * points[1][0]
+            y = (1 - alpha) * points[0][1] + alpha * points[1][1]
+            pts.append((x, y))
+        return pts
+
+    # Extended points with virtual ends for boundary tangency
+    P = [points[0]] + list(points) + [points[-1]]
+    spline_curve = []
+
+    for i in range(1, len(P) - 2):
+        p0, p1, p2, p3 = P[i - 1], P[i], P[i + 1], P[i + 2]
+        for t in np.linspace(0, 1, steps_per_segment, endpoint=False):
+            t2 = t * t
+            t3 = t2 * t
+            # Catmull-Rom basis functions (centripetal formulation approximation)
+            x = 0.5 * (
+                (2 * p1[0])
+                + (-p0[0] + p2[0]) * t
+                + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2
+                + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3
+            )
+            y = 0.5 * (
+                (2 * p1[1])
+                + (-p0[1] + p2[1]) * t
+                + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2
+                + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3
+            )
+            spline_curve.append((x, y))
+
+    spline_curve.append(points[-1])
+    return spline_curve
+
+
 def run(frames, fps, size, cfg):
     weights = cfg.get("weights", "weights/ball_best.pt")
     if not os.path.exists(weights):
@@ -30,7 +70,6 @@ def run(frames, fps, size, cfg):
     raw_candidates = []
     t = time.perf_counter()
 
-    # Step 1: Detect candidate ball boxes across all frames
     for f in frames:
         r = model.predict(f, imgsz=imgsz, conf=conf, verbose=False)[0]
         cands = []
@@ -45,7 +84,6 @@ def run(frames, fps, size, cfg):
             cands.append({"x": (x1 + x2) / 2.0, "y": (y1 + y2) / 2.0, "conf": c})
         raw_candidates.append(cands)
 
-    # Step 2: Track continuous trajectory with motion gating
     tracked_points = [None] * len(frames)
     last_pos = None
     velocity = [0.0, 0.0]
@@ -88,11 +126,11 @@ def run(frames, fps, size, cfg):
                 last_pos = None
                 velocity = [0.0, 0.0]
 
-    # Step 3: Parabolic Arc Interpolation across small gaps (1 to 5 frames)
+    # Parabolic gap filling
     interpolated = list(tracked_points)
     i = 0
     n = len(interpolated)
-    g_est = 0.4  # Slight gravitational downward acceleration per frame^2
+    g_est = 0.35
 
     while i < n:
         if interpolated[i] is None:
@@ -109,7 +147,6 @@ def run(frames, fps, size, cfg):
                 if total_dist <= max_jump_px * (gap_len + 1):
                     for k in range(gap_start, gap_end):
                         alpha = (k - gap_start + 1) / (gap_len + 1)
-                        # Arc sag along y axis
                         sag = 4.0 * alpha * (1.0 - alpha) * (g_est * (gap_len ** 1.5))
                         interpolated[k] = {
                             "x": p1["x"] + alpha * (p2["x"] - p1["x"]),
@@ -121,9 +158,9 @@ def run(frames, fps, size, cfg):
         else:
             i += 1
 
-    # Step 4: Moving window smoothing
+    # Light smoothing pass
     smoothed = list(interpolated)
-    window = 3
+    window = 2
     for k in range(len(interpolated)):
         if interpolated[k] is not None:
             nbrs = [
@@ -131,7 +168,7 @@ def run(frames, fps, size, cfg):
                 for j in range(max(0, k - window), min(len(interpolated), k + window + 1))
                 if interpolated[j] is not None
             ]
-            if len(nbrs) >= 3:
+            if len(nbrs) >= 2:
                 smoothed[k] = {
                     "x": float(np.mean([p["x"] for p in nbrs])),
                     "y": float(np.mean([p["y"] for p in nbrs])),
@@ -162,59 +199,66 @@ def draw(frame, i, data):
     max_jump = data.get("max_jump_px", 75.0)
 
     start_idx = max(0, i - trail_len)
-    trail_segment = pts[start_idx : i + 1]
+    raw_segment = pts[start_idx : i + 1]
 
-    # Draw Speed-Responsive Glowing Trail
-    glow = frame.copy()
-    has_segments = False
+    # Collect valid consecutive points
+    valid_pts = []
+    for p in raw_segment:
+        if p is not None:
+            if valid_pts:
+                dist = np.hypot(p["x"] - valid_pts[-1][0], p["y"] - valid_pts[-1][1])
+                if dist > max_jump * 1.5:
+                    valid_pts = []  # Discontinuity/cut: reset
+            valid_pts.append((p["x"], p["y"]))
 
-    for k in range(len(trail_segment) - 1):
-        p1 = trail_segment[k]
-        p2 = trail_segment[k + 1]
-        if p1 is None or p2 is None:
-            continue
+    # 1. Aerodynamic Spline Ribbon Trail (Hawk-Eye / Toptracer Style)
+    if len(valid_pts) >= 3:
+        smooth_curve = _catmull_rom_subdivide(valid_pts, steps_per_segment=4)
+        m = len(smooth_curve)
 
-        dist = np.hypot(p2["x"] - p1["x"], p2["y"] - p1["y"])
-        if dist > max_jump * 1.5:
-            continue
+        glow_overlay = frame.copy()
+        for k in range(m - 1):
+            pt1 = (int(smooth_curve[k][0]), int(smooth_curve[k][1]))
+            pt2 = (int(smooth_curve[k + 1][0]), int(smooth_curve[k + 1][1]))
+            progress = (k + 1) / m
 
-        progress = (k + 1) / len(trail_segment)
-        pt1 = (int(p1["x"]), int(p1["y"]))
-        pt2 = (int(p2["x"]), int(p2["y"]))
+            # Aerodynamic Tapering: 1px at tail -> 5px at head
+            thickness = max(1, int((progress ** 1.3) * 5))
 
-        # Dynamic Color based on Ball Speed
-        speed = p2.get("speed", dist)
-        if speed > 22.0:
-            # Fast shot: Blazing Orange/Flame (BGR)
-            base_color = (0, 140, 255)
-            core_color = (180, 230, 255)
-        elif speed > 10.0:
-            # Rally: Electric Chartreuse Neon Yellow
-            base_color = (0, 240, 220)
-            core_color = (220, 255, 255)
-        else:
-            # Soft touch / Drop: Ice Cyan
-            base_color = (255, 220, 0)
-            core_color = (255, 255, 200)
+            # Broadcast Golden/Amber Glow Palette
+            # Tail: warm deep amber -> Head: luminous bright neon yellow
+            r_val = int(255)
+            g_val = int(160 + 90 * progress)
+            b_val = int(20 + 180 * (progress ** 2))
+            glow_col = (b_val, g_val, r_val)  # BGR
 
-        # Outer soft glow
-        cv2.line(glow, pt1, pt2, base_color, int(progress * 6) + 2, lineType=cv2.LINE_AA)
-        # Inner sharp core
-        cv2.line(frame, pt1, pt2, core_color, max(1, int(progress * 2.2)), lineType=cv2.LINE_AA)
-        has_segments = True
+            # Soft diffused outer ribbon
+            cv2.line(glow_overlay, pt1, pt2, glow_col, thickness + 3, lineType=cv2.LINE_AA)
+            # Focused inner core
+            cv2.line(frame, pt1, pt2, (240, 255, 255), max(1, int(progress * 2)), lineType=cv2.LINE_AA)
 
-    if has_segments:
-        cv2.addWeighted(glow, 0.45, frame, 0.55, 0, frame)
+        cv2.addWeighted(glow_overlay, 0.40, frame, 0.60, 0, frame)
 
-    # High-visibility Ball Reticle
+    # 2. Sleek Broadcast AR Ball Highlight & Rotating Compass Reticle
     curr = pts[i]
     if curr is not None:
         cx, cy = int(curr["x"]), int(curr["y"])
-        # Outer dark ring for contrast
-        cv2.circle(frame, (cx, cy), 12, (0, 0, 0), 3, lineType=cv2.LINE_AA)
-        # Bright neon indicator ring
-        speed = curr.get("speed", 0.0)
-        ring_color = (0, 140, 255) if speed > 22 else (0, 240, 220)
-        cv2.circle(frame, (cx, cy), 12, ring_color, 2, lineType=cv2.LINE_AA)
-        # Center pip
-        cv2.circle(frame, (cx, cy), 3, (255, 255, 255), -1, lineType=cv2.LINE_AA)
+
+        # Soft luminous ball highlight / bloom
+        bloom = frame.copy()
+        cv2.circle(bloom, (cx, cy), 14, (100, 240, 255), -1, lineType=cv2.LINE_AA)
+        cv2.addWeighted(bloom, 0.28, frame, 0.72, 0, frame)
+
+        # Thin minimalist AR circle
+        cv2.circle(frame, (cx, cy), 9, (20, 20, 20), 2, lineType=cv2.LINE_AA)
+        cv2.circle(frame, (cx, cy), 9, (120, 245, 255), 1, lineType=cv2.LINE_AA)
+
+        # Subtle 4-point rotating tick animation (rotates 4 degrees every frame)
+        rot_angle = np.radians((i * 4) % 360)
+        for offset in [0, np.pi / 2, np.pi, 3 * np.pi / 2]:
+            ang = rot_angle + offset
+            tx1 = int(cx + 9 * np.cos(ang))
+            ty1 = int(cy + 9 * np.sin(ang))
+            tx2 = int(cx + 12 * np.cos(ang))
+            ty2 = int(cy + 12 * np.sin(ang))
+            cv2.line(frame, (tx1, ty1), (tx2, ty2), (255, 255, 255), 1, lineType=cv2.LINE_AA)

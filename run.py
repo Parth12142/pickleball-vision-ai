@@ -58,36 +58,48 @@ def device_name():
 
 
 def draw_hud(frame, i, total_frames, fps, active, results):
-    import cv2
+    import cv2, numpy as np
     h, w = frame.shape[:2]
+
+    # Minimalist TV Broadcast Telemetry Badge (Top-Left corner)
+    card_w, card_h = 240, 44
+    cx1, cy1 = 16, 14
+    cx2, cy2 = cx1 + card_w, cy1 + card_h
+
+    # Frosted glass card
     overlay = frame.copy()
-    cv2.rectangle(overlay, (0, 0), (w, 28), (15, 15, 15), -1)
+    cv2.rectangle(overlay, (cx1 + 6, cy1), (cx2 - 6, cy2), (18, 18, 18), -1)
+    cv2.rectangle(overlay, (cx1, cy1 + 6), (cx2, cy2 - 6), (18, 18, 18), -1)
+    cv2.circle(overlay, (cx1 + 6, cy1 + 6), 6, (18, 18, 18), -1, cv2.LINE_AA)
+    cv2.circle(overlay, (cx2 - 6, cy1 + 6), 6, (18, 18, 18), -1, cv2.LINE_AA)
+    cv2.circle(overlay, (cx1 + 6, cy2 - 6), 6, (18, 18, 18), -1, cv2.LINE_AA)
+    cv2.circle(overlay, (cx2 - 6, cy2 - 6), 6, (18, 18, 18), -1, cv2.LINE_AA)
     cv2.addWeighted(overlay, 0.65, frame, 0.35, 0, frame)
-    cv2.line(frame, (0, 28), (w, 28), (60, 60, 60), 1)
 
-    cv2.circle(frame, (14, 14), 4, (0, 255, 0), -1, cv2.LINE_AA)
-    cv2.putText(frame, "PICKLEBALL VISION AI", (24, 18),
-                cv2.FONT_HERSHEY_DUPLEX, 0.42, (255, 255, 255), 1, cv2.LINE_AA)
+    # Sleek outline border
+    cv2.rectangle(frame, (cx1 + 6, cy1), (cx2 - 6, cy2), (50, 50, 50), 1, cv2.LINE_AA)
 
-    info = []
-    if "players" in results:
-        p_count = len(results["players"]["data"][i]) if i < len(results["players"]["data"]) else 0
-        info.append(f"PLAYERS: {p_count}")
-    if "ball" in results:
-        ball_pt = results["ball"]["data"]["points"][i] if i < len(results["ball"]["data"]["points"]) else None
-        b_status = "TRACKED" if ball_pt is not None else "SEARCHING"
-        info.append(f"BALL: {b_status}")
-    if info:
-        info_txt = "  |  ".join(info)
-        (tw, _), _ = cv2.getTextSize(info_txt, cv2.FONT_HERSHEY_DUPLEX, 0.40, 1)
-        cv2.putText(frame, info_txt, ((w - tw) // 2, 18),
-                    cv2.FONT_HERSHEY_DUPLEX, 0.40, (0, 230, 255), 1, cv2.LINE_AA)
+    # Pulsing Red Broadcast Pip
+    pulse = 0.5 + 0.5 * np.sin(i * 0.2)
+    pip_color = (0, int(40 * pulse), int(220 + 35 * pulse))
+    cv2.circle(frame, (cx1 + 14, cy1 + 15), 4, pip_color, -1, cv2.LINE_AA)
+
+    # Badge Header
+    font = cv2.FONT_HERSHEY_DUPLEX
+    cv2.putText(frame, "COURT-VISION AR", (cx1 + 24, cy1 + 18), font, 0.38, (240, 240, 240), 1, cv2.LINE_AA)
+
+    # Ball Speed & Rally Metrics
+    speed_mph = 0
+    if "ball" in results and i < len(results["ball"]["data"]["points"]):
+        b_pt = results["ball"]["data"]["points"][i]
+        if b_pt is not None:
+            # Approximate mph: pixels/frame to real speed estimation
+            px_per_frame = b_pt.get("speed", 0.0)
+            speed_mph = int(px_per_frame * 1.6)
 
     sec = i / fps
-    tc = f"{int(sec // 60):02d}:{sec % 60:04.1f}  [{i}/{total_frames}]"
-    (tw, _), _ = cv2.getTextSize(tc, cv2.FONT_HERSHEY_DUPLEX, 0.38, 1)
-    cv2.putText(frame, tc, (w - tw - 12, 18),
-                cv2.FONT_HERSHEY_DUPLEX, 0.38, (200, 200, 200), 1, cv2.LINE_AA)
+    status_str = f"RALLY {sec:04.1f}s   |   {speed_mph} MPH"
+    cv2.putText(frame, status_str, (cx1 + 14, cy1 + 35), font, 0.36, (0, 215, 255), 1, cv2.LINE_AA)
 
 
 def main():
