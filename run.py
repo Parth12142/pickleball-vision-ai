@@ -24,6 +24,7 @@ import numpy as np
 import yaml
 
 from video_io import read_video, write_video
+import manifest_tracker
 
 # ---- module registry -------------------------------------------------------
 from tracking import player_tracker
@@ -169,7 +170,12 @@ def main():
     ap.add_argument("--no-roi", action="store_true", help="disables court ROI filtering")
     ap.add_argument("--max-frames", type=int, default=None, help="maximum frames to read and process")
     ap.add_argument("--conf", type=float, default=None, help="override player detection confidence")
+    ap.add_argument("--list-outputs", action="store_true", help="list all tracked outputs from OUTPUTS_MANIFEST.md")
     a = ap.parse_args()
+
+    if a.list_outputs:
+        manifest_tracker.list_manifest()
+        return
 
     cfg = yaml.safe_load(open(a.config))
     clip = a.clip or cfg.get("clip", "data/clips/match1.mp4")
@@ -282,6 +288,9 @@ def main():
                          m["fps"], m["realtime_factor"], summary["read_s"],
                          summary["render_s"], summary["total_s"]])
 
+    # update outputs manifest
+    manifest_tracker.update_manifest(summary)
+
     # print the report
     print("\n================ RESULT ================")
     print(f"clip length : {clip_s:.2f} s ({len(frames)} frames @ {fps:.1f} FPS)   device: {summary['device']}")
@@ -294,9 +303,10 @@ def main():
           f"| total {summary['total_s']} s")
     print("real-time factor: 1.0x = takes as long as the clip, below 1.0x = faster than real time")
     if out_path:
-        print(f"video  : {out_path}")
-    print(f"saved  : {json_path}")
-    print(f"history: {log}")
+        print(f"video   : {out_path}")
+    print(f"saved   : {json_path}")
+    print(f"history : {log}")
+    print("manifest: OUTPUTS_MANIFEST.md")
 
 
 if __name__ == "__main__":
