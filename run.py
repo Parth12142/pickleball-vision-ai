@@ -3,8 +3,9 @@ run.py - runs every module that is switched on in config.yaml, times each one,
 draws the results on one video and saves the timing to files.
 
     python run.py                                   # uses config.yaml
-    python run.py --clip data/clips/clip2.mp4       # same config, different clip
+    python run.py --clip data/clips/match1.mp4      # same config, different clip
     python run.py --config other_config.yaml
+    python run.py --clip data/clips/match1.mp4 --no-roi
 
 Saved every run:
     results/runs/<clip>_<date-time>.json   full details of this run
@@ -18,21 +19,23 @@ import json
 import os
 import time
 
+import cv2
+import numpy as np
 import yaml
 
 from video_io import read_video, write_video
 
 # ---- module registry -------------------------------------------------------
-# To add a new tracker later: create a file with run() and draw(),
-# import it here, add one line to MODULES, and add a block in config.yaml.
 from tracking import player_tracker
 from detection import ball_detector
+import court as court_module
+import events as bounce_module
 
 MODULES = {
     "players": player_tracker,
     "ball": ball_detector,
-    # "court": court_module,       # Day 5-6
-    # "bounces": bounce_module,    # Day 11
+    "court": court_module,
+    "bounces": bounce_module,
 }
 # -----------------------------------------------------------------------------
 
@@ -58,65 +61,132 @@ def device_name():
 
 
 def draw_hud(frame, i, total_frames, fps, active, results):
-    import cv2, numpy as np
     h, w = frame.shape[:2]
 
-    # Minimalist TV Broadcast Telemetry Badge (Top-Left corner)
-    card_w, card_h = 240, 44
-    cx1, cy1 = 16, 14
-    cx2, cy2 = cx1 + card_w, cy1 + card_h
+    # Responsive scaling for broadcast badge based on resolution
+    scale = max(0.80, min(1.6, w / 1280.0))
+    card_w = int(290 * scale)
+    card_h = int(62 * scale)
+    cx1 = int(18 * scale)
+    cy1 = int(16 * scale)
+    cx2 = cx1 + card_w
+    cy2 = cy1 + card_h
 
-    # Frosted glass card
+    # Frosted glass background card
     overlay = frame.copy()
-    cv2.rectangle(overlay, (cx1 + 6, cy1), (cx2 - 6, cy2), (18, 18, 18), -1)
-    cv2.rectangle(overlay, (cx1, cy1 + 6), (cx2, cy2 - 6), (18, 18, 18), -1)
-    cv2.circle(overlay, (cx1 + 6, cy1 + 6), 6, (18, 18, 18), -1, cv2.LINE_AA)
-    cv2.circle(overlay, (cx2 - 6, cy1 + 6), 6, (18, 18, 18), -1, cv2.LINE_AA)
-    cv2.circle(overlay, (cx1 + 6, cy2 - 6), 6, (18, 18, 18), -1, cv2.LINE_AA)
-    cv2.circle(overlay, (cx2 - 6, cy2 - 6), 6, (18, 18, 18), -1, cv2.LINE_AA)
-    cv2.addWeighted(overlay, 0.65, frame, 0.35, 0, frame)
+    r = int(7 * scale)
+    cv2.rectangle(overlay, (cx1 + r, cy1), (cx2 - r, cy2), (18, 18, 18), -1)
+    cv2.rectangle(overlay, (cx1, cy1 + r), (cx2, cy2 - r), (18, 18, 18), -1)
+    cv2.circle(overlay, (cx1 + r, cy1 + r), r, (18, 18, 18), -1, cv2.LINE_AA)
+    cv2.circle(overlay, (cx2 - r, cy1 + r), r, (18, 18, 18), -1, cv2.LINE_AA)
+    cv2.circle(overlay, (cx1 + r, cy2 - r), r, (18, 18, 18), -1, cv2.LINE_AA)
+    cv2.circle(overlay, (cx2 - r, cy2 - r), r, (18, 18, 18), -1, cv2.LINE_AA)
+    cv2.addWeighted(overlay, 0.70, frame, 0.30, 0, frame)
 
     # Sleek outline border
-    cv2.rectangle(frame, (cx1 + 6, cy1), (cx2 - 6, cy2), (50, 50, 50), 1, cv2.LINE_AA)
+    cv2.rectangle(frame, (cx1 + r, cy1), (cx2 - r, cy2), (65, 65, 65), 1, cv2.LINE_AA)
 
     # Pulsing Red Broadcast Pip
     pulse = 0.5 + 0.5 * np.sin(i * 0.2)
     pip_color = (0, int(40 * pulse), int(220 + 35 * pulse))
-    cv2.circle(frame, (cx1 + 14, cy1 + 15), 4, pip_color, -1, cv2.LINE_AA)
+    pip_x = cx1 + int(14 * scale)
+    pip_y = cy1 + int(15 * scale)
+    cv2.circle(frame, (pip_x, pip_y), max(3, int(4 * scale)), pip_color, -1, cv2.LINE_AA)
 
     # Badge Header
     font = cv2.FONT_HERSHEY_DUPLEX
-    cv2.putText(frame, "COURT-VISION AR", (cx1 + 24, cy1 + 18), font, 0.38, (240, 240, 240), 1, cv2.LINE_AA)
+    header_scale = 0.38 * scale
+    cv2.putText(
+        frame,
+        "COURT-VISION AR",
+        (cx1 + int(24 * scale), cy1 + int(18 * scale)),
+        font,
+        header_scale,
+        (240, 240, 240),
+        1,
+        cv2.LINE_AA,
+    )
 
-    # Ball Speed & Rally Metrics
+    # Match timecode and frame counter
+    sec_total = i / max(1.0, fps)
+    mins = int(sec_total // 60)
+    secs = int(sec_total % 60)
+    millis = int((sec_total - int(sec_total)) * 100)
+    timecode_str = f"{mins:02d}:{secs:02d}.{millis:02d}   [F:{i + 1}/{total_frames}]"
+    body_scale = 0.34 * scale
+    cv2.putText(
+        frame,
+        timecode_str,
+        (cx1 + int(14 * scale), cy1 + int(34 * scale)),
+        font,
+        body_scale,
+        (190, 190, 190),
+        1,
+        cv2.LINE_AA,
+    )
+
+    # Active Players Count & Ball Tracking Status
+    players_count = 0
+    if "players" in results and i < len(results["players"]["data"]):
+        players_count = len(results["players"]["data"][i])
+
+    ball_status = "SEARCHING"
     speed_mph = 0
+    ball_color = (130, 130, 130)
+
     if "ball" in results and i < len(results["ball"]["data"]["points"]):
         b_pt = results["ball"]["data"]["points"][i]
         if b_pt is not None:
-            # Approximate mph: pixels/frame to real speed estimation
             px_per_frame = b_pt.get("speed", 0.0)
+            # Approximate mph: pixels/frame conversion estimate
             speed_mph = int(px_per_frame * 1.6)
+            ball_status = f"{speed_mph} MPH"
+            # Color code ball status
+            if px_per_frame >= 22.0:
+                ball_color = (20, 140, 255)  # Orange for smash
+            elif px_per_frame >= 10.0:
+                ball_color = (30, 240, 200)  # Chartreuse
+            else:
+                ball_color = (255, 230, 50)  # Ice Cyan
 
-    sec = i / fps
-    status_str = f"RALLY {sec:04.1f}s   |   {speed_mph} MPH"
-    cv2.putText(frame, status_str, (cx1 + 14, cy1 + 35), font, 0.36, (0, 215, 255), 1, cv2.LINE_AA)
+    stat_line = f"PLAYERS: {players_count}/4   |   BALL: {ball_status}"
+    cv2.putText(
+        frame,
+        stat_line,
+        (cx1 + int(14 * scale), cy1 + int(51 * scale)),
+        font,
+        body_scale,
+        ball_color if ball_status != "SEARCHING" else (0, 215, 255),
+        1,
+        cv2.LINE_AA,
+    )
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="config.yaml")
     ap.add_argument("--clip", default=None, help="overrides 'clip' in the config")
+    ap.add_argument("--no-roi", action="store_true", help="disables court ROI filtering")
+    ap.add_argument("--max-frames", type=int, default=None, help="maximum frames to read and process")
+    ap.add_argument("--conf", type=float, default=None, help="override player detection confidence")
     a = ap.parse_args()
 
     cfg = yaml.safe_load(open(a.config))
-    clip = a.clip or cfg["clip"]
+    clip = a.clip or cfg.get("clip", "data/clips/match1.mp4")
     out_dir = cfg.get("output_dir", "outputs")
     res_dir = cfg.get("results_dir", "results")
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(f"{res_dir}/runs", exist_ok=True)
 
-    # which modules are on
+    # Apply CLI overrides to module config
     mod_cfg = cfg.get("modules", {})
+    if a.no_roi and "players" in mod_cfg:
+        mod_cfg["players"]["use_roi"] = False
+    if a.conf is not None and "players" in mod_cfg:
+        mod_cfg["players"]["conf"] = a.conf
+
+    max_frames = a.max_frames or cfg.get("max_frames", None)
+
     active = []
     for name, mcfg in mod_cfg.items():
         if not (mcfg or {}).get("enabled", False):
@@ -130,7 +200,7 @@ def main():
 
     # read video
     t = time.perf_counter()
-    frames, fps, (w, h) = read_video(clip)
+    frames, fps, (w, h) = read_video(clip, max_frames=max_frames)
     read_s = time.perf_counter() - t
     if not frames:
         raise SystemExit(f"No frames read from {clip}. Check the path and that the file exists.")
@@ -162,6 +232,7 @@ def main():
     # draw + write video
     render_s, out_path = 0.0, None
     if cfg.get("render", {}).get("enabled", True) and active:
+        print("rendering overlays and HUD ...")
         t = time.perf_counter()
         for i, f in enumerate(frames):
             for name in active:

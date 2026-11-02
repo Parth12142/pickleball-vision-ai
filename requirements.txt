@@ -3,3 +3,4 @@ ultralytics
 numpy
 scipy
 pyyaml
+imageio-ffmpeg

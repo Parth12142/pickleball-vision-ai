@@ -15,11 +15,11 @@ video clip ──► read frames ──► YOLO person detection ──► ByteT
 | Step | What it does | Where |
 |---|---|---|
 | Read / write video | OpenCV `VideoCapture` / `VideoWriter`, re-encoded to H.264 so browsers can play it | `video_io.py` |
-| Player detection | Pretrained YOLO11n, person class only, confidence 0.3 | `run_pipeline.py` |
-| Player tracking | ByteTrack through `model.track(..., persist=True)`: links boxes across frames so each player keeps one ID | `run_pipeline.py` |
-| Court-area filter | Keeps a person only if the **feet** (bottom-centre of the box) are inside a polygon around the court. Removes referee and crowd | `run_pipeline.py` |
-| Short-track filter | Drops IDs seen in fewer than 30 frames (false detections) | `run_pipeline.py` |
-| Overlay | Coloured ellipse under each player's feet plus an ID label | `run_pipeline.py` |
+| Player detection | Pretrained YOLO11n, person class only, confidence 0.3 | `run.py` |
+| Player tracking | ByteTrack through `model.track(..., persist=True)`: links boxes across frames so each player keeps one ID | `run.py` |
+| Court-area filter | Keeps a person only if the **feet** (bottom-centre of the box) are inside a polygon around the court. Removes referee and crowd | `run.py` |
+| Short-track filter | Drops IDs seen in fewer than 30 frames (false detections) | `run.py` |
+| Overlay | Coloured ellipse under each player's feet plus an ID label | `run.py` |
 | Ball detector | YOLO11n fine-tuned on a Roboflow Universe dataset, trained in Google Colab | Colab notebook |
 
 ## 2. What was done today
@@ -50,7 +50,7 @@ video clip ──► read frames ──► YOLO person detection ──► ByteT
 
 ## 3. Timing: how long does player detection and tracking take?
 
-Measured with `run_pipeline.py`. "Detect + track time" is the model loop only (detection, ByteTrack and nothing else). Reading the file and drawing and encoding the output video are listed separately.
+Measured with `run.py`. "Detect + track time" is the model loop only (detection, ByteTrack and nothing else). Reading the file and drawing and encoding the output video are listed separately.
 
 | Clip | Length (s) | Device | Model | Detect + track (s) | ms / frame | FPS | Real-time factor | Total incl. read and render (s) | Players tracked |
 |---|---|---|---|---|---|---|---|---|---|
@@ -77,9 +77,9 @@ ffmpeg -ss 2 -i inputvideos/YOUR_FILE.mp4 -vf "fps=30" -c:v libx264 -pix_fmt yuv
 
 Run detection, tracking and timing on a clip:
 ```bash
-python run_pipeline.py --clip data/clips/match.mp4
-python run_pipeline.py --clip data/clips/clip2.mp4            # second clip
-python run_pipeline.py --clip data/clips/clip2.mp4 --no-roi   # different camera angle
+python run.py --clip data/clips/match1.mp4
+python run.py --clip data/clips/rally_sample.mp4      # second clip
+python run.py --clip data/clips/match1.mp4 --no-roi   # different camera angle
 ```
 
 Ball training (Google Colab, T4 GPU):
@@ -105,7 +105,7 @@ model.train(data="/content/ds_split/data_split.yaml", imgsz=960, epochs=40,
 | `avg players / frame` | Close to 4 |
 | Watching `outputs/<clip>_players.mp4` | Rings stay on the same player and nobody outside the court is marked |
 
-If the number of tracked players is wrong or the referee is marked, the court-area polygon is probably wrong for that camera. Try `--no-roi`, or edit `ROI_FRAC` in `run_pipeline.py`.
+If the number of tracked players is wrong or the referee is marked, the court-area polygon is probably wrong for that camera. Try `--no-roi`, or edit `roi` in `config.yaml`.
 
 ## 6. Limitations
 

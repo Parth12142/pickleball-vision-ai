@@ -8,3 +8,6 @@ runs/
 .env
 yolo11n.pt
 !weights/ball_best.pt
+outputs/*_raw.mp4
+outputs/match1_sample_*.jpg
+outputs/roi_check.png
