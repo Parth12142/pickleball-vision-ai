@@ -14,19 +14,19 @@ PROJECT_ID = "liberin-technologies/pickleball-vision"
 VERSION = "9"
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEST_DIR = os.path.join(ROOT_DIR, "datasets", "raw", "liberin")
-ZIP_DEST = os.path.join(ROOT_DIR, "datasets", "raw", "liberin_v9_yolov11.zip")
+ZIP_DEST = os.path.join(ROOT_DIR, "datasets", "raw", "liberin_v9_yolo26.zip")
 
 
 def main():
     print("=" * 80)
-    print(" 📥 DOWNLOADING ROBOFLOW DATASET: liberin-technologies/pickleball-vision/9")
+    print(" 📥 DOWNLOADING ROBOFLOW DATASET: liberin-technologies/pickleball-vision/9 (YOLO26)")
     print("=" * 80)
     print(f"  • API Key            : {API_KEY[:4]}...{API_KEY[-4:]}")
     print(f"  • Destination Dir    : {DEST_DIR}")
     print("=" * 80)
 
-    # 1. Query Roboflow API for the YOLO11 export URL
-    export_url = f"https://api.roboflow.com/{PROJECT_ID}/{VERSION}/yolov11?api_key={API_KEY}"
+    # 1. Query Roboflow API for the YOLO26 export URL
+    export_url = f"https://api.roboflow.com/{PROJECT_ID}/{VERSION}/yolo26?api_key={API_KEY}"
     req = urllib.request.Request(export_url, headers={"User-Agent": "Mozilla/5.0"})
 
     print("[1/3] Querying Roboflow export endpoint...")
@@ -41,7 +41,7 @@ def main():
         print("Error: Could not retrieve download link. Full response:", meta)
         sys.exit(1)
 
-    print(f"  • Found YOLO11 Archive : {archive_size_mb:.1f} MB")
+    print(f"  • Found YOLO26 Archive : {archive_size_mb:.1f} MB")
     print(f"  • Download Link        : {download_link[:40]}...")
 
     # 2. Download the zip archive

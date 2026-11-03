@@ -33,7 +33,7 @@ PLAYER_THEMES = [
 class BasePerceptionPipeline:
     def __init__(
         self,
-        player_weights: str = "weights/yolo11n.pt",
+        player_weights: str = "weights/yolo26n.pt",
         ball_weights: str = "weights/ball_colab_dukcv.pt",
         player_conf: float = 0.25,
         ball_conf: float = 0.15,

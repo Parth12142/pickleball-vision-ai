@@ -16,7 +16,7 @@ Video Clip ──► Court Homography (H) ──► Player Tracker (P1-P4) ─�
    - Sub-millimeter numerical precision (reprojection RMSE $< 10^{-4}\text{ ft}$).
 
 2. **Canonical Multi-Player Tracking (`pbbase/tracking/player_tracker.py`)**:
-   - YOLO11 person detection with dynamic court-polygon distance gating (filters spectators and referee).
+   - YOLO26 NMS-free end-to-end person detection with dynamic court-polygon distance gating (filters spectators and referee).
    - Hungarian optimal bipartite association preventing partner ID swaps.
    - Ground-contact foot coordinate estimation $(x_{\text{foot}}, y_{\text{foot}})$ with metric velocity estimation (mph).
 
@@ -60,7 +60,7 @@ pickleball-base/
 │   └── rally_sample.mp4
 ├── weights/                 # Model checkpoints
 │   ├── ball_colab_dukcv.pt
-│   └── yolo11n.pt
+│   └── yolo26n.pt           # YOLO26 Nano (NMS-Free End-to-End)
 ├── outputs/                 # Output preview MP4s & structured JSON telemetry
 ├── reports/                 # Empirical accuracy benchmark reports
 ├── run_base.py              # CLI entry point to run perception on clips

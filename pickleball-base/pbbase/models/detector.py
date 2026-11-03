@@ -9,8 +9,8 @@ from ultralytics import YOLO
 
 
 class PlayerDetector:
-    """Detects human players on court using pretrained or fine-tuned YOLO."""
-    def __init__(self, model_path: str = "weights/yolo11n.pt", conf_thresh: float = 0.25):
+    """Detects human players on court using pretrained or fine-tuned YOLO26."""
+    def __init__(self, model_path: str = "weights/yolo26n.pt", conf_thresh: float = 0.25):
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Player model weights not found at: {model_path}")
         self.model = YOLO(model_path)
