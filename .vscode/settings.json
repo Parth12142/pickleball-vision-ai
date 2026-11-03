@@ -25,5 +25,16 @@
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.diagnosticSeverityOverrides": {
     "reportMissingImports": "warning"
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/*/**": true,
+    "**/.venv/**": true,
+    "**/pickleball-base/datasets/**": true,
+    "**/outputs/*.mp4": true
+  },
+  "search.exclude": {
+    "**/pickleball-base/datasets/**": true
   }
 }
