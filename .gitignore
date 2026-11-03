@@ -9,18 +9,19 @@ labels.cache
 .env
 yolo11n.pt
 yolo26n.pt
-!weights/ball_best.pt
-!pickleball-base/weights/yolo26n.pt
+!weights/yolo26n.pt
+!weights/ball_colab_dukcv.pt
+!weights/ball_yolo26_best.pt
 
 # Datasets and Archives (Datasets built via scripts)
-pickleball-base/datasets/
+datasets/
+archive/
+scratch/
 *.zip
 *.tar.gz
 
 # Video and large media outputs
 outputs/*.mp4
-pickleball-base/outputs/*.mp4
-pickleball-base/outputs/*.avi
-pickleball-base/scratch/
+outputs/*.avi
 outputs/match1_sample_*.jpg
 outputs/roi_check.png

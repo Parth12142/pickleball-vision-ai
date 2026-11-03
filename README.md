@@ -1,93 +1,103 @@
-# 🏓 Pickleball Vision AI - Player & Ball Tracking Pipeline
+# 🏓 Pickleball Base Vision AI — Core Perception Engine
 
-An AI-powered computer vision system designed to analyze pickleball match footage. It accurately detects, tracks, and visualizes **players** and the **ball** in real time, delivering broadcast-quality analytics and trajectory visualization.
+A fresh, pure computer vision base perception system for pickleball. It accurately detects and tracks **players**, the **ball**, and **court planar geometry** with **ZERO hard-coded scoring rules, referee decisions, or scoreboard logic**.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Architecture & Core Capabilities
 
-### 1. 🏃 Elite Player Tracking (`tracking/player_tracker.py`)
-- **Hybrid Cost Association**: Combines Intersection-over-Union (IoU) with normalized center distance to handle fast player crossovers without identity swaps.
-- **Persistent Canonical Slots**: Keeps player IDs locked to canonical tags (`P1`, `P2`, `P3`, `P4`) instead of fragile transient IDs.
-- **Court Perspective Locking**: Distinguishes near-court and far-court players to prevent misidentifications across the net.
-- **Occlusion Resilience**: Holds active player memory for up to 2.5 seconds (75 frames) across serves, swings, and net occlusions.
-- **Footstep Movement Trails**: Renders smooth fading paths under each player's feet illustrating court coverage.
-- **Anti-Aliased Badging**: Modern broadcast-style player pill badges and ground halo indicators.
+```
+Video Clip ──► Court Homography (H) ──► Player Tracker (P1-P4) ──► Ball Trajectory ──► Structured Telemetry JSON
+                                                                                      └──► Diagnostic Preview MP4
+```
 
-### 2. ⚡ Precision Ball Trajectory Tracking (`detection/ball_detector.py`)
-- **Custom Trained YOLO Model**: Fine-tuned on Roboflow Universe pickleball datasets (`weights/ball_best.pt`) running at high-resolution input (`imgsz: 1312`).
-- **Kinematic Velocity Gating**: Filters rogue candidates using physical momentum vectors $\vec{v} = (v_x, v_y)$ to eliminate false positives (shoes, court lines, reflections).
-- **Parabolic Arc Interpolation**: Fills detection gaps (1–5 frames) along the true gravitational ballistic arc ($sag = 4\alpha(1-\alpha)g$).
-- **Dynamic Speed-Responsive Laser Trail**:
-  - 🔥 **Fast Smash (> 22 px/f)**: Vibrant Electric Orange glow.
-  - ⚡ **Rally Play (10–22 px/f)**: Neon Chartreuse Laser Yellow glow.
-  - 💧 **Drop / Dink (< 10 px/f)**: Ice Cyan laser glow.
-- **High-Visibility Reticle**: Dual-layer circular tracking reticle with center pip.
+1. **Court Calibration & Homography (`pbbase/court/homography.py`)**:
+   - 4-corner baseline projective transformation mapping camera pixels $(u, v)$ to official USA Pickleball (USAP) 2D regulation plane ($20 \times 44\text{ ft}$).
+   - Sub-millimeter numerical precision (reprojection RMSE $< 10^{-4}\text{ ft}$).
 
-### 3. 📺 Broadcast Analytics HUD
-- Live translucent telemetry bar displaying:
-  - Match timecode and frame counter.
-  - Active players tracked count.
-  - Ball tracking status indicator.
+2. **Canonical Multi-Player Tracking (`pbbase/tracking/player_tracker.py`)**:
+   - YOLO26 NMS-free end-to-end person detection with dynamic court-polygon distance gating (filters spectators and referee).
+   - Hungarian optimal bipartite association preventing partner ID swaps.
+   - Ground-contact foot coordinate estimation $(x_{\text{foot}}, y_{\text{foot}})$ with metric velocity estimation (mph).
+
+3. **High-Resolution Micro-Ball Trajectory (`pbbase/tracking/ball_trajectory.py`)**:
+   - Specialist high-resolution ($1280\text{p}$) ball detection.
+   - Kinematic velocity gating with physical momentum prediction.
+   - Parabolic gravitational arc interpolation bridging 1–4 frame paddle/net occlusions.
+   - Speed-responsive dynamic color trail (Electric Orange $> 22\text{ px/f}$, Laser Chartreuse $10\text{--}22\text{ px/f}$, Ice Cyan $< 10\text{ px/f}$).
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-├── data/
-│   └── clips/
-│       ├── match.mp4                 # Input match footage
-│       └── rally_sample.mp4          # 10s rally test clip
-├── outputs/
-│   ├── rally_sample_players-ball.mp4 # Tracked rally output with HUD & laser trail
-│   └── match_players-ball.mp4        # Full annotated match video
-├── weights/
-│   └── ball_best.pt                  # Fine-tuned YOLO ball detection weights
-├── tracking/
-│   └── player_tracker.py             # Advanced player tracking engine
-├── detection/
-│   └── ball_detector.py              # Ball detection & parabolic trajectory engine
-├── render/
-│   └── overlay.py                    # Visual elements & overlay renderers
-├── results/                          # Performance benchmarks, confusion matrices, and run logs
-├── config.yaml                       # Central pipeline configuration
-├── requirements.txt                  # Python dependencies
-├── run.py                            # Main execution CLI
-└── video_io.py                       # FFmpeg H.264 CRF 18 video reader/writer
+pickleball-base/
+├── pbbase/
+│   ├── court/               # Court geometry & homography projection
+│   │   ├── homography.py
+│   │   └── __init__.py
+│   ├── models/              # YOLO inference wrappers & training scripts
+│   │   ├── detector.py
+│   │   ├── train_ball.py
+│   │   └── __init__.py
+│   ├── tracking/            # Canonical player tracking & ball trajectory
+│   │   ├── player_tracker.py
+│   │   ├── ball_trajectory.py
+│   │   └── __init__.py
+│   ├── data/                # Dataset curation & leakage-free splitting
+│   │   ├── build_datasets.py
+│   │   └── __init__.py
+│   ├── tests/               # Unit tests
+│   │   └── test_base.py
+│   ├── pipeline.py          # Unified streaming pipeline orchestrator
+│   └── patch_env.py         # POSIX SemLock sandbox compatibility patch
+├── datasets/                # Clean train/val/test splits (v13 + v1i)
+│   ├── ball/
+│   └── players/
+├── clips/                   # Test match clips
+│   ├── match1.mp4
+│   ├── MicrosoftTeams-video.mp4
+│   └── rally_sample.mp4
+├── weights/                 # Model checkpoints
+│   ├── ball_colab_dukcv.pt
+│   └── yolo26n.pt           # YOLO26 Nano (NMS-Free End-to-End)
+├── outputs/                 # Output preview MP4s & structured JSON telemetry
+├── reports/                 # Empirical accuracy benchmark reports
+├── run_base.py              # CLI entry point to run perception on clips
+├── evaluate_base.py         # Master empirical accuracy benchmark suite
+└── README.md
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Installation
-Clone the repository and install the dependencies:
+### 1. Run Base Perception on Video Clip
 ```bash
-git clone https://github.com/Parth12142/pickleball-vision-ai.git
-cd pickleball-vision-ai
-
-# Create virtual environment
-python -m venv .venv
-
-# Activate on Linux/macOS:
-source .venv/bin/activate
-# Or on Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-
-# Install requirements
-pip install -r requirements.txt
+python run_base.py --clip clips/match1.mp4
 ```
 
-### 2. Run the Pipeline
-Run with default configuration:
+To run on a subset of frames:
 ```bash
-python run.py
+python run_base.py --clip clips/match1.mp4 --max-frames 90
 ```
 
-Run on a specific clip:
+Outputs will be saved in `outputs/`:
+- `outputs/match1_base_telemetry.json`: Clean per-frame spatial coordinates, speeds, and player tracks.
+- `outputs/match1_base_preview.mp4`: Diagnostic H.264 video with ground halos, laser trajectory ribbon, and HUD.
+
+### 2. Run Automated Unit Tests
 ```bash
-python run.py --clip data/clips/rally_sample.mp4
+python -m unittest pbbase/tests/test_base.py
 ```
 
-Processed videos will be saved directly into `outputs/` with full analytics logs in `results/runs/`.
+### 3. Evaluate Model Accuracy on Held-Out Test Splits
+```bash
+python evaluate_base.py
+```
+Outputs verifiable evaluation metrics to `reports/BASE_MODEL_ACCURACY_REPORT.md`.
+
+### 4. Fine-Tune Ball Model
+```bash
+python pbbase/models/train_ball.py --epochs 20 --batch 8 --imgsz 960
+```
