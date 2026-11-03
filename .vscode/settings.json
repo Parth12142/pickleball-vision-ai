@@ -1,0 +1,29 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/court",
+    "${workspaceFolder}/detection",
+    "${workspaceFolder}/tracking",
+    "${workspaceFolder}/events",
+    "${workspaceFolder}/render",
+    "${workspaceFolder}/.venv/lib/python3.14/site-packages",
+    "/home/pce118/snap/antigravity-cli/common/local/lib/python3.14/dist-packages",
+    "/snap/antigravity-cli/24/usr/lib/python3/dist-packages"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/court",
+    "${workspaceFolder}/detection",
+    "${workspaceFolder}/tracking",
+    "${workspaceFolder}/events",
+    "${workspaceFolder}/render",
+    "${workspaceFolder}/.venv/lib/python3.14/site-packages",
+    "/home/pce118/snap/antigravity-cli/common/local/lib/python3.14/dist-packages",
+    "/snap/antigravity-cli/24/usr/lib/python3/dist-packages"
+  ],
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "warning"
+  }
+}

@@ -1,6 +1,14 @@
 opencv-python
 ultralytics
+torch
+torchvision
 numpy
 scipy
 pyyaml
 imageio-ffmpeg
+sqlalchemy
+psycopg
+openpyxl
+pandas
+matplotlib
+

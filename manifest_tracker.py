@@ -31,7 +31,11 @@ def _extract_metrics(run_data):
         elif m_name == "ball":
             det_rate = stats.get("detection_rate", 0.0)
             found = stats.get("frames_with_ball", 0)
-            ball_metric = f"{det_rate * 100:.1f}% ({found} frames)"
+            occl = stats.get("occluded_recovered_frames", 0)
+            if occl > 0:
+                ball_metric = f"{det_rate * 100:.1f}% ({found}f, +{occl} net)"
+            else:
+                ball_metric = f"{det_rate * 100:.1f}% ({found} frames)"
 
     return player_metric, ball_metric
 

@@ -37,4 +37,3 @@ def run(frames, fps, size, cfg):
 
 def draw(frame, i, data):
     """Placeholder module drawer for court overlay."""
-    pass

@@ -23,14 +23,14 @@ import cv2
 import numpy as np
 import yaml
 
-from video_io import read_video, write_video
+import court as court_module
+import events as bounce_module
 import manifest_tracker
+from detection import ball_detector
 
 # ---- module registry -------------------------------------------------------
 from tracking import player_tracker
-from detection import ball_detector
-import court as court_module
-import events as bounce_module
+from video_io import read_video, write_video
 
 MODULES = {
     "players": player_tracker,
@@ -43,9 +43,10 @@ MODULES = {
 
 def cpu_name():
     try:
-        for line in open("/proc/cpuinfo"):
-            if line.startswith("model name"):
-                return line.split(":", 1)[1].strip()
+        with open("/proc/cpuinfo", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
     except OSError:
         pass
     return "unknown CPU"
@@ -62,7 +63,7 @@ def device_name():
 
 
 def draw_hud(frame, i, total_frames, fps, active, results):
-    h, w = frame.shape[:2]
+    _h, w = frame.shape[:2]
 
     # Responsive scaling for broadcast badge based on resolution
     scale = max(0.80, min(1.6, w / 1280.0))
@@ -163,6 +164,85 @@ def draw_hud(frame, i, total_frames, fps, active, results):
     )
 
 
+def print_timing_report(summary, log_path, json_path):
+    clip = summary["clip"]
+    clip_s = summary["clip_seconds"]
+    frames = summary["frames"]
+    fps = summary["fps"]
+    device = summary["device"]
+    total_s = summary["total_s"]
+    read_s = summary["read_s"]
+    render_s = summary["render_s"]
+    modules = summary["modules"]
+    out_video = summary.get("output_video", "N/A")
+
+    print("\n" + "=" * 90)
+    print(" ⏱️   PIPELINE EXECUTION & TIMING REPORT")
+    print("=" * 90)
+    print(f" 🎬 Input Clip      : {clip}")
+    print(f" 📐 Clip Specs      : {summary['resolution']} | {frames} frames @ {fps:.1f} FPS | {clip_s:.2f}s duration")
+    print(f" 💻 Hardware Device : {device}")
+    print(f" 🎥 Output Video    : {out_video}")
+    print("-" * 90)
+    print(f" {'STAGE / MODULE':<26} | {'TIME (SEC)':<12} | {'% TOTAL':<9} | {'PROCESSING RATE':<18} | {'QUALITY / STATS':<18}")
+    print("-" * 90)
+
+    # 1. Video Ingestion
+    read_pct = (read_s / total_s * 100) if total_s > 0 else 0
+    read_fps = frames / max(0.001, read_s)
+    print(f" {'📥 Video Reading':<26} | {read_s:>9.2f} s  | {read_pct:>7.1f}% | {read_fps:>9.1f} FPS   | {'Loaded successfully':<18}")
+
+    # 2. Modules
+    for m in modules:
+        mod_name = m["module"]
+        p_s = m["process_s"]
+        p_pct = (p_s / total_s * 100) if total_s > 0 else 0
+        mod_fps = m["fps"]
+        icon = "🏃" if mod_name == "players" else "🎾" if mod_name == "ball" else "🏷️"
+        label = f"{icon} {mod_name.capitalize()} Tracking"
+        rate_str = f"{mod_fps:>9.1f} FPS"
+
+        stats = m.get("stats", {})
+        if mod_name == "players":
+            q_str = f"{stats.get('mean_players_per_frame', 0):.1f}/4 players"
+        elif mod_name == "ball":
+            det_rate = stats.get("detection_rate", 0) * 100
+            rec = stats.get("occluded_recovered_frames", 0)
+            if rec > 0:
+                q_str = f"{det_rate:.1f}% (+{rec} net occl)"
+            else:
+                q_str = f"{det_rate:.1f}% ({stats.get('frames_with_ball', 0)}f)"
+        else:
+            q_str = "OK"
+
+        print(f" {label:<26} | {p_s:>9.2f} s  | {p_pct:>7.1f}% | {rate_str:<18} | {q_str:<18}")
+
+    # 3. Video Rendering
+    render_pct = (render_s / total_s * 100) if total_s > 0 else 0
+    render_fps = frames / max(0.001, render_s)
+    print(f" {'🎨 Render & Encode':<26} | {render_s:>9.2f} s  | {render_pct:>7.1f}% | {render_fps:>9.1f} FPS   | {'H.264 broadcast':<18}")
+
+    print("-" * 90)
+    rt_factor = total_s / max(0.01, clip_s)
+    print(f" {'⚡ TOTAL PIPELINE':<26} | {total_s:>9.2f} s  | {'100.0%':>8} | {frames/total_s:>9.1f} FPS   | {rt_factor:.2f}x real-time")
+    print("=" * 90)
+
+    print("\n📋 CLEAN TIMING SUMMARY:")
+    print(f"  • Video Clip Length    : {clip_s:.2f} seconds ({frames} frames)")
+    print(f"  • Output Ready In      : {total_s:.2f} seconds ({total_s/60:.1f} min)")
+    print(f"  • Video Reading Took   : {read_s:.2f} seconds")
+    for m in modules:
+        mod_title = m['module'].capitalize()
+        p_s = m['process_s']
+        print(f"  • {mod_title:<10} Detection : {p_s:.2f} seconds")
+    print(f"  • Video Rendering Took : {render_s:.2f} seconds")
+    print(f"  • Result Output Video  : {out_video}\n")
+    print(f"  • Detailed Run Log     : {json_path}")
+    print(f"  • Run History CSV      : {log_path}")
+    print("  • Outputs Manifest     : OUTPUTS_MANIFEST.md")
+    print("=" * 90 + "\n")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="config.yaml")
@@ -177,7 +257,8 @@ def main():
         manifest_tracker.list_manifest()
         return
 
-    cfg = yaml.safe_load(open(a.config))
+    with open(a.config, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
     clip = a.clip or cfg.get("clip", "data/clips/match1.mp4")
     out_dir = cfg.get("output_dir", "outputs")
     res_dir = cfg.get("results_dir", "results")
@@ -291,22 +372,8 @@ def main():
     # update outputs manifest
     manifest_tracker.update_manifest(summary)
 
-    # print the report
-    print("\n================ RESULT ================")
-    print(f"clip length : {clip_s:.2f} s ({len(frames)} frames @ {fps:.1f} FPS)   device: {summary['device']}")
-    for m in module_rows:
-        print(f"\n[{m['module']}]  process time {m['process_s']} s  |  {m['ms_per_frame']} ms/frame  |  "
-              f"{m['fps']} FPS  |  real-time factor {m['realtime_factor']}x")
-        for k, v in m["stats"].items():
-            print(f"    {k}: {v}")
-    print(f"\nread {read_s:.2f} s | all modules {compute_s:.2f} s | draw+write video {render_s:.2f} s "
-          f"| total {summary['total_s']} s")
-    print("real-time factor: 1.0x = takes as long as the clip, below 1.0x = faster than real time")
-    if out_path:
-        print(f"video   : {out_path}")
-    print(f"saved   : {json_path}")
-    print(f"history : {log}")
-    print("manifest: OUTPUTS_MANIFEST.md")
+    # print the clean timing table report
+    print_timing_report(summary, log, json_path)
 
 
 if __name__ == "__main__":

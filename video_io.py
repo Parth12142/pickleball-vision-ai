@@ -1,6 +1,8 @@
+import math
 import os
 import shutil
 import subprocess
+
 import cv2
 
 
@@ -39,7 +41,7 @@ def read_video(path, max_frames=None, start_frame=0):
         raise ValueError(f"Could not open video file: {path}")
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    if fps <= 0 or fps != fps:
+    if fps <= 0 or math.isnan(fps):
         fps = 30.0
 
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

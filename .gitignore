@@ -5,9 +5,22 @@ __pycache__/
 cache/
 runs/
 *.cache
+labels.cache
 .env
 yolo11n.pt
+yolo26n.pt
 !weights/ball_best.pt
-outputs/*_raw.mp4
+!pickleball-base/weights/yolo26n.pt
+
+# Datasets and Archives (Datasets built via scripts)
+pickleball-base/datasets/
+*.zip
+*.tar.gz
+
+# Video and large media outputs
+outputs/*.mp4
+pickleball-base/outputs/*.mp4
+pickleball-base/outputs/*.avi
+pickleball-base/scratch/
 outputs/match1_sample_*.jpg
 outputs/roi_check.png

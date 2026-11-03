@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pickleball Vision AI — Match Tracking, Subscriptions &amp; Officiating</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <!-- ======================================================================
+       LIVE 60 FPS PICKLEBALL RALLY & BOUNCE ANIMATION BACKGROUND
+       ====================================================================== -->
+  <canvas id="pickleball-bg-canvas" aria-hidden="true"></canvas>
+
+  <div class="app-shell">
+
+    <!-- ====================================================================
+         1. STICKY MULTI-PAGE TOP MENU NAVBAR
+         ==================================================================== -->
+    <div class="navbar-sticky-wrap">
+      <header class="pill-navbar">
+        <button class="nav-brand" data-page="home">
+          <span class="brand-loop-icon"></span>
+          <span>PICKLEBALL AI</span>
+        </button>
+
+        <nav class="nav-center-links" aria-label="Main Menu">
+          <button class="nav-menu-btn active" data-page="home">
+            Home
+          </button>
+          <a href="/view-preview.html" class="nav-menu-btn" style="text-decoration: none; color: #CCFF00; display: inline-flex; align-items: center; gap: 4px;" title="Open standalone video player">
+            🎬 Direct Player
+          </a>
+          <button class="nav-menu-btn" data-page="subscriptions">
+            Subscriptions
+          </button>
+          <button class="nav-menu-btn" data-page="ai-coach">
+            <span class="soon-dot"></span>
+            AI Coach
+          </button>
+          <button class="nav-menu-btn" data-page="scoring">
+            <span class="soon-dot"></span>
+            USAP Scoring
+          </button>
+          <button class="nav-menu-btn" data-page="line-var">
+            <span class="soon-dot"></span>
+            In/Out Line VAR
+          </button>
+          <button class="nav-menu-btn" data-page="kitchen-nvz">
+            <span class="soon-dot"></span>
+            Kitchen NVZ
+          </button>
+          <button class="nav-menu-btn" data-page="shot-analytics">
+            <span class="soon-dot"></span>
+            Shot Analytics
+          </button>
+        </nav>
+
+        <!-- Guest Auth Actions -->
+        <div id="nav-guest-actions" class="nav-right-actions">
+          <button class="nav-menu-btn" data-page="login">
+            Log In
+          </button>
+          <button class="nav-cta-btn" data-page="signup">
+            <span>Sign Up</span>
+            <span>+</span>
+          </button>
+        </div>
+
+        <!-- Logged-In User Actions -->
+        <div id="nav-user-actions" class="nav-right-actions hidden" style="display: none;">
+          <div class="user-account-pill">
+            <span id="nav-user-name">Player</span>
+            <span id="nav-user-tier" class="user-tier-tag">PADDLE</span>
+          </div>
+          <button id="nav-logout-btn" class="nav-menu-btn">
+            Log Out
+          </button>
+        </div>
+      </header>
+    </div>
+
+    <!-- ====================================================================
+         PAGE 1: HOME PAGE (HERO + 2-VIDEO COURT VISION + PLAYER TELEMETRY)
+         ==================================================================== -->
+    <main id="page-home" class="page-view">
+      <div class="page-container">
+
+        <!-- Hero Stage -->
+        <section class="hero-stage">
+          <div class="hero-main-grid">
+
+            <div class="hero-copy-col">
+              <div class="live-anim-tag">
+                <span class="pulse-ball"></span>
+                <span>YOLOv8s + TrackNetV2 • Live Vision Engine</span>
+              </div>
+
+              <h1 class="hero-stacked-title">
+                TURN<br />
+                RALLIES<br />
+                INTO<br />
+                DATA
+              </h1>
+
+              <p class="hero-subtext">
+                Our AI vision system provides 4-player tracking, ball speed, and automated USAP tournament officiating that elevate every match.
+              </p>
+
+              <div class="hero-cta-row">
+                <button id="hero-watch-btn" class="btn-orange-cta">
+                  <span>Watch Match Demo</span>
+                  <span>+</span>
+                </button>
+                <button class="btn-outline-secondary" data-page="subscriptions">
+                  <span>View Paddle Plans</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="hero-visual-col">
+              <div class="hero-video-showcase">
+                <span id="hero-clip-badge" class="hero-video-badge">
+                  LIVE OUTPUT • MicrosoftTeams-video.mp4
+                </span>
+                <video
+                  id="hero-preview-video"
+                  src="/outputs/MicrosoftTeams-video_players-ball.mp4"
+                  autoplay
+                  loop
+                  muted
+                  playsinline
+                ></video>
+              </div>
+
+              <!-- Overlapping Vibrant Orange Card -->
+              <aside class="floating-orange-card">
+                <div class="floating-card-head">
+                  <span class="floating-loop-mark"></span>
+                  <div class="floating-card-title">
+                    COURT AI<br />EXCELLENCE
+                  </div>
+                </div>
+
+                <div class="floating-card-inner-preview">
+                  <div class="mini-score-strip">
+                    <span>USAP SCORE</span>
+                    <span id="mini-score-val" class="mini-score-call">4 - 2 - 1</span>
+                  </div>
+                  <div class="mini-stat-grid">
+                    <div class="mini-stat-box">
+                      <small>Players</small>
+                      <strong id="mini-players-val">4 / 4 Locked</strong>
+                    </div>
+                    <div class="mini-stat-box">
+                      <small>Kitchen NVZ</small>
+                      <strong id="mini-nvz-val">SAFE (+185 mm)</strong>
+                    </div>
+                    <div class="mini-stat-box">
+                      <small>Line Call</small>
+                      <strong id="mini-line-val">IN (+42 mm)</strong>
+                    </div>
+                    <div class="mini-stat-box">
+                      <small>Output Time</small>
+                      <strong id="mini-time-val">78.79s</strong>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Dark Rounded Showcase Banner (ONLY 2 VIDEOS + 2D COURT) -->
+        <section id="match-demo" class="dark-banner-sec">
+
+          <div class="dark-banner-top">
+            <div>
+              <h2 class="dark-giant-word">COURT <span>VISION</span></h2>
+            </div>
+
+            <div class="clip-switcher-bar">
+              <button class="clip-tab-btn active" data-clip="MicrosoftTeams-video">
+                1. MicrosoftTeams-video.mp4 (60 FPS)
+              </button>
+              <button class="clip-tab-btn" data-clip="match1">
+                2. match1.mp4 (30 FPS)
+              </button>
+              <button class="clip-tab-btn" data-clip="base_preview">
+                ⚡ 3. Base Model Perception (H.264 Preview)
+              </button>
+            </div>
+          </div>
+
+          <div class="match-demo-grid">
+
+            <!-- Left: Processed Match Video -->
+            <div class="dark-panel">
+              <div class="dark-panel-head">
+                <div class="dark-panel-title">
+                  <span class="orange-dot"></span>
+                  <span id="demo-video-title">MicrosoftTeams-video.mp4 (720×1280 @ 60fps)</span>
+                </div>
+                <span id="demo-score-call" style="font-size: 12px; color: #DFFF00; font-weight: 700;">
+                  USAP Score: 4 - 2 - 1 (P1)
+                </span>
+              </div>
+
+              <div class="video-box">
+                <video
+                  id="demo-video-player"
+                  src="/outputs/MicrosoftTeams-video_players-ball.mp4"
+                  autoplay
+                  loop
+                  muted
+                  playsinline
+                  controls
+                ></video>
+              </div>
+
+              <div class="dark-panel-foot">
+                <span id="demo-frame-counter">Frame 000 / 470</span>
+                <span id="demo-ball-tracked">138 frames tracked</span>
+                <span>P1–P4 IDs Locked</span>
+              </div>
+            </div>
+
+            <!-- Right: Interactive 2D USAP Pickleball Court -->
+            <div class="dark-panel">
+              <div class="dark-panel-head">
+                <div class="dark-panel-title">
+                  <span>2D Pickleball Court (20×44 ft)</span>
+                </div>
+
+                <div class="lens-pill-row">
+                  <button class="lens-pill active" data-lens="rally">2D Court</button>
+                  <button class="lens-pill" data-lens="heatmap">Heatmap</button>
+                  <button class="lens-pill" data-lens="kitchen">Kitchen NVZ</button>
+                  <button class="lens-pill" data-lens="var">In/Out</button>
+                </div>
+              </div>
+
+              <div class="court-box">
+                <canvas id="demo-court-canvas"></canvas>
+              </div>
+
+              <div class="dark-panel-foot">
+                <span>20×44 ft Homography</span>
+                <span>7-ft Kitchen Zone Monitored</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 4-Card Processing Time Summary -->
+          <div class="timing-strip">
+            <div class="timing-pill-card">
+              <small>Clip Duration</small>
+              <strong id="t-clip-len">7.84s</strong>
+            </div>
+            <div class="timing-pill-card highlight">
+              <small>Total Output Ready In</small>
+              <strong id="t-total-sec">78.79s</strong>
+            </div>
+            <div class="timing-pill-card">
+              <small>Player Detection (YOLOv8s)</small>
+              <strong id="t-players-sec">14.06s</strong>
+            </div>
+            <div class="timing-pill-card">
+              <small>Ball Detection (TrackNetV2)</small>
+              <strong id="t-ball-sec">55.33s</strong>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Player Telemetry Table (P1–P4) -->
+        <section id="player-stats" class="clean-sec">
+          <div class="sec-header">
+            <div>
+              <span class="sec-kicker">Match Telemetry</span>
+              <h2 class="sec-title">Player Distance, Speed &amp; Zone Coverage</h2>
+            </div>
+          </div>
+
+          <div class="clean-table-wrap">
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Team</th>
+                  <th>Distance Covered</th>
+                  <th>Avg Speed</th>
+                  <th>Max Sprint Speed</th>
+                  <th>Kitchen / Net Zone %</th>
+                  <th>Baseline Zone %</th>
+                </tr>
+              </thead>
+              <tbody id="player-stats-tbody">
+                <!-- Populated dynamically by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- ====================================================================
+         PAGE 2: 3-TIER BUSINESS SUBSCRIPTION PAGE
+         (1. PADDLE FREE • 2. PADDLE PRO • 3. PADDLE PREMIUM)
+         ==================================================================== -->
+    <section id="page-subscriptions" class="page-view hidden">
+      <div class="page-container">
+        <div class="sub-hero-wrap">
+
+          <div class="sub-header-center">
+            <div class="live-anim-tag">
+              <span class="pulse-ball"></span>
+              <span>PICKLEBALL AI BUSINESS PLANS • CHOOSE YOUR PADDLE TIER</span>
+            </div>
+
+            <h1 class="sub-title-xl">
+              BUILT FOR PLAYERS,<br />CLUBS &amp; <span>TOURNAMENTS</span>
+            </h1>
+
+            <p style="color: var(--text-body); font-size: 16px; margin: 0 0 18px;">
+              Scale from monthly recorded clip uploads to unlimited 4K match uploads and high-capacity live court AI officiating.
+            </p>
+
+            <!-- Monthly / Annual Billing Toggle -->
+            <div class="billing-toggle-pill">
+              <button class="cycle-btn active" data-cycle="monthly">Monthly Billing</button>
+              <button class="cycle-btn" data-cycle="annual">
+                Annual Billing
+                <span class="save-tag">SAVE 20%</span>
+              </button>
+            </div>
+
+            <div id="sub-feedback-banner" class="auth-status-banner success hidden" style="margin-top: 18px; display: none;"></div>
+          </div>
+
+          <!-- 3-Tier Cards Grid -->
+          <div class="pricing-trio-grid">
+
+            <!-- TIER 1: PADDLE (FREE) -->
+            <article class="plan-card">
+              <div>
+                <div class="plan-visual-banner tier-free">
+                  <div>
+                    <span class="plan-tier-kicker">STARTER TIER</span>
+                    <h2 class="plan-tier-name">PADDLE</h2>
+                  </div>
+                  <!-- Animated Classic Graphite Pickleball Paddle SVG -->
+                  <svg class="paddle-svg-anim" viewBox="0 0 100 100" fill="none">
+                    <rect x="22" y="10" width="52" height="62" rx="18" fill="#1E293B" stroke="#0F172A" stroke-width="4"/>
+                    <rect x="42" y="72" width="12" height="22" rx="4" fill="#475569"/>
+                    <circle cx="66" cy="30" r="11" fill="#DFFF00" stroke="#0F172A" stroke-width="2.5"/>
+                    <circle cx="63" cy="28" r="2" fill="#0F172A"/>
+                    <circle cx="69" cy="32" r="2" fill="#0F172A"/>
+                  </svg>
+                </div>
+
+                <div class="plan-price-row">
+                  <span class="plan-price-val" data-monthly="$0" data-annual="$0">$0</span>
+                  <span class="plan-price-unit">/ month • Free forever</span>
+                </div>
+
+                <!-- Visual Quota Comparison Meters -->
+                <div class="quota-meters-box">
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Monthly Clip Uploads</span>
+                      <span>5 Clips / Mo</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill" style="width: 18%"></div>
+                    </div>
+                  </div>
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Live Clip Analysis</span>
+                      <span>Recorded Only (0 Live)</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill lime" style="width: 6%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <ul class="plan-feature-list">
+                  <li><span class="check-icon">✓</span> <span><strong>Limited Video Clip Uploads</strong> (5 match clips / month, up to 720p)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>AI Stroke Coach:</strong> Film 2 strokes / month on your phone</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>4-Player (P1–P4) &amp; Ball Tracking</strong> on uploaded clips</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Basic 2D Court Minimap</strong> &amp; player distance summary</span></li>
+                </ul>
+              </div>
+
+              <button class="plan-select-btn" data-select-tier="paddle">
+                Start Free with Paddle
+              </button>
+            </article>
+
+            <!-- TIER 2: PADDLE PRO (MOST POPULAR) -->
+            <article class="plan-card popular">
+              <div>
+                <div class="plan-visual-banner tier-pro">
+                  <div>
+                    <span class="plan-tier-kicker">MOST POPULAR • PRO</span>
+                    <h2 class="plan-tier-name">PADDLE PRO</h2>
+                  </div>
+                  <!-- Animated Carbon Orange Pickleball Paddle SVG -->
+                  <svg class="paddle-svg-anim" viewBox="0 0 100 100" fill="none">
+                    <rect x="22" y="10" width="52" height="62" rx="18" fill="#0E1116" stroke="#FFFFFF" stroke-width="4"/>
+                    <rect x="42" y="72" width="12" height="22" rx="4" fill="#FFFFFF"/>
+                    <circle cx="68" cy="28" r="13" fill="#DFFF00" stroke="#0E1116" stroke-width="2.5"/>
+                    <circle cx="65" cy="26" r="2.2" fill="#0E1116"/>
+                    <circle cx="71" cy="30" r="2.2" fill="#0E1116"/>
+                  </svg>
+                </div>
+
+                <div class="plan-price-row">
+                  <span class="plan-price-val" data-monthly="$29" data-annual="$23">$29</span>
+                  <span class="plan-price-unit">/ month • Competitive Players &amp; Coaches</span>
+                </div>
+
+                <!-- Visual Quota Comparison Meters -->
+                <div class="quota-meters-box">
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Monthly Clip Uploads</span>
+                      <span>50 Clips / Mo (1080p 60fps)</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill" style="width: 62%"></div>
+                    </div>
+                  </div>
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Live Clip Analysis</span>
+                      <span>15 Live Sessions / Mo</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill lime" style="width: 45%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <ul class="plan-feature-list">
+                  <li><span class="check-icon">✓</span> <span><strong>10× More Video Clip Uploads</strong> (50 clips / month in Full HD 1080p 60fps)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Includes Live Clip Analysis</strong> (15 live rally analysis sessions / month)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>AI Stroke Coach:</strong> 30 phone stroke biomechanics checks / month</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Player Spatial Heatmaps &amp; Zone %</strong> (Kitchen vs. Baseline control)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Automated In/Out Line VAR</strong> &amp; Shot Speed (MPH/km/h)</span></li>
+                </ul>
+              </div>
+
+              <button class="plan-select-btn" data-select-tier="paddle_pro">
+                Choose Paddle Pro +
+              </button>
+            </article>
+
+            <!-- TIER 3: PADDLE PREMIUM (UNLIMITED + MAX LIVE ANALYSIS) -->
+            <article class="plan-card premium">
+              <div>
+                <div class="plan-visual-banner tier-premium">
+                  <div>
+                    <span class="plan-tier-kicker">TOURNAMENT &amp; CLUB</span>
+                    <h2 class="plan-tier-name">PADDLE PREMIUM</h2>
+                  </div>
+                  <!-- Animated Optic Gold/Lime Kevlar Paddle SVG -->
+                  <svg class="paddle-svg-anim" viewBox="0 0 100 100" fill="none">
+                    <rect x="22" y="10" width="52" height="62" rx="18" fill="#0E1116" stroke="#DFFF00" stroke-width="4"/>
+                    <rect x="42" y="72" width="12" height="22" rx="4" fill="#DFFF00"/>
+                    <circle cx="68" cy="26" r="14" fill="#FF4D00" stroke="#FFFFFF" stroke-width="2.5"/>
+                    <circle cx="65" cy="24" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="71" cy="28" r="2.2" fill="#FFFFFF"/>
+                  </svg>
+                </div>
+
+                <div class="plan-price-row">
+                  <span class="plan-price-val" data-monthly="$79" data-annual="$63">$79</span>
+                  <span class="plan-price-unit">/ month • Unlimited Club &amp; Pro Tour</span>
+                </div>
+
+                <!-- Visual Quota Comparison Meters -->
+                <div class="quota-meters-box">
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Monthly Clip Uploads</span>
+                      <span>UNLIMITED (4K 60fps)</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill" style="width: 100%"></div>
+                    </div>
+                  </div>
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Live Clip Analysis</span>
+                      <span>UNLIMITED Live Streams</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill lime" style="width: 100%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <ul class="plan-feature-list">
+                  <li><span class="check-icon">✓</span> <span><strong>UNLIMITED Video Clip Uploads</strong> (Full-length 4K 60fps tournament matches)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Maximum / Unlimited Live Clip Analysis</strong> (Far more live court streams than Paddle Pro)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>UNLIMITED AI Stroke Coach</strong> + Pro Skeleton Technique Comparison</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Live USAP 0-0-2 Automated Point Counting</strong> &amp; Side-Out Server Rotation</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>7-ft Kitchen (NVZ) Foot-Fault Watchdog</strong> &amp; Two-Bounce Rule AI</span></li>
+                </ul>
+              </div>
+
+              <button class="plan-select-btn" data-select-tier="paddle_premium">
+                Unlock Paddle Premium +
+              </button>
+            </article>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         PAGE 3: DEDICATED PICKLEBALL SIGN UP & LOGIN SPLIT-SCREEN PAGE
+         ==================================================================== -->
+    <section id="page-auth" class="page-view hidden">
+      <div class="page-container">
+        <div class="auth-split-stage">
+          <div class="auth-split-card">
+
+            <!-- Left Column: Dedicated Paddle-to-Paddle Kitchen Volley Animation -->
+            <div class="auth-visual-panel">
+              <div class="auth-canvas-holder">
+                <canvas id="auth-duel-canvas"></canvas>
+              </div>
+
+              <div class="auth-visual-overlay-bottom">
+                <h3>PICKLEBALL VISION AI ACCOUNT</h3>
+                <p>
+                  Watch our live Carbon-Paddle Kitchen Volley telemetry above while you sign in. Your account and chosen <strong>Paddle</strong>, <strong>Paddle Pro</strong>, or <strong>Paddle Premium</strong> subscription are synced directly with our PostgreSQL / SQLAlchemy database.
+                </p>
+              </div>
+            </div>
+
+            <!-- Right Column: Toggleable Sign Up & Log In Forms -->
+            <div class="auth-form-panel">
+
+              <div class="auth-mode-tabs">
+                <button id="tab-btn-signup" class="auth-tab-btn active" data-auth-mode="signup">
+                  Create Account (Sign Up)
+                </button>
+                <button id="tab-btn-login" class="auth-tab-btn" data-auth-mode="login">
+                  Log In
+                </button>
+              </div>
+
+              <div id="auth-alert-box" class="auth-status-banner hidden" style="display: none;"></div>
+
+              <!-- SIGN UP FORM -->
+              <form id="signup-form">
+                <h2 class="auth-form-title">JOIN PICKLEBALL AI</h2>
+                <p class="auth-form-sub">Create your player or club account and select your starting Paddle tier.</p>
+
+                <div class="form-field">
+                  <label for="signup-name">Full Name</label>
+                  <input id="signup-name" type="text" placeholder="e.g., Ben Johns" required />
+                </div>
+
+                <div class="form-field">
+                  <label for="signup-email">Email Address</label>
+                  <input id="signup-email" type="email" placeholder="player@pickleballclub.com" required />
+                </div>
+
+                <div class="form-field">
+                  <label for="signup-role">Club or Player Role</label>
+                  <input id="signup-role" type="text" placeholder="e.g., Tournament Doubles Player / Coach" value="Tournament Doubles Player" />
+                </div>
+
+                <div class="form-field">
+                  <label for="signup-tier">Select Subscription Plan</label>
+                  <select id="signup-tier">
+                    <option value="paddle">Paddle (Free — 5 Clip Uploads / Mo)</option>
+                    <option value="paddle_pro" selected>Paddle Pro ($29/mo — 50 Uploads + 15 Live Clips)</option>
+                    <option value="paddle_premium">Paddle Premium ($79/mo — Unlimited Uploads + Unlimited Live AI)</option>
+                  </select>
+                </div>
+
+                <div class="form-field">
+                  <label for="signup-password">Password</label>
+                  <input id="signup-password" type="password" placeholder="Min. 4 characters" required />
+                </div>
+
+                <button type="submit" class="btn-orange-cta" style="width: 100%; justify-content: center;">
+                  <span>Create Account &amp; Activate Plan</span>
+                  <span>+</span>
+                </button>
+              </form>
+
+              <!-- LOG IN FORM -->
+              <form id="login-form" class="hidden" style="display: none;">
+                <h2 class="auth-form-title">WELCOME BACK</h2>
+                <p class="auth-form-sub">Log in to access your match clips, live court analyzer, and Paddle subscription.</p>
+
+                <div class="form-field">
+                  <label for="login-email">Email Address</label>
+                  <input id="login-email" type="email" placeholder="player@pickleballclub.com" required />
+                </div>
+
+                <div class="form-field">
+                  <label for="login-password">Password</label>
+                  <input id="login-password" type="password" placeholder="Enter your password" required />
+                </div>
+
+                <button type="submit" class="btn-orange-cta" style="width: 100%; justify-content: center;">
+                  <span>Log In to Court AI</span>
+                  <span>→</span>
+                </button>
+              </form>
+
+              <div class="db-conn-pill">
+                <span>🗄️ DB: <strong id="db-engine-label">PostgreSQL + SQLAlchemy</strong></span>
+                <span id="db-users-count">Connected</span>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         PAGE 4: DEDICATED "COMING SOON" PAGE VIEW FOR UPCOMING MENU FEATURES
+         ==================================================================== -->
+    <section id="page-coming-soon" class="page-view hidden">
+      <div class="page-container">
+        <div class="coming-soon-stage">
+          <div class="coming-soon-card">
+            <div class="coming-soon-badge">
+              <span id="soon-badge-text">COMING SOON • TOURNAMENT MODULE</span>
+            </div>
+
+            <h1 id="soon-title-text" class="coming-soon-title">
+              AUTOMATED USAP 0-0-2 SCORING
+            </h1>
+
+            <p id="soon-desc-text" class="coming-soon-desc">
+              Autonomous tournament point-counting state machine tracking Side-Out rotations, Server #1 / Server #2 transitions, and the Two-Bounce rule in real time.
+            </p>
+
+            <div id="soon-spec-grid" class="soon-spec-grid">
+              <!-- Populated dynamically per feature by app.js -->
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+              <button class="btn-orange-cta" data-page="subscriptions">
+                <span>Included in Paddle Pro &amp; Premium</span>
+                <span>+</span>
+              </button>
+              <button class="btn-outline-secondary" data-page="home">
+                <span>← Back to Live Match Demo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="simple-footer">
+      <span><strong>PICKLEBALL VISION AI</strong> — Plans: Paddle (Free) • Paddle Pro • Paddle Premium</span>
+      <span>Active Clips: MicrosoftTeams-video.mp4 &amp; match1.mp4</span>
+    </footer>
+
+    <!-- ====================================================================
+         7. CENTER-COURT VOLLEY & SPIN MENU TRANSITION LOADER (CONTAINED & MATTE)
+         ==================================================================== -->
+    <div id="pickleball-menu-loader" class="pb-transition-overlay" aria-hidden="true">
+      <div class="pb-loader-backdrop"></div>
+      
+      <div class="pb-volley-card">
+        <!-- Contained Court Volley Stage -->
+        <div class="pb-court-stage">
+          <!-- Court Net Marker -->
+          <div class="pb-stage-net">
+            <span class="pb-net-tape"></span>
+            <span class="pb-net-mesh"></span>
+          </div>
+
+          <!-- Paddle Stroke Assembly (Left Side) -->
+          <div class="pb-paddle-actor">
+            <div class="pb-paddle-mini">
+              <div class="pb-mini-blade">
+                <span class="pb-mini-logo">⚡</span>
+              </div>
+              <div class="pb-mini-neck"></div>
+              <div class="pb-mini-handle"></div>
+            </div>
+          </div>
+
+          <!-- Soft Impact Tap Indicator -->
+          <div class="pb-soft-tap-ring"></div>
+
+          <!-- 64px Spinning Pickleball in Horizontal Volley Arc (NO screen throw) -->
+          <div class="pb-volley-ball-track">
+            <div class="pb-volley-ball">
+              <!-- Authentic 26 Perforated Holes -->
+              <div class="pb-ball-holes">
+                <span class="hole h1"></span><span class="hole h2"></span><span class="hole h3"></span>
+                <span class="hole h4"></span><span class="hole h5"></span><span class="hole h6"></span>
+                <span class="hole h7"></span><span class="hole h8"></span><span class="hole h9"></span>
+                <span class="hole h10"></span><span class="hole h11"></span><span class="hole h12"></span>
+                <span class="hole h13"></span><span class="hole h14"></span><span class="hole h15"></span>
+                <span class="hole h16"></span><span class="hole h17"></span><span class="hole h18"></span>
+                <span class="hole h19"></span><span class="hole h20"></span><span class="hole h21"></span>
+                <span class="hole h22"></span><span class="hole h23"></span><span class="hole h24"></span>
+                <span class="hole h25"></span><span class="hole h26"></span>
+              </div>
+              <div class="pb-ball-seam"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tactical Status HUD -->
+        <div class="pb-loader-hud">
+          <div class="pb-hud-pill">
+            <span class="pb-hud-dot"></span>
+            <span id="pb-loader-target-tag">PADDLE AI ENGINE</span>
+          </div>
+          <div id="pb-loader-title" class="pb-hud-title">SWITCHING COURT VIEW</div>
+          <div class="pb-hud-bar-shell">
+            <div class="pb-hud-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

@@ -1,3 +1,3 @@
-from .court_reference import CourtGeometry, run, draw
+from .court_reference import CourtGeometry, draw, run
 
-__all__ = ["CourtGeometry", "run", "draw"]
+__all__ = ["CourtGeometry", "draw", "run"]
