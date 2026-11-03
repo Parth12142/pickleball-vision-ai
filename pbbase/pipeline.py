@@ -89,6 +89,12 @@ class BasePerceptionPipeline:
         frames_with_ball = 0
         player_counts = []
 
+        # Feature timing accumulators (seconds)
+        t_player_total = 0.0
+        t_ball_total = 0.0
+        t_court_total = 0.0
+        t_render_total = 0.0
+
         while cap.isOpened():
             ok, frame = cap.read()
             if not ok or (max_frames and frame_idx >= max_frames):
@@ -97,15 +103,20 @@ class BasePerceptionPipeline:
             timestamp_s = frame_idx / fps
 
             # 1. Calibrate Court on first frame
+            t_c_start = time.time()
             if not self.court_calibrator.result.calibrated:
                 self.court_calibrator.auto_calibrate_broadcast(frame)
+            t_court_total += (time.time() - t_c_start)
 
             # 2. Detect & Track Players
+            t_p_start = time.time()
             raw_players = self.player_detector.detect(frame)
             active_players = self.player_tracker.update(raw_players, (h, w), timestamp_s, self.court_calibrator)
             player_counts.append(len(active_players))
+            t_player_total += (time.time() - t_p_start)
 
             # 3. Detect & Track Ball
+            t_b_start = time.time()
             raw_ball_cands = self.ball_detector.detect(frame)
             ball_result = self.ball_tracker.process_candidates(raw_ball_cands, frame_idx, timestamp_s, self.court_calibrator)
             if ball_result is not None:
@@ -115,6 +126,7 @@ class BasePerceptionPipeline:
                 ball_pts_history.append((bx, by, bspeed))
             else:
                 ball_pts_history.append(None)
+            t_ball_total += (time.time() - t_b_start)
 
             # Telemetry record for this frame
             frame_record = {
@@ -128,8 +140,10 @@ class BasePerceptionPipeline:
 
             # 4. Render diagnostic overlay if preview requested
             if writer:
+                t_r_start = time.time()
                 annotated = self._render_frame(frame, frame_record, ball_pts_history, frame_idx, frames_to_read, fps)
                 writer.write(annotated)
+                t_render_total += (time.time() - t_r_start)
 
             frame_idx += 1
             if frame_idx % 30 == 0:
@@ -156,6 +170,10 @@ class BasePerceptionPipeline:
             "mean_players_per_frame": round(float(np.mean(player_counts)) if player_counts else 0.0, 2),
             "frames_with_ball": frames_with_ball,
             "ball_detection_rate_pct": round((frames_with_ball / max(1, frame_idx)) * 100, 1),
+            "player_ms": round((t_player_total / max(1, frame_idx)) * 1000, 1),
+            "ball_ms": round((t_ball_total / max(1, frame_idx)) * 1000, 1),
+            "court_ms": round((t_court_total / max(1, frame_idx)) * 1000, 2),
+            "render_ms": round((t_render_total / max(1, frame_idx)) * 1000, 1),
             "telemetry_stream": telemetry_stream,
         }
 

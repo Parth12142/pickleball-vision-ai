@@ -1,0 +1,37 @@
+# ==============================================================================
+# 🏓 Pickleball Vision AI — Master Pipeline Configuration
+# ==============================================================================
+
+clip: "clips/match1.mp4"
+
+models:
+  players:
+    weights: "weights/yolo26n.pt"
+    conf: 0.25
+    max_players: 4
+    filter_spectators: true
+
+  ball:
+    weights: "weights/ball_yolo26_best.pt"
+    imgsz: 1312
+    conf: 0.15
+    trail_length: 12
+    max_coast_frames: 3
+
+  court:
+    auto_calibrate: true
+    dimensions:
+      width_ft: 20.0
+      length_ft: 44.0
+      kitchen_depth_ft: 7.0
+
+render:
+  preview: true
+  hud: true
+  ball_ribbon: true
+
+paths:
+  out_dir: "outputs"
+  timing_log: "outputs/timing_log.csv"
+  run_report: "RUN_ACCURACY_REPORT.md"
+  history_json: "reports/run_history.json"
