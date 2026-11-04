@@ -179,6 +179,7 @@ def parse_args():
     parser.add_argument("--player-weights", default=None, help="Weights for player detection (YOLO26)")
     parser.add_argument("--ball-weights", default=None, help="Weights for ball detection (Colab A100 YOLO26)")
     parser.add_argument("--ball-imgsz", type=int, default=None, help="Input resolution for ball model (e.g. 1312)")
+    parser.add_argument("--multiscale", action="store_true", help="Enable multi-scale cropped-patch sliding inference for distant micro-balls")
     parser.add_argument("--max-frames", type=int, default=None, help="Maximum frames to process")
     parser.add_argument("--out-dir", default=None, help="Output directory")
     parser.add_argument("--no-preview", action="store_true", help="Disable generating diagnostic preview video")
@@ -205,6 +206,7 @@ def main():
     player_weights = args.player_weights or cfg_models.get("players", {}).get("weights") or "weights/player_yolo26_best.pt"
     ball_weights = args.ball_weights or cfg_models.get("ball", {}).get("weights") or "weights/ball_yolo26_best.pt"
     ball_imgsz = args.ball_imgsz or cfg_models.get("ball", {}).get("imgsz") or 1312
+    multiscale = args.multiscale or bool(cfg_models.get("ball", {}).get("multiscale", False))
     out_dir = args.out_dir or cfg_paths.get("out_dir") or DEFAULT_OUT_DIR
     timing_csv = cfg_paths.get("timing_log") or DEFAULT_TIMING_CSV
     report_md = cfg_paths.get("run_report") or DEFAULT_REPORT_PATH
@@ -221,6 +223,7 @@ def main():
     print(f"  • Input Video        : {clip_path}")
     print(f"  • Player Weights     : {player_weights}")
     print(f"  • Ball Weights       : {ball_weights} (imgsz={ball_imgsz})")
+    print(f"  • Multi-Scale Mode   : {'Enabled (Adaptive Far-Court ROI Zoom)' if multiscale else 'Disabled (Single Full-Frame Pass)'}")
     print(f"  • Output Telemetry   : {out_json}")
     print(f"  • Output Video       : {out_preview or 'Disabled'}")
     print(f"  • Timing Log (CSV)   : {timing_csv}")
@@ -230,6 +233,7 @@ def main():
         player_weights=player_weights,
         ball_weights=ball_weights,
         ball_imgsz=ball_imgsz,
+        multiscale=multiscale,
     )
 
     summary = pipeline.process_video(

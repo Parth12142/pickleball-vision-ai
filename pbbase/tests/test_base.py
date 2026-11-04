@@ -7,6 +7,7 @@ import numpy as np
 from pbbase.court.homography import CourtGeometry, CourtCalibrator
 from pbbase.tracking.player_tracker import CanonicalPlayerTracker, _box_iou
 from pbbase.tracking.ball_trajectory import BallTrajectoryTracker, get_speed_color
+from pbbase.models.detector import BallDetector, _merge_ball_candidates, _box_iou_px
 
 
 class TestCourtHomography(unittest.TestCase):
@@ -68,6 +69,41 @@ class TestBallTrajectory(unittest.TestCase):
         self.assertEqual(col_smash, (20, 120, 255))
         self.assertNotEqual(col_smash, col_rally)
         self.assertNotEqual(col_rally, col_dink)
+
+
+class TestMultiScaleBallInference(unittest.TestCase):
+    def test_box_iou_calculation(self):
+        b1 = [100.0, 100.0, 120.0, 120.0]
+        b2 = [110.0, 100.0, 130.0, 120.0]
+        iou = _box_iou_px(b1, b2)
+        # Inter: 10 * 20 = 200. Area1: 400, Area2: 400. Union: 400 + 400 - 200 = 600. IoU = 1/3
+        self.assertAlmostEqual(iou, 1.0 / 3.0, places=3)
+
+    def test_candidate_merging_consensus(self):
+        primary = [
+            {"box": [500.0, 200.0, 515.0, 215.0], "conf": 0.60, "center_px": (507.5, 207.5)}
+        ]
+        patch = [
+            {"box": [502.0, 201.0, 516.0, 215.0], "conf": 0.85, "center_px": (509.0, 208.0), "patch_origin": True}
+        ]
+        merged = _merge_ball_candidates(primary, patch, iou_thresh=0.25, dist_thresh_px=24.0)
+        self.assertEqual(len(merged), 1)
+        self.assertTrue(merged[0].get("consensus", False))
+        # Confidence should be boosted from multi-scale consensus
+        self.assertGreater(merged[0]["conf"], 0.85)
+
+    def test_candidate_merging_disjoint(self):
+        primary = [
+            {"box": [100.0, 800.0, 120.0, 820.0], "conf": 0.70, "center_px": (110.0, 810.0)}
+        ]
+        patch = [
+            {"box": [600.0, 200.0, 615.0, 215.0], "conf": 0.80, "center_px": (607.5, 207.5), "patch_origin": True}
+        ]
+        merged = _merge_ball_candidates(primary, patch, iou_thresh=0.25, dist_thresh_px=24.0)
+        # Both distinct candidates should be preserved
+        self.assertEqual(len(merged), 2)
+        self.assertEqual(merged[0]["conf"], 0.80)  # Highest conf first
+        self.assertEqual(merged[1]["conf"], 0.70)
 
 
 if __name__ == "__main__":

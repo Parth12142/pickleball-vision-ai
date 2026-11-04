@@ -38,11 +38,19 @@ class BasePerceptionPipeline:
         player_conf: float = 0.25,
         ball_conf: float = 0.15,
         ball_imgsz: int = 1280,
+        multiscale: bool = False,
+        ball_patch_slices: Optional[List[Tuple[float, float, float, float]]] = None,
     ):
         print(f"[BasePerceptionPipeline] Loading Player Model: {player_weights}")
         self.player_detector = PlayerDetector(player_weights, conf_thresh=player_conf)
-        print(f"[BasePerceptionPipeline] Loading Ball Model  : {ball_weights} (imgsz={ball_imgsz})")
-        self.ball_detector = BallDetector(ball_weights, conf_thresh=ball_conf, imgsz=ball_imgsz)
+        print(f"[BasePerceptionPipeline] Loading Ball Model  : {ball_weights} (imgsz={ball_imgsz}, multiscale={multiscale})")
+        self.ball_detector = BallDetector(
+            ball_weights,
+            conf_thresh=ball_conf,
+            imgsz=ball_imgsz,
+            multiscale=multiscale,
+            patch_slices=ball_patch_slices,
+        )
 
         self.court_calibrator = CourtCalibrator()
         self.player_tracker = CanonicalPlayerTracker(max_players=4)
@@ -167,6 +175,7 @@ class BasePerceptionPipeline:
             "processing_fps": round(frame_idx / max(0.001, elapsed_total), 2),
             "court_calibrated": self.court_calibrator.result.calibrated,
             "court_reprojection_rmse_ft": round(self.court_calibrator.result.reprojection_rmse_ft, 4),
+            "multiscale_inference": self.ball_detector.multiscale,
             "mean_players_per_frame": round(float(np.mean(player_counts)) if player_counts else 0.0, 2),
             "frames_with_ball": frames_with_ball,
             "ball_detection_rate_pct": round((frames_with_ball / max(1, frame_idx)) * 100, 1),

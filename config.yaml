@@ -17,6 +17,9 @@ models:
     conf: 0.15
     trail_length: 12
     max_coast_frames: 3
+    multiscale: false
+    patch_conf: 0.12
+    patch_imgsz: 1280
 
   court:
     auto_calibrate: true
