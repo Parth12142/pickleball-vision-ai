@@ -1,7 +1,7 @@
 # 🏓 Pickleball Vision AI — Run Accuracy & Performance Report
 
-> **Last Updated**: `2026-11-03 18:04:07`  
-> **Total Pipeline Runs Recorded**: `4`  
+> **Last Updated**: `2026-11-04 09:22:25`  
+> **Total Pipeline Runs Recorded**: `5`  
 > **Output Guide & Telemetry Specification**: See [`OUTPUT_EXPLANATION.md`](OUTPUT_EXPLANATION.md) for full visual overlay and JSON schema definitions.
 
 ---
@@ -12,9 +12,9 @@
 | :--- | :--- | :--- | :--- |
 | **Clip Name** | `match1.mp4` | — | — |
 | **Resolution & Video FPS** | `1302x740` @ `30.0 FPS` | — | — |
-| **Frames Processed** | `289` frames | Full Rally | ✅ Analyzed |
-| **Inference Throughput** | **`6.23 FPS`** | > 30 FPS (Real-Time) | ⚡ Real-Time |
-| **Ball Detection Rate** | **`79.6%`** (230 frames) | > 85% Sustained | ⚠️ Tuning Required |
+| **Frames Processed** | `15` frames | Full Rally | ✅ Analyzed |
+| **Inference Throughput** | **`3.73 FPS`** | > 30 FPS (Real-Time) | ⚡ Real-Time |
+| **Ball Detection Rate** | **`100.0%`** (15 frames) | > 85% Sustained | ✅ Target Met |
 | **Active Players Tracked** | **`4.0 / 4.0`** | 4.0 Players (Doubles) | ✅ Locked (4/4) |
 | **Court Calibration (RMSE)** | **`0.0000 ft`** | < 0.05 ft Error | ✅ Sub-Millimeter |
 
@@ -28,6 +28,7 @@
 
 | Run | Timestamp | Clip Name | Res | Frames | Ball Detect % | Players / 4 | Court RMSE (ft) | FPS | Outputs |
 | :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| #5 | `2026-11-04 09:22:25` | **match1.mp4** | 1302x740 | 15 | **100.0%** (15f) | 4.0 / 4.0 | ✅ 0.0000 | 3.7 | [JSON](outputs/match1_base_telemetry.json) | [MP4](outputs/match1_base_preview.mp4) |
 | #4 | `2026-11-03 18:04:07` | **match1.mp4** | 1302x740 | 289 | **79.6%** (230f) | 4.0 / 4.0 | ✅ 0.0000 | 6.2 | [JSON](outputs/match1_base_telemetry.json) | [MP4](outputs/match1_base_preview.mp4) |
 | #3 | `2026-11-03 18:02:28` | **match1.mp4** | 1302x740 | 60 | **91.7%** (55f) | 4.0 / 4.0 | ✅ 0.0000 | 4.8 | [JSON](outputs/match1_base_telemetry.json) | [MP4](outputs/match1_base_preview.mp4) |
 | #2 | `2026-11-03 17:53:12` | **match1.mp4** | 1302x740 | 289 | **79.6%** (230f) | 4.0 / 4.0 | ✅ 0.0000 | 6.3 | [JSON](outputs/match1_base_telemetry.json) | [MP4](outputs/match1_base_preview.mp4) |

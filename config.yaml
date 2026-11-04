@@ -6,7 +6,7 @@ clip: "clips/match1.mp4"
 
 models:
   players:
-    weights: "weights/yolo26n.pt"
+    weights: "weights/player_yolo26_best.pt"  # Auto-falls back to weights/yolo26n.pt if not downloaded
     conf: 0.25
     max_players: 4
     filter_spectators: true

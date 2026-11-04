@@ -66,5 +66,22 @@
     "court_rmse_ft": 0.0,
     "telemetry_json": "outputs/match1_base_telemetry.json",
     "preview_mp4": "outputs/match1_base_preview.mp4"
+  },
+  {
+    "run_id": 5,
+    "timestamp": "2026-11-04 09:22:25",
+    "clip": "match1.mp4",
+    "video_path": "clips/match1.mp4",
+    "resolution": "1302x740",
+    "fps": 30.0,
+    "frames_processed": 15,
+    "processing_fps": 3.73,
+    "ball_detection_rate_pct": 100.0,
+    "frames_with_ball": 15,
+    "mean_players_per_frame": 4.0,
+    "court_calibrated": true,
+    "court_rmse_ft": 0.0,
+    "telemetry_json": "outputs/match1_base_telemetry.json",
+    "preview_mp4": "outputs/match1_base_preview.mp4"
   }
 ]

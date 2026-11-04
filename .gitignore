@@ -12,6 +12,7 @@ yolo26n.pt
 !weights/yolo26n.pt
 !weights/ball_colab_dukcv.pt
 !weights/ball_yolo26_best.pt
+!weights/player_yolo26_best.pt
 
 # Datasets and Archives (Datasets built via scripts)
 datasets/

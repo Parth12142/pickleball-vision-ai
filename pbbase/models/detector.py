@@ -10,10 +10,18 @@ from ultralytics import YOLO
 
 class PlayerDetector:
     """Detects human players on court using pretrained or fine-tuned YOLO26."""
-    def __init__(self, model_path: str = "weights/yolo26n.pt", conf_thresh: float = 0.25):
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Player model weights not found at: {model_path}")
-        self.model = YOLO(model_path)
+    def __init__(self, model_path: Optional[str] = None, conf_thresh: float = 0.25):
+        resolved_path = model_path or "weights/player_yolo26_best.pt"
+        if not os.path.exists(resolved_path):
+            if os.path.exists("weights/player_yolo26_best.pt"):
+                resolved_path = "weights/player_yolo26_best.pt"
+            elif os.path.exists("weights/yolo26n.pt"):
+                resolved_path = "weights/yolo26n.pt"
+            else:
+                raise FileNotFoundError(f"Player model weights not found at: {resolved_path}")
+
+        self.model_path = resolved_path
+        self.model = YOLO(resolved_path)
         self.conf_thresh = conf_thresh
 
     def detect(self, frame: np.ndarray, imgsz: int = 640) -> List[Dict[str, Any]]:

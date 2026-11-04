@@ -202,7 +202,7 @@ def main():
     cfg_paths = cfg.get("paths", {})
 
     clip_path = args.clip or cfg.get("clip") or DEFAULT_CLIP
-    player_weights = args.player_weights or cfg_models.get("players", {}).get("weights") or "weights/yolo26n.pt"
+    player_weights = args.player_weights or cfg_models.get("players", {}).get("weights") or "weights/player_yolo26_best.pt"
     ball_weights = args.ball_weights or cfg_models.get("ball", {}).get("weights") or "weights/ball_yolo26_best.pt"
     ball_imgsz = args.ball_imgsz or cfg_models.get("ball", {}).get("imgsz") or 1312
     out_dir = args.out_dir or cfg_paths.get("out_dir") or DEFAULT_OUT_DIR
