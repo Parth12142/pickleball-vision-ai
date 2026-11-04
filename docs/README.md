@@ -23,6 +23,8 @@ docs/
 ├── README.md                      # Documentation index (this file)
 └── week1/
     └── README.md                  # Week 1 Complete Guide (Zero to Current State)
+
+FUTURE_IDEAS.md                    # Future ideas and feature backlog (e.g. stroke speed attribution)
 ```
 
 ---
