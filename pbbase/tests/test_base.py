@@ -106,5 +106,91 @@ class TestMultiScaleBallInference(unittest.TestCase):
         self.assertEqual(merged[1]["conf"], 0.70)
 
 
+class TestBallTrajectoryKinematics(unittest.TestCase):
+    def setUp(self):
+        self.calibrator = CourtCalibrator()
+        self.calibrator.calibrate([
+            (420.0, 180.0), (860.0, 180.0), (1140.0, 640.0), (140.0, 640.0)
+        ])
+        self.tracker = BallTrajectoryTracker(
+            max_jump_px=80.0,
+            max_coast_frames=3,
+            gravity_px=0.5,
+            drag_coeff=0.01,
+        )
+
+    def test_velocity_gating_rejects_teleport(self):
+        # Frame 0: Initial detection
+        cand0 = [{"box": [500, 300, 512, 312], "conf": 0.8, "center_px": (506.0, 306.0)}]
+        p0 = self.tracker.process_candidates(cand0, 0, 0.0, self.calibrator)
+        self.assertIsNotNone(p0)
+        self.assertFalse(p0["interpolated"])
+
+        # Frame 1: Normal movement
+        cand1 = [{"box": [515, 308, 527, 320], "conf": 0.82, "center_px": (521.0, 314.0)}]
+        p1 = self.tracker.process_candidates(cand1, 1, 0.033, self.calibrator)
+        self.assertIsNotNone(p1)
+        self.assertFalse(p1["interpolated"])
+
+        # Frame 2: Teleport noise candidate 300px away (should be gated out and coasted)
+        teleport_cand = [{"box": [850, 700, 862, 712], "conf": 0.9, "center_px": (856.0, 706.0)}]
+        p2 = self.tracker.process_candidates(teleport_cand, 2, 0.066, self.calibrator)
+        self.assertIsNotNone(p2)
+        self.assertTrue(p2["interpolated"])  # Coasted using velocity instead of jumping
+        self.assertLess(abs(p2["pixel"][0] - 536.0), 5.0)
+
+    def test_ballistic_occlusion_coasting(self):
+        # Frame 0 & 1: Establish steady trajectory
+        self.tracker.process_candidates([{"box": [100, 200, 110, 210], "conf": 0.8, "center_px": (105.0, 205.0)}], 0, 0.0, self.calibrator)
+        self.tracker.process_candidates([{"box": [115, 210, 125, 220], "conf": 0.8, "center_px": (120.0, 215.0)}], 1, 0.033, self.calibrator)
+
+        # Frame 2: Occlusion (no candidates) -> Coast 1
+        p2 = self.tracker.process_candidates([], 2, 0.066, self.calibrator)
+        self.assertIsNotNone(p2)
+        self.assertTrue(p2["interpolated"])
+        self.assertEqual(p2["coast_frame"], 1)
+
+        # Frame 3: Occlusion -> Coast 2
+        p3 = self.tracker.process_candidates([], 3, 0.099, self.calibrator)
+        self.assertIsNotNone(p3)
+        self.assertTrue(p3["interpolated"])
+        self.assertEqual(p3["coast_frame"], 2)
+
+        # Frame 4: Occlusion -> Coast 3
+        p4 = self.tracker.process_candidates([], 4, 0.132, self.calibrator)
+        self.assertIsNotNone(p4)
+        self.assertTrue(p4["interpolated"])
+        self.assertEqual(p4["coast_frame"], 3)
+
+        # Frame 5: Exceeded max_coast_frames (3) -> Clean track termination
+        p5 = self.tracker.process_candidates([], 5, 0.165, self.calibrator)
+        self.assertIsNone(p5)
+
+    def test_retroactive_parabolic_gap_filling(self):
+        # Frames 0 & 1: Steady flight
+        self.tracker.process_candidates([{"box": [100, 200, 110, 210], "conf": 0.8, "center_px": (105.0, 205.0)}], 0, 0.0, self.calibrator)
+        self.tracker.process_candidates([{"box": [120, 210, 130, 220], "conf": 0.8, "center_px": (125.0, 215.0)}], 1, 0.033, self.calibrator)
+
+        # Frames 2 & 3: Occluded behind net
+        self.tracker.process_candidates([], 2, 0.066, self.calibrator)
+        self.tracker.process_candidates([], 3, 0.099, self.calibrator)
+
+        # Frame 4: Re-acquired!
+        cand4 = [{"box": [178, 232, 188, 242], "conf": 0.85, "center_px": (183.0, 237.0)}]
+        p4 = self.tracker.process_candidates(cand4, 4, 0.132, self.calibrator)
+        self.assertIsNotNone(p4)
+        self.assertFalse(p4["interpolated"])
+
+        # Check retroactive parabolic smoothing on intermediate frames
+        gap_frame_2 = self.tracker.raw_history[2]
+        gap_frame_3 = self.tracker.raw_history[3]
+        self.assertTrue(gap_frame_2.get("retro_parabolic_refined", False))
+        self.assertTrue(gap_frame_3.get("retro_parabolic_refined", False))
+        # Ensure smooth monotonic progression along X
+        self.assertGreater(gap_frame_2["pixel"][0], 125.0)
+        self.assertGreater(gap_frame_3["pixel"][0], gap_frame_2["pixel"][0])
+        self.assertLess(gap_frame_3["pixel"][0], 183.0)
+
+
 if __name__ == "__main__":
     unittest.main()

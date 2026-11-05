@@ -206,6 +206,7 @@ def main():
     player_weights = args.player_weights or cfg_models.get("players", {}).get("weights") or "weights/player_yolo26_best.pt"
     ball_weights = args.ball_weights or cfg_models.get("ball", {}).get("weights") or "weights/ball_yolo26_best.pt"
     ball_imgsz = args.ball_imgsz or cfg_models.get("ball", {}).get("imgsz") or 1312
+    ball_max_coast = cfg_models.get("ball", {}).get("max_coast_frames", 3)
     multiscale = args.multiscale or bool(cfg_models.get("ball", {}).get("multiscale", False))
     out_dir = args.out_dir or cfg_paths.get("out_dir") or DEFAULT_OUT_DIR
     timing_csv = cfg_paths.get("timing_log") or DEFAULT_TIMING_CSV
@@ -224,6 +225,7 @@ def main():
     print(f"  • Player Weights     : {player_weights}")
     print(f"  • Ball Weights       : {ball_weights} (imgsz={ball_imgsz})")
     print(f"  • Multi-Scale Mode   : {'Enabled (Adaptive Far-Court ROI Zoom)' if multiscale else 'Disabled (Single Full-Frame Pass)'}")
+    print(f"  • Occlusion Coasting : {ball_max_coast} frames ballistic interpolation")
     print(f"  • Output Telemetry   : {out_json}")
     print(f"  • Output Video       : {out_preview or 'Disabled'}")
     print(f"  • Timing Log (CSV)   : {timing_csv}")
@@ -234,6 +236,7 @@ def main():
         ball_weights=ball_weights,
         ball_imgsz=ball_imgsz,
         multiscale=multiscale,
+        ball_max_coast=ball_max_coast,
     )
 
     summary = pipeline.process_video(

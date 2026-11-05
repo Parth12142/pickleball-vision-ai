@@ -40,6 +40,8 @@ class BasePerceptionPipeline:
         ball_imgsz: int = 1280,
         multiscale: bool = False,
         ball_patch_slices: Optional[List[Tuple[float, float, float, float]]] = None,
+        ball_max_coast: int = 3,
+        ball_max_jump_px: float = 85.0,
     ):
         print(f"[BasePerceptionPipeline] Loading Player Model: {player_weights}")
         self.player_detector = PlayerDetector(player_weights, conf_thresh=player_conf)
@@ -54,7 +56,10 @@ class BasePerceptionPipeline:
 
         self.court_calibrator = CourtCalibrator()
         self.player_tracker = CanonicalPlayerTracker(max_players=4)
-        self.ball_tracker = BallTrajectoryTracker(max_jump_px=80.0)
+        self.ball_tracker = BallTrajectoryTracker(
+            max_jump_px=ball_max_jump_px,
+            max_coast_frames=ball_max_coast,
+        )
 
     def process_video(
         self,
@@ -270,8 +275,14 @@ class BasePerceptionPipeline:
             bx, by = int(ball["pixel"][0]), int(ball["pixel"][1])
             spd_px = ball.get("speed_px_per_frame", 0.0)
             ret_col = get_speed_color(spd_px)
-            cv2.circle(vis, (bx, by), 8, ret_col, 2, cv2.LINE_AA)
-            cv2.circle(vis, (bx, by), 2, (255, 255, 255), -1, cv2.LINE_AA)
+            is_interpolated = ball.get("interpolated", False)
+            if is_interpolated:
+                cv2.circle(vis, (bx, by), 8, (120, 200, 255), 1, cv2.LINE_AA)
+                cv2.circle(vis, (bx, by), 2, (120, 200, 255), -1, cv2.LINE_AA)
+                cv2.putText(vis, "COAST", (bx + 10, by + 12), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (120, 200, 255), 1, cv2.LINE_AA)
+            else:
+                cv2.circle(vis, (bx, by), 8, ret_col, 2, cv2.LINE_AA)
+                cv2.circle(vis, (bx, by), 2, (255, 255, 255), -1, cv2.LINE_AA)
 
             if ball.get("speed_mph", 0.0) > 1.0:
                 cv2.putText(vis, f"{ball['speed_mph']:.1f} MPH", (bx + 12, by - 4),
@@ -281,7 +292,8 @@ class BasePerceptionPipeline:
         cv2.rectangle(vis, (16, 16), (380, 80), (15, 23, 42), -1)
         cv2.rectangle(vis, (16, 16), (380, 80), (0, 255, 220), 1)
         cv2.putText(vis, "PICKLEBALL BASE VISION MODEL", (26, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 220), 1, cv2.LINE_AA)
-        status_line = f"F: {frame_idx + 1}/{total_frames} | Players: {len(record['players'])}/4 | Ball: {'LOCKED' if ball else 'SEARCH'}"
+        ball_status = "COAST" if (ball and ball.get("interpolated")) else ("LOCKED" if ball else "SEARCH")
+        status_line = f"F: {frame_idx + 1}/{total_frames} | Players: {len(record['players'])}/4 | Ball: {ball_status}"
         cv2.putText(vis, status_line, (26, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (250, 250, 250), 1, cv2.LINE_AA)
         sec = frame_idx / fps
         cv2.putText(vis, f"Time: {int(sec//60):02d}:{int(sec%60):02d}.{int((sec%1)*100):02d} | Zero Rules (Pure Perception)",
