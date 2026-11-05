@@ -8,6 +8,7 @@ from pbbase.court.homography import CourtGeometry, CourtCalibrator
 from pbbase.tracking.player_tracker import CanonicalPlayerTracker, _box_iou
 from pbbase.tracking.ball_trajectory import BallTrajectoryTracker, get_speed_color
 from pbbase.models.detector import BallDetector, _merge_ball_candidates, _box_iou_px
+from pbbase.data.schema import SCHEMA_VERSION, validate_telemetry_schema
 
 
 class TestCourtHomography(unittest.TestCase):
@@ -264,6 +265,82 @@ class TestBallTrajectoryKinematics(unittest.TestCase):
         self.assertGreater(gap_frame_2["pixel"][0], 125.0)
         self.assertGreater(gap_frame_3["pixel"][0], gap_frame_2["pixel"][0])
         self.assertLess(gap_frame_3["pixel"][0], 183.0)
+
+
+class TestPerceptionSchema(unittest.TestCase):
+    def setUp(self):
+        self.valid_telemetry = {
+            "schema_version": SCHEMA_VERSION,
+            "producer": "Pickleball Base Perception Engine",
+            "timestamp": "2026-11-05 10:00:00",
+            "video_path": "clips/match1.mp4",
+            "total_frames_processed": 1,
+            "fps": 30.0,
+            "resolution": "1920x1080",
+            "elapsed_s": 0.2,
+            "processing_fps": 5.0,
+            "court": {
+                "calibrated": True,
+                "reprojection_rmse_ft": 0.0001,
+                "dimensions_ft": {"width": 20.0, "length": 44.0, "net_y": 22.0, "nvz_depth": 7.0},
+                "corners_px": [[420.0, 180.0], [860.0, 180.0], [1140.0, 640.0], [140.0, 640.0]],
+            },
+            "benchmark_summary": {
+                "ball_detection_rate_pct": 100.0,
+                "frames_with_ball": 1,
+                "mean_players_per_frame": 4.0,
+                "multiscale_inference": True,
+                "stage_latencies_ms": {"player_ms": 35.0, "ball_ms": 150.0, "court_ms": 0.0, "render_ms": 7.0},
+            },
+            "telemetry_stream": [
+                {
+                    "frame_idx": 0,
+                    "timestamp_s": 0.0,
+                    "court_calibrated": True,
+                    "players": [
+                        {
+                            "id": 1,
+                            "slot": "P1",
+                            "box": [200.0, 400.0, 260.0, 600.0],
+                            "foot_px": [230.0, 600.0],
+                            "court_ft": [4.5, 38.0],
+                            "speed_mph": 2.1,
+                            "side": "near",
+                            "is_coasting": False,
+                        }
+                    ],
+                    "ball": {
+                        "pixel": [500.0, 300.0],
+                        "box": [495.0, 295.0, 505.0, 305.0],
+                        "conf": 0.85,
+                        "speed_mph": 24.5,
+                        "speed_px_per_frame": 12.0,
+                        "court_ft": [10.0, 22.0],
+                        "interpolated": False,
+                    },
+                }
+            ],
+        }
+
+    def test_valid_schema_passes(self):
+        valid, errors = validate_telemetry_schema(self.valid_telemetry)
+        self.assertTrue(valid, f"Validation failed with errors: {errors}")
+        self.assertEqual(len(errors), 0)
+
+    def test_missing_top_level_key_fails(self):
+        invalid_data = dict(self.valid_telemetry)
+        del invalid_data["court"]
+        valid, errors = validate_telemetry_schema(invalid_data)
+        self.assertFalse(valid)
+        self.assertTrue(any("Missing top-level key: 'court'" in e for e in errors))
+
+    def test_missing_player_key_fails(self):
+        import copy
+        invalid_data = copy.deepcopy(self.valid_telemetry)
+        del invalid_data["telemetry_stream"][0]["players"][0]["slot"]
+        valid, errors = validate_telemetry_schema(invalid_data)
+        self.assertFalse(valid)
+        self.assertTrue(any("missing key 'slot'" in e for e in errors))
 
 
 if __name__ == "__main__":

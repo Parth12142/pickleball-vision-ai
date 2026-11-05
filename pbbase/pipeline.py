@@ -20,6 +20,7 @@ from pbbase.court.homography import CourtCalibrator
 from pbbase.models.detector import PlayerDetector, BallDetector
 from pbbase.tracking.player_tracker import CanonicalPlayerTracker
 from pbbase.tracking.ball_trajectory import BallTrajectoryTracker, get_speed_color
+from pbbase.data.schema import SCHEMA_VERSION, SCHEMA_PRODUCER
 
 
 PLAYER_THEMES = [
@@ -171,23 +172,55 @@ class BasePerceptionPipeline:
             self._encode_h264(raw_preview_tmp, out_preview)
             print(f"[BasePerceptionPipeline] Saved H.264 preview to: {out_preview}")
 
+        corners_list = [[round(x, 1), round(y, 1)] for x, y in self.court_calibrator.result.corners_px]
+        court_schema = {
+            "calibrated": self.court_calibrator.result.calibrated,
+            "reprojection_rmse_ft": round(self.court_calibrator.result.reprojection_rmse_ft, 4),
+            "dimensions_ft": {
+                "width": 20.0,
+                "length": 44.0,
+                "net_y": 22.0,
+                "nvz_depth": 7.0,
+            },
+            "corners_px": corners_list,
+        }
+
+        bench_schema = {
+            "ball_detection_rate_pct": round((frames_with_ball / max(1, frame_idx)) * 100, 1),
+            "frames_with_ball": frames_with_ball,
+            "mean_players_per_frame": round(float(np.mean(player_counts)) if player_counts else 0.0, 2),
+            "multiscale_inference": self.ball_detector.multiscale,
+            "stage_latencies_ms": {
+                "player_ms": round((t_player_total / max(1, frame_idx)) * 1000, 1),
+                "ball_ms": round((t_ball_total / max(1, frame_idx)) * 1000, 1),
+                "court_ms": round((t_court_total / max(1, frame_idx)) * 1000, 2),
+                "render_ms": round((t_render_total / max(1, frame_idx)) * 1000, 1),
+            },
+        }
+
         summary = {
+            "schema_version": SCHEMA_VERSION,
+            "producer": SCHEMA_PRODUCER,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "video_path": video_path,
             "total_frames_processed": frame_idx,
             "fps": round(fps, 2),
             "resolution": f"{w}x{h}",
             "elapsed_s": round(elapsed_total, 2),
             "processing_fps": round(frame_idx / max(0.001, elapsed_total), 2),
+            "court": court_schema,
+            "benchmark_summary": bench_schema,
+            # Top-level backward compatibility keys for reports & CLI runners
             "court_calibrated": self.court_calibrator.result.calibrated,
             "court_reprojection_rmse_ft": round(self.court_calibrator.result.reprojection_rmse_ft, 4),
             "multiscale_inference": self.ball_detector.multiscale,
-            "mean_players_per_frame": round(float(np.mean(player_counts)) if player_counts else 0.0, 2),
+            "mean_players_per_frame": bench_schema["mean_players_per_frame"],
             "frames_with_ball": frames_with_ball,
-            "ball_detection_rate_pct": round((frames_with_ball / max(1, frame_idx)) * 100, 1),
-            "player_ms": round((t_player_total / max(1, frame_idx)) * 1000, 1),
-            "ball_ms": round((t_ball_total / max(1, frame_idx)) * 1000, 1),
-            "court_ms": round((t_court_total / max(1, frame_idx)) * 1000, 2),
-            "render_ms": round((t_render_total / max(1, frame_idx)) * 1000, 1),
+            "ball_detection_rate_pct": bench_schema["ball_detection_rate_pct"],
+            "player_ms": bench_schema["stage_latencies_ms"]["player_ms"],
+            "ball_ms": bench_schema["stage_latencies_ms"]["ball_ms"],
+            "court_ms": bench_schema["stage_latencies_ms"]["court_ms"],
+            "render_ms": bench_schema["stage_latencies_ms"]["render_ms"],
             "telemetry_stream": telemetry_stream,
         }
 

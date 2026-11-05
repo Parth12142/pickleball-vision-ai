@@ -48,22 +48,48 @@ When you run `run_base.py`, it produces an annotated MP4 video with real-time pe
 
 ## 2. Structured JSON Telemetry (`outputs/<clip>_base_telemetry.json`)
 
-The telemetry file contains a master summary at the top, followed by a frame-by-frame stream (`telemetry_stream`).
+The telemetry output strictly adheres to **Unified Perception Schema v1.0.0** ([`pbbase/data/schema.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/data/schema.py)). It exposes master court geometry, benchmark metrics, and a synchronized frame-by-frame stream (`telemetry_stream`).
 
-### Example JSON Record
+### Example Telemetry v1.0.0 Record
 ```json
 {
+  "schema_version": "1.0.0",
+  "producer": "Pickleball Base Perception Engine (Zero-Rule Core)",
+  "timestamp": "2026-11-05 10:44:50",
   "video_path": "clips/match1.mp4",
-  "total_frames_processed": 300,
-  "fps": 29.97,
-  "resolution": "1920x1080",
-  "elapsed_s": 4.12,
-  "processing_fps": 72.8,
-  "court_calibrated": true,
-  "court_reprojection_rmse_ft": 0.0001,
-  "mean_players_per_frame": 4.0,
-  "frames_with_ball": 278,
-  "ball_detection_rate_pct": 92.7,
+  "total_frames_processed": 90,
+  "fps": 30.0,
+  "resolution": "1302x740",
+  "elapsed_s": 19.59,
+  "processing_fps": 4.59,
+  "court": {
+    "calibrated": true,
+    "reprojection_rmse_ft": 0.0,
+    "dimensions_ft": {
+      "width": 20.0,
+      "length": 44.0,
+      "net_y": 22.0,
+      "nvz_depth": 7.0
+    },
+    "corners_px": [
+      [362.0, 168.0],
+      [738.0, 168.0],
+      [1126.0, 638.0],
+      [14.0, 638.0]
+    ]
+  },
+  "benchmark_summary": {
+    "ball_detection_rate_pct": 100.0,
+    "frames_with_ball": 90,
+    "mean_players_per_frame": 4.0,
+    "multiscale_inference": true,
+    "stage_latencies_ms": {
+      "player_ms": 37.6,
+      "ball_ms": 169.9,
+      "court_ms": 0.0,
+      "render_ms": 7.8
+    }
+  },
   "telemetry_stream": [
     {
       "frame_idx": 42,
@@ -71,26 +97,34 @@ The telemetry file contains a master summary at the top, followed by a frame-by-
       "court_calibrated": true,
       "players": [
         {
-          "id": "P1",
-          "bbox": [320.5, 410.2, 450.1, 780.0],
-          "confidence": 0.91,
-          "foot_px": [385.3, 780.0],
-          "court_ft": [5.21, 12.14]
+          "id": 1,
+          "slot": "P1",
+          "box": [768.4, 340.0, 889.5, 604.3],
+          "foot_px": [829.0, 604.3],
+          "court_ft": [14.22, 44.12],
+          "speed_mph": 3.4,
+          "is_coasting": false,
+          "side": "near"
         },
         {
-          "id": "P2",
-          "bbox": [710.0, 420.1, 840.4, 790.2],
-          "confidence": 0.89,
-          "foot_px": [775.2, 790.2],
-          "court_ft": [14.82, 11.91]
+          "id": 2,
+          "slot": "P2",
+          "box": [374.2, 341.2, 438.5, 549.7],
+          "foot_px": [406.4, 549.7],
+          "court_ft": [4.26, 41.17],
+          "speed_mph": 2.8,
+          "is_coasting": false,
+          "side": "near"
         }
       ],
       "ball": {
         "pixel": [582.4, 310.1],
-        "confidence": 0.86,
+        "box": [576.4, 304.1, 588.4, 316.1],
+        "conf": 0.86,
         "speed_px_per_frame": 18.4,
         "speed_mph": 28.4,
-        "court_ft": [9.85, 21.42]
+        "court_ft": [9.85, 21.42],
+        "interpolated": false
       }
     }
   ]
@@ -99,25 +133,42 @@ The telemetry file contains a master summary at the top, followed by a frame-by-
 
 ### Telemetry Field Definitions
 
-#### Top-Level Summary
-- `video_path`: Input video file processed.
-- `total_frames_processed`: Total frame count analyzed.
-- `resolution` & `fps`: Video dimensions and capture frame rate.
-- `processing_fps`: Real inference throughput achieved on your hardware.
-- `court_calibrated`: `true` if camera planar homography succeeded.
-- `court_reprojection_rmse_ft`: Calibration error in feet (lower is better, typically $< 0.01\text{ ft}$).
-- `mean_players_per_frame`: Average players tracked per frame (target is $4.0$ for doubles).
-- `ball_detection_rate_pct`: Percentage of video frames where the ball was detected or tracked.
+#### Top-Level Metadata & Court Geometry
+- `schema_version`: Semantic schema version string (`"1.0.0"`).
+- `producer`: Pipeline identification string.
+- `court`: Full geometric court specifications:
+  - `calibrated`: Boolean indicating active camera calibration.
+  - `reprojection_rmse_ft`: Calibration reprojection error in feet.
+  - `dimensions_ft`: Official USAP specifications (width: $20'$, length: $44'$, net: $22'$, NVZ: $7'$).
+  - `corners_px`: The 4 physical baseline court corners in image coordinates.
+- `benchmark_summary`: Aggregate perception metrics across the rally:
+  - `ball_detection_rate_pct`: Percentage of frames with confirmed ball track.
+  - `mean_players_per_frame`: Average active players tracked (target: 4.0).
+  - `stage_latencies_ms`: Microsecond/millisecond breakdown for Player, Ball, Court, and Rendering.
 
 #### Per-Frame Stream (`telemetry_stream[i]`)
-- `frame_idx`: Integer 0-based frame index.
+- `frame_idx`: Zero-based integer frame counter.
 - `timestamp_s`: Exact video elapsed time in seconds.
-- `players`: Array of active players detected on court:
-  - `id`: Canonical slot (`"P1"`, `"P2"`, `"P3"`, or `"P4"`).
-  - `bbox`: `[x1, y1, x2, y2]` in video pixel coordinates.
-  - `confidence`: Detection score ($0.0\text{--}1.0$).
+- `court_calibrated`: Boolean verification for frame $i$.
+- `players`: Array of active players detected within the athletic envelope:
+  - `id`: Integer canonical slot ($1, 2, 3, 4$).
+  - `slot`: Canonical label (`"P1"`, `"P2"` for near court; `"P3"`, `"P4"` for far court).
+  - `box`: `[x1, y1, x2, y2]` in video pixel coordinates.
   - `foot_px`: `[x, y]` pixel location of the player's ground contact.
-  - `court_ft`: `[X, Y]` in feet mapped to official court dimensions:
+  - `court_ft`: `[X, Y]` coordinates in feet mapped to official court dimensions:
+    - $X \in [0.0, 20.0]$: Left to right court width.
+    - $Y \in [0.0, 44.0]$: Far baseline ($Y=0$) to near baseline ($Y=44$). Kitchen net line is at $Y=22.0$.
+  - `speed_mph`: Instantaneous physical foot ground speed in MPH.
+  - `is_coasting`: Boolean flag indicating brief occlusion coasting.
+  - `side`: Court partition (`"near"` or `"far"`).
+- `ball`: Object containing localized pickleball metrics (or `null` if lost):
+  - `pixel`: `[x, y]` centroid in video coordinates.
+  - `box`: `[x1, y1, x2, y2]` bounding coordinates.
+  - `conf`: Confidence score ($0.0\text{--}1.0$).
+  - `speed_px_per_frame`: Euclidean pixel velocity.
+  - `speed_mph`: Metric 2D velocity calculated via planar homography.
+  - `court_ft`: `[X, Y]` ground projection in feet.
+  - `interpolated`: Boolean flag indicating ballistic occlusion coasting.
     - Width ($X$): $0.0\text{ ft}$ (left sideline) to $20.0\text{ ft}$ (right sideline).
     - Length ($Y$): $0.0\text{ ft}$ (near baseline) to $44.0\text{ ft}$ (far baseline).
     - Net location: $Y = 22.0\text{ ft}$.

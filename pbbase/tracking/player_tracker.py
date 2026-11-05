@@ -320,6 +320,7 @@ class CanonicalPlayerTracker:
 
                 active_telemetry.append({
                     "id": sid,
+                    "slot": f"P{sid}",
                     "box": box,
                     "foot_px": (round(fx, 1), round(fy, 1)),
                     "court_ft": (round(court_ft[0], 2), round(court_ft[1], 2)) if court_ft else None,

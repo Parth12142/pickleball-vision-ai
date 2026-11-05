@@ -1,7 +1,7 @@
 # 🏓 Week 2 Technical Guide: Base Model Fine-Tuning & Tracking Stabilization
 
 > **Phase 1: Pure Base Perception (Zero Rules)**  
-> **Status**: ⏳ **In Progress (Tasks W2-01 to W2-04 Delivered)**  
+> **Status**: ⏳ **In Progress (Tasks W2-01 to W2-05 Delivered)**  
 > **Working Window**: Days 6–10 (17 Nov 2026 – 23 Nov 2026)  
 > **Target Milestone**: Sustained $>92\%$ ball detection rate and zero player ID swaps across full rallies.
 
@@ -15,8 +15,8 @@
 | **`W2-02`** | **Detection**| Multi-scale ball inference | [`pbbase/models/detector.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/models/detector.py) | ✅ **Done** | Adaptive far-court ROI zoom & patch candidate fusion |
 | **`W2-03`** | **Tracking** | Ball trajectory: velocity gating, parabolic gap filling | [`pbbase/tracking/ball_trajectory.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tracking/ball_trajectory.py) | ✅ **Done** | Ballistic occlusion coasting & retroactive parabolic fitting |
 | **`W2-04`** | **Tracking** | Hungarian bipartite player tracker with spectator rejection | [`pbbase/tracking/player_tracker.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tracking/player_tracker.py) | ✅ **Done** | Court perimeter envelope, zero partner ID swaps |
-| **`W2-05`** | **Pipeline** | Define unified perception JSON schema (players, ball, court) | [`pbbase/pipeline.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/pipeline.py) | ⏳ Next | Standardized frame-by-frame telemetry schema |
-| **`W2-06`** | **QA** | Validate on full rallies: ball detection rate and ID switches | Validation Results | 📅 Planned | Target: $>92\%$ ball detection, 0 ID switches |
+| **`W2-05`** | **Pipeline** | Define unified perception JSON schema (players, ball, court) | [`pbbase/pipeline.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/pipeline.py), [`pbbase/data/schema.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/data/schema.py) | ✅ **Done** | Standardized Unified Perception Schema v1.0.0 |
+| **`W2-06`** | **QA** | Validate on full rallies: ball detection rate and ID switches | Validation Results | ⏳ Next | Target: $>92\%$ ball detection, 0 ID switches |
 | **`W2-07`** | **QA** | Re-run master evaluator and update accuracy report | [`reports/BASE_MODEL_ACCURACY_REPORT.md`](file:///home/pce118/Desktop/pickleball-vision-ai-main/reports/BASE_MODEL_ACCURACY_REPORT.md) | 📅 Planned | Milestone: Fully stabilized base perception engine |
 
 ---
@@ -155,3 +155,48 @@ In doubles pickleball broadcasts, court-side spectators, bench sitters, and refe
 4. **Deterministic Canonical Slotting**:
    - Enforces $P_1, P_2$ (Near Court) and $P_3, P_4$ (Far Court).
    - Sustains **4.0 / 4.0** continuous player locking with **37.4ms** per-frame latency.
+
+---
+
+## 📜 Task W2-05: Standardized Unified Perception JSON Schema v1.0.0
+
+To establish a strict, production-grade interface between base perception and downstream engines (2D Court Minimap in Week 3, Autonomous USAP Rules in Week 4, and Broadcast Biomechanics in Week 5), **Task W2-05** defines the **Unified Perception JSON Schema v1.0.0**.
+
+### 1. Schema Modules & Artifacts
+- **Contract Specification**: [`pbbase/data/schema.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/data/schema.py)
+- **Comprehensive Guide**: [`OUTPUT_EXPLANATION.md`](file:///home/pce118/Desktop/pickleball-vision-ai-main/OUTPUT_EXPLANATION.md)
+- **Validation Engine**: `validate_telemetry_schema(data)` enforces key completeness, data types, physical coordinate ranges, and player/ball structure.
+
+### 2. Standardized Hierarchy
+```
+outputs/<clip>_base_telemetry.json
+  ├── schema_version: "1.0.0"
+  ├── producer: "Pickleball Base Perception Engine (Zero-Rule Core)"
+  ├── timestamp: ISO 8601 string
+  ├── video_path, resolution, fps, elapsed_s, processing_fps
+  ├── court:
+  │     ├── calibrated: true
+  │     ├── reprojection_rmse_ft: 0.0000
+  │     ├── dimensions_ft: {width: 20.0, length: 44.0, net_y: 22.0, nvz_depth: 7.0}
+  │     └── corners_px: [[x0, y0], [x1, y1], [x2, y2], [x3, y3]]
+  ├── benchmark_summary:
+  │     ├── ball_detection_rate_pct: 100.0
+  │     ├── mean_players_per_frame: 4.0
+  │     ├── multiscale_inference: true
+  │     └── stage_latencies_ms: {player_ms, ball_ms, court_ms, render_ms}
+  └── telemetry_stream: [
+        {
+          frame_idx: int,
+          timestamp_s: float,
+          court_calibrated: bool,
+          players: [
+            { id: 1, slot: "P1", box, foot_px, court_ft, speed_mph, is_coasting, side }
+          ],
+          ball: { pixel, box, conf, speed_mph, speed_px_per_frame, court_ft, interpolated }
+        }
+      ]
+```
+
+### 3. Verification & Compliance
+- **Automated Validation**: Verified on full live match telemetry (`outputs/match1_base_telemetry.json`) with **0 errors**.
+- **Unit Tests**: Added `TestPerceptionSchema` verifying valid schemas, missing top-level keys, and missing player slot keys (**16 / 16 unit tests passing**).
