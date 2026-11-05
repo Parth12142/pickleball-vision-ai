@@ -124,7 +124,7 @@ class BasePerceptionPipeline:
             # 2. Detect & Track Players
             t_p_start = time.time()
             raw_players = self.player_detector.detect(frame)
-            active_players = self.player_tracker.update(raw_players, (h, w), timestamp_s, self.court_calibrator)
+            active_players = self.player_tracker.update(raw_players, (h, w), timestamp_s, self.court_calibrator, frame=frame)
             player_counts.append(len(active_players))
             t_player_total += (time.time() - t_p_start)
 

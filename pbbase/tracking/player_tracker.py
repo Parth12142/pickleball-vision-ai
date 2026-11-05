@@ -28,12 +28,50 @@ def _center(box: List[float]) -> Tuple[float, float]:
     return float((box[0] + box[2]) / 2.0), float((box[1] + box[3]) / 2.0)
 
 
+def _extract_appearance_feature(frame: Optional[np.ndarray], box: List[float]) -> Optional[np.ndarray]:
+    """
+    Extracts a 16-bin normalized Hue histogram from the torso region (15% to 55% of box height).
+    Captures jersey/shirt color signature to prevent partner identity swaps during kitchen cross-overs.
+    """
+    if frame is None or frame.size == 0:
+        return None
+    h, w = frame.shape[:2]
+    x1, y1, x2, y2 = [int(round(v)) for v in box]
+    x1 = max(0, min(w - 1, x1))
+    x2 = max(x1 + 4, min(w, x2))
+    bh = max(10, y2 - y1)
+
+    ty1 = max(0, min(h - 1, y1 + int(0.15 * bh)))
+    ty2 = max(ty1 + 4, min(h, y1 + int(0.55 * bh)))
+
+    torso = frame[ty1:ty2, x1:x2]
+    if torso.size == 0 or torso.shape[0] < 4 or torso.shape[1] < 4:
+        return None
+
+    hsv = cv2.cvtColor(torso, cv2.COLOR_BGR2HSV)
+    hist = cv2.calcHist([hsv], [0], None, [16], [0, 180])
+    hist = cv2.normalize(hist, hist, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+    return hist.flatten()
+
+
+def _compare_appearance(hist1: Optional[np.ndarray], hist2: Optional[np.ndarray]) -> float:
+    """Computes Bhattacharyya distance between two appearance histograms in [0.0, 1.0]."""
+    if hist1 is None or hist2 is None:
+        return 0.5
+    dist = cv2.compareHist(
+        hist1.astype(np.float32), hist2.astype(np.float32), cv2.HISTCMP_BHATTACHARYYA
+    )
+    return float(np.clip(dist, 0.0, 1.0))
+
+
 class CanonicalPlayerTracker:
     """
     Robust Multi-Object Player Tracker with:
-    - Canonical 4-Player Slots (P1, P2 near court; P3, P4 far court)
-    - Hungarian optimal bipartite assignment
-    - Candidate NMS deduplication (prevents torso vs full-body duplicates)
+    - Canonical 4-Player Doubles Slots (P1, P2 near court; P3, P4 far court)
+    - Metric Court Envelope Spectator Rejection (rejects bench warmers and spectators)
+    - Net Partition Barrier (infinite cost across the 22ft net line)
+    - Multi-Objective Hungarian matching (motion prediction + IoU + Torso HSV appearance)
+    - Zero Partner ID Swaps during cross-overs and kitchen stacking
     - Motion-prediction coasting across brief player swings/occlusions
     - Ground foot projection via CourtCalibrator
     """
@@ -65,11 +103,13 @@ class CanonicalPlayerTracker:
         frame_shape: Tuple[int, int],
         timestamp_s: float,
         court_calibrator: CourtCalibrator,
+        frame: Optional[np.ndarray] = None,
     ) -> List[Dict[str, Any]]:
         h, w = frame_shape[:2]
 
-        # 1. Filter out spectators and bench sitters outside court envelope
+        # 1. Filter out spectators and bench sitters outside court athletic perimeter
         valid_cands = []
+        court_calibrated = court_calibrator.result.calibrated
         court_corners = court_calibrator.result.corners_px
         court_poly = np.array(court_corners, dtype=np.int32) if len(court_corners) == 4 else None
 
@@ -83,18 +123,37 @@ class CanonicalPlayerTracker:
             if bh < 0.05 * h or bw < 0.015 * w:
                 continue
 
-            # Court proximity check: allow athletic play up to 50px outside baseline/sidelines
-            if court_poly is not None:
+            # Court Perimeter Envelope Spectator Rejection
+            if court_calibrated:
+                court_ft = court_calibrator.pixel_to_court_ft(foot_x, foot_y)
+                if court_ft is not None:
+                    cx_ft, cy_ft = court_ft
+                    # Physical pickleball athletic envelope:
+                    # Court is [0, 20] x [0, 44] ft.
+                    # Sideline clearance 6.0 ft, baseline clearance 8.0 ft.
+                    if cx_ft < -6.0 or cx_ft > 26.0 or cy_ft < -8.0 or cy_ft > 52.0:
+                        continue
+            elif court_poly is not None:
                 dist = cv2.pointPolygonTest(court_poly, (foot_x, foot_y), measureDist=True)
                 if dist < -55.0:
                     continue
 
-            side = "near" if foot_y > 0.45 * h else "far"
+            # Net side determination
+            if court_calibrated:
+                court_ft = court_calibrator.pixel_to_court_ft(foot_x, foot_y)
+                side = "near" if (court_ft and court_ft[1] > 22.0) else ("near" if foot_y > 0.45 * h else "far")
+            else:
+                side = "near" if foot_y > 0.45 * h else "far"
+
+            # Appearance signature
+            app_feat = _extract_appearance_feature(frame, box)
+
             valid_cands.append({
                 "box": box,
                 "conf": det["conf"],
                 "foot_px": (foot_x, foot_y),
                 "side": side,
+                "appearance": app_feat,
             })
 
         # 2. Candidate NMS Deduplication (highest confidence first)
@@ -115,7 +174,7 @@ class CanonicalPlayerTracker:
             if not is_dup:
                 deduped.append(cand)
 
-        # 3. Hungarian Association with existing slots
+        # 3. Hungarian Multi-Objective Association with existing slots
         slot_ids = list(self.slots.keys())
         num_slots = len(slot_ids)
         num_cands = len(deduped)
@@ -133,8 +192,13 @@ class CanonicalPlayerTracker:
                 vel = slot.get("velocity", [0.0, 0.0])
                 c_pred = (_center(s_box)[0] + vel[0], _center(s_box)[1] + vel[1])
                 slot_side = slot.get("side", "unknown")
+                slot_app = slot.get("appearance")
 
                 for c_idx, cand in enumerate(deduped):
+                    # Strict Net Partition Barrier: Player cannot jump across the net!
+                    if slot_side != "unknown" and cand["side"] != "unknown" and slot_side != cand["side"]:
+                        continue
+
                     c_det = _center(cand["box"])
                     dist = np.hypot(c_pred[0] - c_det[0], c_pred[1] - c_det[1])
                     if dist > max_dist:
@@ -142,13 +206,16 @@ class CanonicalPlayerTracker:
 
                     iou = _box_iou(s_box, cand["box"])
                     dist_norm = dist / max_dist
-                    side_factor = 1.0 if (slot_side == cand["side"] or slot_side == "unknown") else 1.35
-                    cost = side_factor * (0.5 * (1.0 - iou) + 0.5 * dist_norm)
+                    app_dist = _compare_appearance(slot_app, cand.get("appearance"))
+
+                    # Multi-objective weighted cost function with appearance preservation
+                    app_penalty = 0.35 if app_dist > 0.65 else 0.0
+                    cost = 0.30 * dist_norm + 0.25 * (1.0 - iou) + 0.45 * app_dist + app_penalty
                     cost_matrix[s_idx, c_idx] = cost
 
             row_ind, col_ind = linear_sum_assignment(cost_matrix)
             for r, c in zip(row_ind, col_ind):
-                if cost_matrix[r, c] < 0.95:
+                if cost_matrix[r, c] < 0.88:
                     sid = slot_ids[r]
                     assigned_slots[sid] = deduped[c]
                     matched_cands.add(c)
@@ -173,6 +240,13 @@ class CanonicalPlayerTracker:
             slot["hits"] += 1
             slot["side"] = cand["side"]
 
+            # Running appearance blend
+            if cand.get("appearance") is not None:
+                if slot.get("appearance") is None:
+                    slot["appearance"] = cand["appearance"]
+                else:
+                    slot["appearance"] = 0.80 * slot["appearance"] + 0.20 * cand["appearance"]
+
             fx = (slot["smooth_box"][0] + slot["smooth_box"][2]) / 2.0
             fy = slot["smooth_box"][3]
             slot.setdefault("history", []).append((int(fx), int(fy)))
@@ -195,12 +269,16 @@ class CanonicalPlayerTracker:
             if self.slots[sid]["lost"] > self.max_lost_frames:
                 del self.slots[sid]
 
-        # 6. Allocate slots for unmatched high-confidence candidates
+        # 6. Allocate canonical slots for unmatched high-confidence candidates
         unmatched_cands = [deduped[i] for i in range(num_cands) if i not in matched_cands]
         for cand in unmatched_cands:
             if len(self.slots) < self.max_players:
                 used_ids = set(self.slots.keys())
-                avail_id = next((i for i in range(1, self.max_players + 1) if i not in used_ids), None)
+                cand_side = cand.get("side", "near")
+                preferred = [1, 2, 3, 4] if cand_side == "near" else [3, 4, 1, 2]
+                avail_id = next((i for i in preferred if i not in used_ids and i <= self.max_players), None)
+                if avail_id is None:
+                    avail_id = next((i for i in range(1, self.max_players + 1) if i not in used_ids), None)
                 if avail_id is None:
                     avail_id = self.next_slot_id
                     self.next_slot_id += 1
@@ -214,6 +292,7 @@ class CanonicalPlayerTracker:
                     "lost": 0,
                     "hits": 1,
                     "side": cand["side"],
+                    "appearance": cand.get("appearance"),
                     "velocity": [0.0, 0.0],
                     "history": [(int(fx), int(fy))],
                 }

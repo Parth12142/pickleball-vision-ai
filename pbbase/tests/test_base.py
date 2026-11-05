@@ -60,6 +60,80 @@ class TestPlayerTracker(unittest.TestCase):
         assigned_ids = {p["id"] for p in active}
         self.assertEqual(assigned_ids, {1, 2, 3, 4})
 
+    def test_spectator_rejection(self):
+        tracker = CanonicalPlayerTracker(max_players=4)
+        # Standard 4 court corners
+        calibrator = CourtCalibrator([(420, 180), (860, 180), (1140, 640), (140, 640)])
+
+        # Player 1 is inside court
+        # Person 2 is 250px below baseline in spectator stands
+        dets = [
+            {"box": [500, 500, 560, 620], "conf": 0.90, "foot_px": (530, 620)},
+            {"box": [500, 950, 560, 1050], "conf": 0.88, "foot_px": (530, 1050)},  # Spectator far outside
+        ]
+        active = tracker.update(dets, (1080, 1920), 0.0, calibrator)
+        # Spectator should be rejected by athletic envelope
+        self.assertEqual(len(active), 1)
+        self.assertEqual(active[0]["id"], 1)
+
+    def test_net_partition_barrier(self):
+        tracker = CanonicalPlayerTracker(max_players=4)
+        calibrator = CourtCalibrator([(420, 180), (860, 180), (1140, 640), (140, 640)])
+
+        # Frame 0: P1 initialized on near court
+        det_near = [{"box": [500, 500, 560, 620], "conf": 0.90, "foot_px": (530, 620)}]
+        active0 = tracker.update(det_near, (1080, 1920), 0.0, calibrator)
+        self.assertEqual(len(active0), 1)
+        self.assertEqual(active0[0]["id"], 1)
+        self.assertEqual(active0[0]["side"], "near")
+
+        # Frame 1: Candidate on far court appears
+        det_far = [{"box": [500, 200, 560, 300], "conf": 0.88, "foot_px": (530, 300)}]
+        active1 = tracker.update(det_far, (1080, 1920), 0.033, calibrator)
+        # P1 cannot be assigned to far candidate! Instead far candidate gets assigned a far slot (P3)
+        assigned_ids = {p["id"]: p["side"] for p in active1}
+        self.assertIn(3, assigned_ids)
+        self.assertEqual(assigned_ids[3], "far")
+
+    def test_partner_cross_over_with_appearance(self):
+        tracker = CanonicalPlayerTracker(max_players=4)
+        calibrator = CourtCalibrator([(420, 180), (860, 180), (1140, 640), (140, 640)])
+
+        # Synthetic frame: Player A (Blue: Hue ~110), Player B (Red: Hue ~5)
+        frame0 = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        # Blue box at x=300
+        frame0[450:600, 280:360] = [220, 50, 30]
+        # Red box at x=700
+        frame0[450:600, 680:760] = [30, 40, 220]
+
+        dets0 = [
+            {"box": [280, 450, 360, 600], "conf": 0.9, "foot_px": (320, 600)},  # P1 Left
+            {"box": [680, 450, 760, 600], "conf": 0.9, "foot_px": (720, 600)},  # P2 Right
+        ]
+        active0 = tracker.update(dets0, (1080, 1920), 0.0, calibrator, frame=frame0)
+        self.assertEqual(len(active0), 2)
+        p1_id = active0[0]["id"]
+        p2_id = active0[1]["id"]
+        self.assertNotEqual(p1_id, p2_id)
+
+        # Cross-over: Blue player moved to right (x=680), Red player moved to left (x=280)
+        frame1 = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        frame1[450:600, 280:360] = [30, 40, 220]  # Red at left
+        frame1[450:600, 680:760] = [220, 50, 30]  # Blue at right
+
+        dets1 = [
+            {"box": [280, 450, 360, 600], "conf": 0.9, "foot_px": (320, 600)},  # Red
+            {"box": [680, 450, 760, 600], "conf": 0.9, "foot_px": (720, 600)},  # Blue
+        ]
+        active1 = tracker.update(dets1, (1080, 1920), 0.033, calibrator, frame=frame1)
+        self.assertEqual(len(active1), 2)
+
+        # Verify Blue player still has p1_id and Red player still has p2_id (zero swap!)
+        blue_player = next(p for p in active1 if p["foot_px"][0] > 500)
+        red_player = next(p for p in active1 if p["foot_px"][0] < 500)
+        self.assertEqual(blue_player["id"], p1_id)
+        self.assertEqual(red_player["id"], p2_id)
+
 
 class TestBallTrajectory(unittest.TestCase):
     def test_speed_color_spectrum(self):

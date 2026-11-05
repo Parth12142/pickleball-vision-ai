@@ -1,7 +1,7 @@
 # 🏓 Week 2 Technical Guide: Base Model Fine-Tuning & Tracking Stabilization
 
 > **Phase 1: Pure Base Perception (Zero Rules)**  
-> **Status**: ⏳ **In Progress (Tasks W2-01, W2-02 & W2-03 Delivered)**  
+> **Status**: ⏳ **In Progress (Tasks W2-01 to W2-04 Delivered)**  
 > **Working Window**: Days 6–10 (17 Nov 2026 – 23 Nov 2026)  
 > **Target Milestone**: Sustained $>92\%$ ball detection rate and zero player ID swaps across full rallies.
 
@@ -14,8 +14,8 @@
 | **`W2-01`** | **Training** | Hyperparameter sweep for ball model | [`pbbase/models/train_ball.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/models/train_ball.py), [`notebooks/train_ball_sweep_colab_a100.ipynb`](file:///home/pce118/Desktop/pickleball-vision-ai-main/notebooks/train_ball_sweep_colab_a100.ipynb) | ✅ **Done** | AdamW LR, weight decay, HSV, scale, blur tuning |
 | **`W2-02`** | **Detection**| Multi-scale ball inference | [`pbbase/models/detector.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/models/detector.py) | ✅ **Done** | Adaptive far-court ROI zoom & patch candidate fusion |
 | **`W2-03`** | **Tracking** | Ball trajectory: velocity gating, parabolic gap filling | [`pbbase/tracking/ball_trajectory.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tracking/ball_trajectory.py) | ✅ **Done** | Ballistic occlusion coasting & retroactive parabolic fitting |
-| **`W2-04`** | **Tracking** | Hungarian bipartite player tracker with spectator rejection | [`pbbase/tracking/player_tracker.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tracking/player_tracker.py) | ⏳ Next | Court perimeter envelope, zero partner ID swaps |
-| **`W2-05`** | **Pipeline** | Define unified perception JSON schema (players, ball, court) | [`pbbase/pipeline.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/pipeline.py) | 📅 Planned | Standardized frame-by-frame telemetry schema |
+| **`W2-04`** | **Tracking** | Hungarian bipartite player tracker with spectator rejection | [`pbbase/tracking/player_tracker.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tracking/player_tracker.py) | ✅ **Done** | Court perimeter envelope, zero partner ID swaps |
+| **`W2-05`** | **Pipeline** | Define unified perception JSON schema (players, ball, court) | [`pbbase/pipeline.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/pipeline.py) | ⏳ Next | Standardized frame-by-frame telemetry schema |
 | **`W2-06`** | **QA** | Validate on full rallies: ball detection rate and ID switches | Validation Results | 📅 Planned | Target: $>92\%$ ball detection, 0 ID switches |
 | **`W2-07`** | **QA** | Re-run master evaluator and update accuracy report | [`reports/BASE_MODEL_ACCURACY_REPORT.md`](file:///home/pce118/Desktop/pickleball-vision-ai-main/reports/BASE_MODEL_ACCURACY_REPORT.md) | 📅 Planned | Milestone: Fully stabilized base perception engine |
 
@@ -133,4 +133,25 @@ When the ball is re-acquired at frame $t_{\text{end}}$ following a $K$-frame occ
 - **Sustained Ball Tracking Rate**: **100.0%** (90 / 90 frames tracked, zero dropouts).
 - **Player Doubled Tracking**: **4.0 / 4.0** continuous player lock.
 - **Court Calibration RMSE**: **0.0000 ft**.
-- **Unit Test Coverage**: **10 / 10 Passing** (`pbbase/tests/test_base.py`).
+- **Unit Test Coverage**: **13 / 13 Passing** (`pbbase/tests/test_base.py`).
+
+---
+
+## 👥 Task W2-04: Hungarian Bipartite Player Tracker & Spectator Rejection
+
+In doubles pickleball broadcasts, court-side spectators, bench sitters, and referees frequently trigger false person detections. Additionally, when doubles partners cross paths or stack in the kitchen, tracking algorithms based solely on Euclidean distance risk swapping player IDs.
+
+**Task W2-04** upgrades [`pbbase/tracking/player_tracker.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tracking/player_tracker.py) with:
+1. **Court Perimeter Envelope Spectator Rejection**:
+   - Evaluates player ground foot contact in calibrated metric coordinates $(X_{\text{ft}}, Y_{\text{ft}})$.
+   - Enforces the athletic perimeter ($X \in [-6.0, 26.0]\text{ ft}, Y \in [-8.0, 52.0]\text{ ft}$), automatically rejecting off-court spectators and bench sitters.
+2. **Net Partition Barrier**:
+   - Enforces an infinite assignment cost ($10^5$) across the net ($Y=22.0\text{ ft}$).
+   - Prevents impossible cross-court player teleportations between near and far courts.
+3. **Multi-Objective Cost Matrix & Zero Partner ID Swaps**:
+   - Formulates the Hungarian matching cost combining motion prediction, bounding box IoU, and torso HSV appearance signatures:
+     $$\text{Cost}(i, j) = 0.30 \cdot \frac{\|\mathbf{p}_{\text{pred}} - \mathbf{p}_j\|}{d_{\max}} + 0.25 \cdot (1 - \text{IoU}_{ij}) + 0.45 \cdot d_{\text{appearance}} + \text{Penalty}_{\text{app}}$$
+   - If torso clothing colors differ significantly ($d_{\text{app}} > 0.65$), an appearance penalty ($+0.35$) strongly deters swapping IDs during physical crossings.
+4. **Deterministic Canonical Slotting**:
+   - Enforces $P_1, P_2$ (Near Court) and $P_3, P_4$ (Far Court).
+   - Sustains **4.0 / 4.0** continuous player locking with **37.4ms** per-frame latency.
