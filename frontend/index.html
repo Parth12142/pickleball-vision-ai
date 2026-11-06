@@ -21,17 +21,15 @@
     <div class="navbar-sticky-wrap">
       <header class="pill-navbar">
         <button class="nav-brand" data-page="home">
-          <span class="brand-loop-icon"></span>
-          <span>PICKLEBALL AI</span>
+          <span class="brand-paddle-icon"></span>
+          <span>PICKLEBALL PRO VISION</span>
+          <span class="pro-league-tag">USAP 2026</span>
         </button>
 
         <nav class="nav-center-links" aria-label="Main Menu">
           <button class="nav-menu-btn active" data-page="home">
             Home
           </button>
-          <a href="/view-preview.html" class="nav-menu-btn" style="text-decoration: none; color: #CCFF00; display: inline-flex; align-items: center; gap: 4px;" title="Open standalone video player">
-            🎬 Direct Player
-          </a>
           <button class="nav-menu-btn" data-page="subscriptions">
             Subscriptions
           </button>
@@ -94,27 +92,27 @@
             <div class="hero-copy-col">
               <div class="live-anim-tag">
                 <span class="pulse-ball"></span>
-                <span>YOLOv8s + TrackNetV2 • Live Vision Engine</span>
+                <span>OFFICIAL TOURNAMENT COURT VISION • LIVE MATCH RADAR</span>
               </div>
 
               <h1 class="hero-stacked-title">
-                TURN<br />
-                RALLIES<br />
-                INTO<br />
-                DATA
+                PRO MATCH<br />
+                COURT<br />
+                VISION<br />
+                RADAR
               </h1>
 
               <p class="hero-subtext">
-                Our AI vision system provides 4-player tracking, ball speed, and automated USAP tournament officiating that elevate every match.
+                Live 4-player foot tracking, instant ball velocity radar, and USAP regulation court telemetry for championship pickleball.
               </p>
 
               <div class="hero-cta-row">
-                <button id="hero-watch-btn" class="btn-orange-cta">
-                  <span>Watch Match Demo</span>
-                  <span>+</span>
+                <button id="hero-watch-btn" class="btn-sports-primary">
+                  <span>Watch 9s Rally Demo</span>
+                  <span class="btn-arrow-icon">▶</span>
                 </button>
-                <button class="btn-outline-secondary" data-page="subscriptions">
-                  <span>View Paddle Plans</span>
+                <button class="btn-sports-outline" data-page="subscriptions">
+                  <span>Tournament Memberships</span>
                 </button>
               </div>
             </div>
@@ -122,11 +120,11 @@
             <div class="hero-visual-col">
               <div class="hero-video-showcase">
                 <span id="hero-clip-badge" class="hero-video-badge">
-                  LIVE OUTPUT • MicrosoftTeams-video.mp4
+                  LIVE TOURNAMENT MATCH • match1.mp4 (9.63s Pro Rally)
                 </span>
                 <video
                   id="hero-preview-video"
-                  src="/outputs/MicrosoftTeams-video_players-ball.mp4"
+                  src="/outputs/match1_base_preview.mp4"
                   autoplay
                   loop
                   muted
@@ -139,14 +137,14 @@
                 <div class="floating-card-head">
                   <span class="floating-loop-mark"></span>
                   <div class="floating-card-title">
-                    COURT AI<br />EXCELLENCE
+                    USAP MATCH<br />RADAR LIVE
                   </div>
                 </div>
 
                 <div class="floating-card-inner-preview">
                   <div class="mini-score-strip">
-                    <span>USAP SCORE</span>
-                    <span id="mini-score-val" class="mini-score-call">4 - 2 - 1</span>
+                    <span>MATCH 1 SCORE</span>
+                    <span id="mini-score-val" class="mini-score-call">8 - 6 - 2</span>
                   </div>
                   <div class="mini-stat-grid">
                     <div class="mini-stat-box">
@@ -181,19 +179,25 @@
               <h2 class="dark-giant-word">COURT <span>VISION</span></h2>
             </div>
 
-            <div class="clip-switcher-bar">
-              <button class="clip-tab-btn active" data-clip="MicrosoftTeams-video">
-                1. MicrosoftTeams-video.mp4 (60 FPS)
-              </button>
-              <button class="clip-tab-btn" data-clip="match1">
-                2. match1.mp4 (30 FPS)
-              </button>
-              <button class="clip-tab-btn" data-clip="base_preview">
-                ⚡ 3. Base Model Perception (H.264 Preview)
-              </button>
-              <button id="btn-toggle-pin-court" class="clip-tab-btn pin-court-btn" title="Open Interactive 4-Point Court Calibrator">
-                🎯 Calibrate Court (Pin 4 Points)
-              </button>
+            <div class="tournament-match-control-bar">
+              <div class="match-badge-tag">
+                <span class="live-sports-beacon"></span>
+                <strong>MATCH 1 (9-SEC RALLY)</strong>
+                <span class="tag-sep">•</span>
+                <span>1302×740 @ 30 FPS</span>
+                <span class="tag-sep">•</span>
+                <span class="tag-usap">USAP REGULATION</span>
+              </div>
+
+              <div class="match-actions-group">
+                <button id="btn-theater-mode" class="sports-btn-theater" title="Toggle Fullscreen Cinema Theater Broadcast Mode">
+                  <span class="theater-icon">📺</span>
+                  <span id="theater-btn-text">Theater Mode</span>
+                </button>
+                <button id="btn-toggle-pin-court" class="sports-btn-calib" title="Fine-tune 4 court corners on 9-second rally">
+                  <span>🎯 Pin &amp; Retrack Court</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -205,21 +209,21 @@
               <div class="workbench-header-left">
                 <span class="workbench-icon">🎯</span>
                 <div>
-                  <h3 class="workbench-title">Interactive Court Calibration Workbench</h3>
+                  <h3 class="workbench-title">9-Second Pro Rally Court Calibration &amp; Re-Tracking</h3>
                   <p class="workbench-subtitle">
-                    Drag the 4 corner pins on the video frame to visually align baseline corners. Regulation USAP court mesh transforms live.
+                    Drag the 4 corner pins on the 1302×740 broadcast frame. Click "Retrack Court" to process the full 9s rally (289 frames).
                   </p>
                 </div>
-                <span id="calib-status-badge" class="calib-badge warning">⚡ AI Recommended • Unsaved</span>
+                <span id="calib-status-badge" class="calib-badge success">✅ Calibrated • RMSE: 0.0000 ft</span>
               </div>
 
               <div class="workbench-header-right">
-                <label for="calib-clip-select" class="workbench-label">Target Clip:</label>
-                <select id="calib-clip-select" class="workbench-select">
-                  <option value="MicrosoftTeams-video.mp4">MicrosoftTeams-video.mp4 (720x1280 • 📱 9:16 Portrait)</option>
-                  <option value="match1.mp4">match1.mp4 (1302x740 • 📺 16:9 Landscape)</option>
-                  <option value="rally_sample.mp4">rally_sample.mp4 (640x360 • 📺 16:9 Landscape)</option>
-                  <option value="match.mp4">match.mp4 (640x360 • 📺 16:9 Landscape)</option>
+                <div class="single-clip-lock-badge">
+                  <span>Target Clip:</span>
+                  <strong>match1.mp4 (9s Rally)</strong>
+                </div>
+                <select id="calib-clip-select" class="workbench-select" style="display: none;">
+                  <option value="match1.mp4" selected>match1.mp4 (1302x740 • 9s Rally)</option>
                 </select>
                 <button id="btn-close-pin-court" class="btn-workbench-close" title="Close calibration tool">✕</button>
               </div>
@@ -245,16 +249,16 @@
                   <div class="pin-card p1-card">
                     <div class="pin-card-head">
                       <span class="pin-dot p1-dot"></span>
-                      <strong>P1: Far-Left (0, 0 ft)</strong>
+                      <strong>P1: Far-Left Baseline (0, 0 ft)</strong>
                     </div>
                     <div class="coord-inputs-row">
                       <div class="coord-group">
                         <label>X (px)</label>
-                        <input type="number" id="pin-p1-x" value="245" />
+                        <input type="number" id="pin-p1-x" value="425" />
                       </div>
                       <div class="coord-group">
                         <label>Y (px)</label>
-                        <input type="number" id="pin-p1-y" value="520" />
+                        <input type="number" id="pin-p1-y" value="177" />
                       </div>
                     </div>
                     <div class="nudge-btns-row">
@@ -276,16 +280,16 @@
                   <div class="pin-card p2-card">
                     <div class="pin-card-head">
                       <span class="pin-dot p2-dot"></span>
-                      <strong>P2: Far-Right (20, 0 ft)</strong>
+                      <strong>P2: Far-Right Baseline (20, 0 ft)</strong>
                     </div>
                     <div class="coord-inputs-row">
                       <div class="coord-group">
                         <label>X (px)</label>
-                        <input type="number" id="pin-p2-x" value="475" />
+                        <input type="number" id="pin-p2-x" value="855" />
                       </div>
                       <div class="coord-group">
                         <label>Y (px)</label>
-                        <input type="number" id="pin-p2-y" value="520" />
+                        <input type="number" id="pin-p2-y" value="177" />
                       </div>
                     </div>
                     <div class="nudge-btns-row">
@@ -307,16 +311,16 @@
                   <div class="pin-card p3-card">
                     <div class="pin-card-head">
                       <span class="pin-dot p3-dot"></span>
-                      <strong>P3: Near-Right (20, 44 ft)</strong>
+                      <strong>P3: Near-Right Baseline (20, 44 ft)</strong>
                     </div>
                     <div class="coord-inputs-row">
                       <div class="coord-group">
                         <label>X (px)</label>
-                        <input type="number" id="pin-p3-x" value="680" />
+                        <input type="number" id="pin-p3-x" value="1080" />
                       </div>
                       <div class="coord-group">
                         <label>Y (px)</label>
-                        <input type="number" id="pin-p3-y" value="1040" />
+                        <input type="number" id="pin-p3-y" value="610" />
                       </div>
                     </div>
                     <div class="nudge-btns-row">
@@ -338,16 +342,16 @@
                   <div class="pin-card p4-card">
                     <div class="pin-card-head">
                       <span class="pin-dot p4-dot"></span>
-                      <strong>P4: Near-Left (0, 44 ft)</strong>
+                      <strong>P4: Near-Left Baseline (0, 44 ft)</strong>
                     </div>
                     <div class="coord-inputs-row">
                       <div class="coord-group">
                         <label>X (px)</label>
-                        <input type="number" id="pin-p4-x" value="40" />
+                        <input type="number" id="pin-p4-x" value="204" />
                       </div>
                       <div class="coord-group">
                         <label>Y (px)</label>
-                        <input type="number" id="pin-p4-y" value="1040" />
+                        <input type="number" id="pin-p4-y" value="602" />
                       </div>
                     </div>
                     <div class="nudge-btns-row">
@@ -368,14 +372,14 @@
 
                 <!-- Action Bar -->
                 <div class="workbench-action-row">
-                  <button type="button" id="btn-calib-recommend" class="btn-workbench-secondary" title="Reset to aspect-ratio-aware AI suggestion">
-                    🤖 Recommend Court
+                  <button type="button" id="btn-calib-recommend" class="btn-sports-secondary" title="Reset to official USAP regulation broadcast geometry">
+                    🔄 Reset USAP Corners
                   </button>
-                  <button type="button" id="btn-calib-save" class="btn-workbench-primary" title="Save coordinates to court_calibrations.json">
-                    💾 Save &amp; Calibrate
+                  <button type="button" id="btn-calib-save" class="btn-sports-save" title="Save coordinates to court_calibrations.json">
+                    💾 Save Court Geometry
                   </button>
-                  <button type="button" id="btn-calib-run-pipeline" class="btn-workbench-orange" title="Run perception pipeline with these corners">
-                    ⚡ Run AI Analysis on Pinned Court
+                  <button type="button" id="btn-calib-run-pipeline" class="btn-sports-retrack" title="Run perception pipeline with these corners">
+                    ⚡ Retrack Court &amp; Run AI (Full 9s Rally)
                   </button>
                 </div>
 
@@ -399,21 +403,21 @@
           <div class="match-demo-grid">
 
             <!-- Left: Processed Match Video -->
-            <div class="dark-panel">
+            <div class="dark-panel main-match-panel">
               <div class="dark-panel-head">
                 <div class="dark-panel-title">
-                  <span class="orange-dot"></span>
-                  <span id="demo-video-title">MicrosoftTeams-video.mp4 (720×1280 @ 60fps)</span>
+                  <span class="live-sports-beacon"></span>
+                  <span id="demo-video-title">match1.mp4 • 9.63s Broadcast Rally (1302×740 @ 30fps)</span>
                 </div>
-                <span id="demo-score-call" style="font-size: 12px; color: #DFFF00; font-weight: 700;">
-                  USAP Score: 4 - 2 - 1 (P1)
+                <span id="demo-score-call" class="live-score-badge">
+                  USAP Score: 8 - 6 - 2 (P2)
                 </span>
               </div>
 
               <div class="video-box">
                 <video
                   id="demo-video-player"
-                  src="/outputs/MicrosoftTeams-video_players-ball.mp4"
+                  src="/outputs/match1_base_preview.mp4"
                   autoplay
                   loop
                   muted
@@ -423,9 +427,9 @@
               </div>
 
               <div class="dark-panel-foot">
-                <span id="demo-frame-counter">Frame 000 / 470</span>
-                <span id="demo-ball-tracked">138 frames tracked</span>
-                <span>P1–P4 IDs Locked</span>
+                <span id="demo-frame-counter">Frame 000 / 289</span>
+                <span id="demo-ball-tracked">272 / 289 frames (94.1%)</span>
+                <span>P1–P4 IDs Locked (0 Swaps)</span>
               </div>
             </div>
 
@@ -876,7 +880,7 @@
 
     <footer class="simple-footer">
       <span><strong>PICKLEBALL VISION AI</strong> — Plans: Paddle (Free) • Paddle Pro • Paddle Premium</span>
-      <span>Active Clips: MicrosoftTeams-video.mp4 &amp; match1.mp4</span>
+      <span>Active Clip: match1.mp4 (9-Second USAP Tournament Rally)</span>
     </footer>
 
     <!-- ====================================================================

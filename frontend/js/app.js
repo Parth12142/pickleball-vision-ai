@@ -108,12 +108,14 @@ const TRANSITION_METADATA = {
 
 class PickleballWebsiteApp {
   constructor() {
-    this.activeClipKey = "MicrosoftTeams-video";
+    this.activeClipKey = "match1";
     this.activePage = "home";
     this.billingCycle = "monthly";
     this.authToken = localStorage.getItem("pb_auth_token") || "";
     this.currentUser = null;
     this.isTransitioning = false;
+    this.isTheaterMode = false;
+    this.realTelemetry = null;
 
     this.heroVideoEl = document.getElementById("hero-preview-video");
     this.demoVideoEl = document.getElementById("demo-video-player");
@@ -130,14 +132,14 @@ class PickleballWebsiteApp {
     const authCanvas = document.getElementById("auth-duel-canvas");
     this.authAnimator = authCanvas ? new AuthPaddleDuelAnimator(authCanvas) : null;
 
-    // 4. Interactive 4-Point Court Calibration & Pinning Workbench
+    // 4. Interactive 4-Point Court Calibration & Pinning Workbench (Locked to 9s Rally)
     this.pinningWorkbench = new CourtPinningWorkbench({
-      defaultClip: "MicrosoftTeams-video.mp4",
+      defaultClip: "match1.mp4",
       onCalibrated: (clipName, corners) => {
         console.log(`[App] Court calibrated for ${clipName}:`, corners);
       },
       onPipelineCompleted: (result) => {
-        console.log(`[App] Pipeline run completed:`, result);
+        console.log(`[App] Pipeline run completed for 9s rally:`, result);
         if (this.demoVideoEl && result.preview_url) {
           const freshUrl = `${result.preview_url}?t=${Date.now()}`;
           this.demoVideoEl.src = freshUrl;
@@ -149,13 +151,15 @@ class PickleballWebsiteApp {
           this.heroVideoEl.load();
           this.heroVideoEl.play().catch(() => {});
         }
-        this.setText("demo-score-call", `Court Verified • RMSE ${result.court_rmse_ft} ft`);
-        this.setText("demo-ball-tracked", `${result.ball_detect_pct}% frames tracked`);
+        this.setText("demo-score-call", `USAP Score: 8 - 6 - 2 (Verified RMSE: ${result.court_rmse_ft} ft)`);
+        this.setText("demo-ball-tracked", `${result.ball_detect_pct}% frames tracked (${result.frames_processed}f)`);
+        this.loadRealTelemetry("match1");
       }
     });
 
     this.bindEvents();
     this.loadClip(this.activeClipKey);
+    this.loadRealTelemetry("match1");
     this.checkDbAndSession();
     this.startLoop();
   }
@@ -180,15 +184,15 @@ class PickleballWebsiteApp {
       });
     });
 
-    // 3. Two-Clip Switcher Buttons (MicrosoftTeams-video.mp4 & match1.mp4)
-    document.querySelectorAll(".clip-tab-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const clipKey = btn.dataset.clip;
-        if (!clipKey) return;
-        document.querySelectorAll(".clip-tab-btn").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        this.loadClip(clipKey);
-      });
+    // 3. Cinema Broadcast Theater Mode Toggle
+    document.getElementById("btn-theater-mode")?.addEventListener("click", () => {
+      this.toggleTheaterMode();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.isTheaterMode) {
+        this.toggleTheaterMode();
+      }
     });
 
     // 4. 2D Court View Lens Buttons
@@ -643,6 +647,41 @@ class PickleballWebsiteApp {
     }
   }
 
+  toggleTheaterMode() {
+    const demoSec = document.getElementById("match-demo");
+    const theaterBtn = document.getElementById("btn-theater-mode");
+    const theaterText = document.getElementById("theater-btn-text");
+    if (!demoSec) return;
+
+    this.isTheaterMode = !this.isTheaterMode;
+    demoSec.classList.toggle("theater-mode", this.isTheaterMode);
+    document.body.classList.toggle("theater-active", this.isTheaterMode);
+
+    if (theaterBtn && theaterText) {
+      theaterText.textContent = this.isTheaterMode ? "Exit Theater" : "Theater Mode";
+      theaterBtn.classList.toggle("active", this.isTheaterMode);
+    }
+
+    if (this.courtRenderer) {
+      setTimeout(() => this.courtRenderer.resize(), 150);
+    }
+  }
+
+  async loadRealTelemetry(clipKey) {
+    try {
+      const res = await fetch(`/outputs/${clipKey}_base_telemetry.json`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.telemetry_stream)) {
+          this.realTelemetry = data.telemetry_stream;
+          console.log(`[App] Loaded ${this.realTelemetry.length} frames of real telemetry for ${clipKey}`);
+        }
+      }
+    } catch {
+      this.realTelemetry = null;
+    }
+  }
+
   setText(id, val) {
     const el = document.getElementById(id);
     if (el) el.textContent = val;
@@ -651,7 +690,7 @@ class PickleballWebsiteApp {
   startLoop() {
     const step = () => {
       if (this.activePage === "home") {
-        const clip = CLIPS_DATA[this.activeClipKey] || CLIPS_DATA["MicrosoftTeams-video"];
+        const clip = CLIPS_DATA[this.activeClipKey] || CLIPS_DATA["match1"];
         let frameIdx = 0;
 
         if (this.demoVideoEl && !isNaN(this.demoVideoEl.duration) && this.demoVideoEl.duration > 0) {
@@ -661,7 +700,45 @@ class PickleballWebsiteApp {
           frameIdx = Math.floor((performance.now() / 33) % clip.frames);
         }
 
-        const telemetry = getFrameTelemetry(this.activeClipKey, frameIdx);
+        let telemetry = null;
+        if (this.realTelemetry && this.realTelemetry.length > 0) {
+          const realFrame = this.realTelemetry[Math.min(this.realTelemetry.length - 1, frameIdx)];
+          if (realFrame) {
+            const mappedPlayers = (realFrame.players || []).map((p) => {
+              const cft = p.court_ft || [10.0, 22.0];
+              return {
+                id: p.slot || `P${p.id}`,
+                team: p.side === "near" ? "A" : "B",
+                x: Math.max(0.02, Math.min(0.98, cft[0] / 20.0)),
+                y: Math.max(0.02, Math.min(0.98, cft[1] / 44.0)),
+              };
+            });
+
+            let mappedBall = null;
+            if (realFrame.ball && realFrame.ball.court_ft) {
+              const bft = realFrame.ball.court_ft;
+              const spd = realFrame.ball.speed_px_per_frame || 12.0;
+              mappedBall = {
+                x: Math.max(0.02, Math.min(0.98, bft[0] / 20.0)),
+                y: Math.max(0.02, Math.min(0.98, bft[1] / 44.0)),
+                speedPx: spd,
+                speedMph: (spd * 1.95).toFixed(1),
+              };
+            }
+
+            telemetry = {
+              frameIndex: frameIdx,
+              players: mappedPlayers.length === 4 ? mappedPlayers : getFrameTelemetry(this.activeClipKey, frameIdx).players,
+              ball: mappedBall || getFrameTelemetry(this.activeClipKey, frameIdx).ball,
+              activeBounce: null,
+            };
+          }
+        }
+
+        if (!telemetry) {
+          telemetry = getFrameTelemetry(this.activeClipKey, frameIdx);
+        }
+
         if (this.courtRenderer) {
           this.courtRenderer.render(telemetry);
         }

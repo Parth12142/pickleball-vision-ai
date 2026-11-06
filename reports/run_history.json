@@ -389,5 +389,22 @@
     "court_rmse_ft": 0.0,
     "telemetry_json": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/MicrosoftTeams-video_base_telemetry.json",
     "preview_mp4": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/MicrosoftTeams-video_base_preview.mp4"
+  },
+  {
+    "run_id": 24,
+    "timestamp": "2026-11-06 10:25:13",
+    "clip": "match1.mp4",
+    "video_path": "/home/pce118/Desktop/pickleball-vision-ai-main/clips/match1.mp4",
+    "resolution": "1302x740",
+    "fps": 30.0,
+    "frames_processed": 289,
+    "processing_fps": 5.66,
+    "ball_detection_rate_pct": 91.0,
+    "frames_with_ball": 263,
+    "mean_players_per_frame": 4.0,
+    "court_calibrated": true,
+    "court_rmse_ft": 0.0,
+    "telemetry_json": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json",
+    "preview_mp4": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4"
   }
 ]

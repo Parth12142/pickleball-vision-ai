@@ -2368,3 +2368,336 @@ a {
   transition: opacity 0.3s ease;
   text-align: center;
 }
+
+/* ==========================================================================
+   AUTHENTIC PICKLEBALL ATHLETIC SPORTS STYLING & THEATER MODE
+   ========================================================================== */
+
+/* Brand & Pro League Badge */
+.brand-paddle-icon {
+  width: 22px;
+  height: 22px;
+  background: #CCFF00;
+  border-radius: 6px;
+  display: inline-block;
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.5);
+  position: relative;
+}
+
+.brand-paddle-icon::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0A111A;
+  top: 8px;
+  left: 8px;
+}
+
+.pro-league-tag {
+  background: #0A111A;
+  color: #CCFF00;
+  border: 1px solid rgba(204, 255, 0, 0.4);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  margin-left: 6px;
+}
+
+/* Live Sports Beacon Dot */
+.live-sports-beacon {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22C55E;
+  display: inline-block;
+  box-shadow: 0 0 10px #22C55E;
+  animation: beaconPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes beaconPulse {
+  0% { transform: scale(0.9); opacity: 0.8; box-shadow: 0 0 4px #22C55E; }
+  50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 14px #22C55E; }
+  100% { transform: scale(0.9); opacity: 0.8; box-shadow: 0 0 4px #22C55E; }
+}
+
+/* Tournament Match Control Bar */
+.tournament-match-control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: #0B111A;
+  border: 1.5px solid #1E293B;
+  border-radius: var(--radius-pill);
+  padding: 8px 18px;
+}
+
+.match-badge-tag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #E2E8F0;
+}
+
+.match-badge-tag strong {
+  color: #CCFF00;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.tag-sep {
+  color: #475569;
+}
+
+.tag-usap {
+  background: rgba(30, 86, 138, 0.4);
+  color: #38BDF8;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.match-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Tactile Sports Equipment Buttons */
+.btn-sports-primary {
+  background: #CCFF00;
+  color: #0A111A;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 12px 24px;
+  border-radius: var(--radius-pill);
+  border: 2px solid #B3E600;
+  box-shadow: 0 4px 14px rgba(204, 255, 0, 0.35);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-sports-primary:hover {
+  background: #D9FF33;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(204, 255, 0, 0.5);
+}
+
+.btn-sports-primary:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(204, 255, 0, 0.3);
+}
+
+.btn-sports-outline {
+  background: transparent;
+  color: #F8FAFC;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: var(--radius-pill);
+  border: 2px solid #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.btn-sports-outline:hover {
+  border-color: #CCFF00;
+  color: #CCFF00;
+  background: rgba(204, 255, 0, 0.08);
+}
+
+.btn-sports-theater {
+  background: #141C28;
+  color: #CCFF00;
+  border: 1.5px solid #293548;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.btn-sports-theater:hover,
+.btn-sports-theater.active {
+  background: #CCFF00;
+  color: #0A111A;
+  border-color: #CCFF00;
+  box-shadow: 0 0 16px rgba(204, 255, 0, 0.4);
+}
+
+.btn-sports-calib {
+  background: rgba(255, 87, 34, 0.15);
+  color: #FF7043;
+  border: 1.5px solid #FF5722;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.btn-sports-calib:hover {
+  background: #FF5722;
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(255, 87, 34, 0.45);
+}
+
+.btn-sports-retrack {
+  background: linear-gradient(135deg, #FF5722, #FF8A00);
+  color: #FFFFFF;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(255, 87, 34, 0.4);
+  transition: all 0.15s ease;
+}
+
+.btn-sports-retrack:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(255, 87, 34, 0.6);
+}
+
+.btn-sports-save {
+  background: #10B981;
+  color: #FFFFFF;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sports-save:hover {
+  background: #059669;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+}
+
+.btn-sports-secondary {
+  background: #1E293B;
+  color: #CBD5E1;
+  border: 1px solid #334155;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sports-secondary:hover {
+  background: #334155;
+  color: #FFFFFF;
+}
+
+.single-clip-lock-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0A111A;
+  border: 1px solid #1E293B;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.single-clip-lock-badge span {
+  color: #94A3B8;
+}
+
+.single-clip-lock-badge strong {
+  color: #CCFF00;
+  font-family: var(--font-mono);
+}
+
+.live-score-badge {
+  background: #0A111A;
+  color: #CCFF00;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(204, 255, 0, 0.3);
+}
+
+/* ==========================================================================
+   CINEMA BROADCAST THEATER MODE
+   ========================================================================== */
+
+#match-demo.theater-mode {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  border-radius: 0;
+  padding: 32px clamp(24px, 4vw, 64px);
+  background: radial-gradient(circle at 50% 25%, #132438 0%, #080E17 65%, #04070B 100%);
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.8) inset;
+  z-index: 50;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+#match-demo.theater-mode .match-demo-grid {
+  grid-template-columns: minmax(0, 7.5fr) minmax(0, 4.5fr);
+  min-height: 600px;
+  gap: 28px;
+}
+
+#match-demo.theater-mode .video-box {
+  min-height: 520px;
+  background: #000;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+#match-demo.theater-mode .video-box video {
+  max-height: 580px;
+}
+
+#match-demo.theater-mode .court-box {
+  min-height: 520px;
+}
+
+body.theater-active {
+  overflow-x: hidden;
+}

@@ -268,32 +268,87 @@ export class WorkbenchCourtRenderer {
     const bx = b.x + ball.x * b.w;
     const by = b.y + ball.y * b.h;
 
-    this.trail.push({ x: bx, y: by });
+    this.trail.push({ x: bx, y: by, time: performance.now() });
     if (this.trail.length > this.maxTrail) {
       this.trail.shift();
     }
 
+    // 1. Draw glowing projectile trail
     if (this.trail.length > 1) {
       for (let i = 1; i < this.trail.length; i++) {
         const p0 = this.trail[i - 1];
         const p1 = this.trail[i];
-        const alpha = (i / this.trail.length) * 0.85;
-        ctx.strokeStyle = `rgba(223, 255, 0, ${alpha})`;
-        ctx.lineWidth = 1.5 + (i / this.trail.length) * 2.5;
+        const progress = i / this.trail.length;
+        const alpha = progress * 0.9;
+
+        ctx.strokeStyle = `rgba(204, 255, 0, ${alpha})`;
+        ctx.lineWidth = 1.5 + progress * 3.5;
         ctx.beginPath();
         ctx.moveTo(p0.x, p0.y);
         ctx.lineTo(p1.x, p1.y);
         ctx.stroke();
+
+        // Motion blur glow
+        if (i === this.trail.length - 1) {
+          ctx.strokeStyle = `rgba(255, 255, 255, 0.7)`;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.stroke();
+        }
       }
     }
 
-    ctx.fillStyle = "#DFFF00";
-    ctx.strokeStyle = "#0D1219";
-    ctx.lineWidth = 1.8;
+    // 2. Animated contact shockwave ripple (every few frames or based on speed)
+    const t = performance.now() / 1000;
+    const waveRadius = 10 + (Math.sin(t * 8) * 0.5 + 0.5) * 12;
+    const waveAlpha = Math.max(0, 0.7 - (waveRadius / 22) * 0.6);
+    ctx.strokeStyle = `rgba(204, 255, 0, ${waveAlpha})`;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(bx, by, 6, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(bx, by, waveRadius, 0, Math.PI * 2);
     ctx.stroke();
+
+    // 3. Pro Optic Yellow Pickleball Body
+    ctx.beginPath();
+    ctx.arc(bx, by, 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#CCFF00";
+    ctx.fill();
+    ctx.strokeStyle = "#0A111A";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    // 4. Perforated ball dots
+    ctx.fillStyle = "#99CC00";
+    const dotOffsets = [[-2, -2], [2, -2], [0, 2], [-3, 1], [3, 1]];
+    dotOffsets.forEach(([dx, dy]) => {
+      ctx.beginPath();
+      ctx.arc(bx + dx, by + dy, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 5. Live Ball Velocity Pill
+    if (ball.speedMph) {
+      ctx.save();
+      ctx.font = "bold 9px 'JetBrains Mono', monospace";
+      const spdText = `${ball.speedMph} MPH`;
+      const tw = ctx.measureText(spdText).width;
+      const tagX = bx + 10;
+      const tagY = by - 8;
+
+      ctx.fillStyle = "rgba(10, 17, 26, 0.88)";
+      ctx.beginPath();
+      ctx.roundRect(tagX, tagY - 9, tw + 8, 14, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#CCFF00";
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+
+      ctx.fillStyle = "#CCFF00";
+      ctx.fillText(spdText, tagX + 4, tagY + 1.5);
+      ctx.restore();
+    }
   }
 
   drawHUD(ctx, telemetry) {

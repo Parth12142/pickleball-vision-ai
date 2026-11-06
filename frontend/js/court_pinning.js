@@ -13,28 +13,28 @@ export class CourtPinningWorkbench {
     this.onCalibrated = options.onCalibrated || null;
     this.onPipelineCompleted = options.onPipelineCompleted || null;
 
-    this.activeClip = options.defaultClip || "MicrosoftTeams-video.mp4";
+    this.activeClip = options.defaultClip || "match1.mp4";
     this.availableClips = [];
 
     // Image & dimensions
     this.frameImage = new Image();
     this.imageLoaded = false;
-    this.nativeWidth = 1280;
-    this.nativeHeight = 720;
+    this.nativeWidth = 1302;
+    this.nativeHeight = 740;
     this.scale = 1.0;
     this.offsetX = 0;
     this.offsetY = 0;
 
-    // 4 Draggable Corners in native image pixels:
+    // 4 Draggable Corners in native image pixels for 9s rally (match1.mp4):
     // [0]: Far-Left  (0, 0) ft
     // [1]: Far-Right (20, 0) ft
     // [2]: Near-Right (20, 44) ft
     // [3]: Near-Left  (0, 44) ft
     this.corners = [
-      { x: 245.0, y: 520.0, label: "P1 Far-Left (0, 0) ft", color: "#FF4D4D", code: "p1" },
-      { x: 475.0, y: 520.0, label: "P2 Far-Right (20, 0) ft", color: "#00BFFF", code: "p2" },
-      { x: 680.0, y: 1040.0, label: "P3 Near-Right (20, 44) ft", color: "#FFD700", code: "p3" },
-      { x: 40.0, y: 1040.0, label: "P4 Near-Left (0, 44) ft", color: "#00FF7F", code: "p4" },
+      { x: 425.0, y: 177.0, label: "P1 Far-Left (0, 0) ft", color: "#FF4D4D", code: "p1" },
+      { x: 855.0, y: 177.0, label: "P2 Far-Right (20, 0) ft", color: "#00BFFF", code: "p2" },
+      { x: 1080.0, y: 610.0, label: "P3 Near-Right (20, 44) ft", color: "#FFD700", code: "p3" },
+      { x: 204.0, y: 602.0, label: "P4 Near-Left (0, 44) ft", color: "#00FF7F", code: "p4" },
     ];
 
     this.draggedPinIndex = null;
@@ -617,8 +617,8 @@ export class CourtPinningWorkbench {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clip: this.activeClip,
-          frames: 60,
+          clip: this.activeClip || "match1.mp4",
+          frames: 289,
           multiscale: false,
         }),
       });

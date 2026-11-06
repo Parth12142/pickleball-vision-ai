@@ -48,8 +48,8 @@ export const CLIPS_DATA = {
   "match1": {
     id: "match1",
     shortName: "match1.mp4",
-    label: "match1.mp4 (1302×740 @ 30fps)",
-    videoUrl: "/outputs/match1_players-ball.mp4",
+    label: "match1.mp4 • 9.63s Pro Rally (1302×740 @ 30fps)",
+    videoUrl: "/outputs/match1_base_preview.mp4",
     resolution: "1302×740",
     frames: 289,
     fps: 30.0,
