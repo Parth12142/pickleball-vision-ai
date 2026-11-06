@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pickleball Vision AI — Pro-Quality Analytics &amp; Line Calling (SwingVision Concept)</title>
+
+  <!-- Google Fonts: Modern Athletic Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/css/swing_style.css" />
+</head>
+<body>
+
+  <!-- Fullscreen 60 FPS Athletic Background Canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <div class="site-wrapper">
+
+    <!-- ====================================================================
+         STICKY GLASS NAVBAR (SWINGVISION ATHLETIC STYLE)
+         ==================================================================== -->
+    <header class="navbar-wrap">
+      <nav class="navbar">
+        <a href="#" class="nav-brand">
+          <span class="brand-dot"></span>
+          <span>SWING•VISION</span>
+          <span class="brand-tag">PICKLEBALL AI</span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#features" class="nav-link">Features</a></li>
+          <li><a href="#line-calling" class="nav-link">ELC Line Calling</a></li>
+          <li><a href="#analytics" class="nav-link">Pro Analytics</a></li>
+          <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+          <li><a href="#pricing" class="nav-link">Memberships</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <a href="http://localhost:3000" target="_blank" class="btn-pill-subtle" title="Open classic broadcast site on port 3000">
+            Classic Site (:3000) ↗
+          </a>
+          <a href="#demo" class="btn-pill-primary">
+            <span>Watch Live Demo</span>
+            <span>▶</span>
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+
+      <!-- ====================================================================
+           HERO SECTION
+           ==================================================================== -->
+      <section class="hero-section container" id="demo">
+        <div class="hero-badge-wrap">
+          <div class="hero-pill-badge award">
+            <span>🏆</span>
+            <span>#1 AI PICKLEBALL PERCEPTION PLATFORM</span>
+          </div>
+          <div class="hero-pill-badge">
+            <span>⚡</span>
+            <span>USAP REGULATION READY • ELC HAWK-EYE</span>
+          </div>
+        </div>
+
+        <h1 class="hero-title">
+          PRO-LEVEL STATS &amp;<br />
+          <span>LINE CALLING</span> FROM YOUR PHONE.
+        </h1>
+
+        <p class="hero-subtitle">
+          The ultimate AI platform for pickleball. Automated scoring, real-time ball velocity radar, electronic line calling, and pro highlights using just a smartphone camera mounted to the fence.
+        </p>
+
+        <div class="hero-cta-group">
+          <a href="#line-calling" class="btn-hero-lg">
+            <span>Try ELC Line Challenge</span>
+            <span>🎯</span>
+          </a>
+          <a href="#analytics" class="btn-hero-outline">
+            <span>Explore 9s Rally Telemetry</span>
+            <span>📊</span>
+          </a>
+        </div>
+
+        <!-- ====================================================================
+             HERO VIDEO SHOWCASE WITH REAL-TIME TELEMETRY OVERLAY
+             ==================================================================== -->
+        <div class="showcase-card">
+          <div class="showcase-header">
+            <div class="showcase-meta">
+              <span class="live-beacon">
+                <span class="live-beacon-dot"></span>
+                <span>MATCH 1 LIVE TRACKING</span>
+              </span>
+              <span>1302×740 @ 30 FPS • 9.63s RALLY</span>
+              <span style="color:var(--accent-lime); font-weight:800;">USAP REGULATION</span>
+            </div>
+            <div style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">
+              4 PLAYERS LOCKED • 0 ID SWAPS
+            </div>
+          </div>
+
+          <div class="showcase-stage">
+            <video
+              id="showcase-video"
+              class="showcase-video"
+              src="/outputs/match1_base_preview.mp4"
+              autoplay
+              loop
+              muted
+              playsinline
+            ></video>
+
+            <!-- SwingVision Floating Video HUD -->
+            <div class="hud-overlay">
+              <div class="hud-pill">
+                <div>
+                  <div class="hud-speed-label">BALL VELOCITY</div>
+                  <div id="live-speed-val" class="hud-speed-value">42 MPH</div>
+                </div>
+                <span id="live-shot-tag" class="hud-shot-tag">💥 SPEED-UP DRIVE</span>
+              </div>
+            </div>
+
+            <!-- Score Call Bug -->
+            <div class="hud-score-card">
+              <div class="score-sub-label">USAP SCORE CALL</div>
+              <div id="live-score-val" class="score-call-lg">8 - 6 - 2</div>
+            </div>
+          </div>
+
+          <!-- Video Playback & Slow-Mo Bar -->
+          <div class="showcase-controls">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <button id="btn-ctrl-play" class="ctrl-btn">⏸ Pause Video</button>
+              <button id="btn-ctrl-speed" class="ctrl-btn">⚡ 1.0x Normal</button>
+            </div>
+            <div style="font-family:var(--font-mono); font-size:12px; color:var(--text-secondary);">
+              <span>Court Reprojection RMSE: </span>
+              <strong style="color:var(--accent-lime);">0.0000 ft</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           CORE FEATURES GRID (SWINGVISION VALUE PROPS)
+           ==================================================================== -->
+      <section class="section container" id="features">
+        <div class="sec-head">
+          <span class="sec-tag">SWINGVISION CAPABILITIES</span>
+          <h2 class="sec-title">EVERY RALLY TRACKED IN HIGH DEFINITION</h2>
+          <p class="sec-desc">
+            Transform everyday match play into a professional tournament broadcast with millimeter-accurate AI officiating.
+          </p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon-badge">🎯</div>
+            <h3 class="feature-title">Electronic Line Calling</h3>
+            <p class="feature-text">
+              Real-time millimeter line calling (ELC) on sidelines and baselines. Review disputed shots instantly with slow-motion Hawk-Eye video replays.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-badge">⚡</div>
+            <h3 class="feature-title">Shot Velocity Radar</h3>
+            <p class="feature-text">
+              Measure instantaneous paddle impact speed, trajectory apex, and ball speed in MPH across kitchen dinks, third-shot drops, and overhead smashes.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-badge">🛑</div>
+            <h3 class="feature-title">Kitchen (NVZ) Watchdog</h3>
+            <p class="feature-text">
+              Sub-pixel foot-tracking along the 7-foot Non-Volley Zone line. Automatically detect airborne volleys vs ground contact violations.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-badge">🔢</div>
+            <h3 class="feature-title">Automated 0-0-2 Scoring</h3>
+            <p class="feature-text">
+              Autonomous scorekeeping finite state machine tracking side-outs, first/second servers, and odd/even court positions hands-free.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-badge">👥</div>
+            <h3 class="feature-title">4-Player Hungarian Tracking</h3>
+            <p class="feature-text">
+              Bipartite matching algorithm ensures zero player ID switches across intense doubles rallies, with smart spectator rejection.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-badge">📱</div>
+            <h3 class="feature-title">Single Phone Setup</h3>
+            <p class="feature-text">
+              No expensive multi-camera arrays or laser sensors. Mount a single smartphone to the back fence and let the AI handle the rest.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           ELECTRONIC LINE CALLING (ELC) INTERACTIVE HAWK-EYE STATION
+           ==================================================================== -->
+      <section class="section container" id="line-calling">
+        <div class="sec-head">
+          <span class="sec-tag">OPTIC HAWK-EYE SYSTEM</span>
+          <h2 class="sec-title">MILLIMETER ELECTRONIC LINE CALLING (ELC)</h2>
+          <p class="sec-desc">
+            Click any bounce event below to inspect the sub-pixel parabolic compression mark against the USAP regulation line.
+          </p>
+        </div>
+
+        <div class="elc-stage-grid">
+          <!-- VAR Canvas Screen -->
+          <div class="var-court-card">
+            <div class="var-canvas-wrap">
+              <canvas id="var-canvas"></canvas>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:14px; font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">
+              <span>VAR PRECISION: ±2.0 MM</span>
+              <span style="color:var(--accent-cyan);">PARABOLIC APEX INFLECTION</span>
+            </div>
+          </div>
+
+          <!-- Interactive Bounces List -->
+          <div class="var-stats-panel">
+            <h4 style="font-family:var(--font-display); font-size:18px; margin-bottom:8px;">
+              MATCH 1 CHALLENGE BOUNCES
+            </h4>
+            <div id="var-calls-list" style="display:flex; flex-direction:column; gap:10px;">
+              <!-- Dynamically populated by swing_app.js -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           PRO MATCH ANALYTICS DASHBOARD
+           ==================================================================== -->
+      <section class="section container" id="analytics">
+        <div class="sec-head">
+          <span class="sec-tag">MATCH 1 PERFORMANCE TELEMETRY</span>
+          <h2 class="sec-title">CHAMPIONSHIP ANALYTICS BREAKDOWN</h2>
+          <p class="sec-desc">
+            Deep performance metrics extracted directly from the 289-frame rally video using YOLO26 perception.
+          </p>
+        </div>
+
+        <div class="analytics-cards-grid">
+          <div class="stat-metric-card">
+            <div class="stat-metric-label">PEAK BALL SPEED</div>
+            <div class="stat-metric-value" style="color:var(--accent-lime);">48.1 <span style="font-size:16px;">MPH</span></div>
+            <div class="stat-metric-sub">Fast Smash (Frame 254)</div>
+          </div>
+
+          <div class="stat-metric-card">
+            <div class="stat-metric-label">BALL CONTINUITY</div>
+            <div class="stat-metric-value" style="color:var(--accent-cyan);">91.0%</div>
+            <div class="stat-metric-sub">263 / 289 frames sustained</div>
+          </div>
+
+          <div class="stat-metric-card">
+            <div class="stat-metric-label">PLAYERS LOCKED</div>
+            <div class="stat-metric-value">4.0 / 4.0</div>
+            <div class="stat-metric-sub">0 ID Switches across rally</div>
+          </div>
+
+          <div class="stat-metric-card">
+            <div class="stat-metric-label">RALLY DURATION</div>
+            <div class="stat-metric-value">9.63 <span style="font-size:16px;">SEC</span></div>
+            <div class="stat-metric-sub">11-Shot Doubles Exchange</div>
+          </div>
+        </div>
+
+        <!-- Shot Breakdown Progress -->
+        <div class="shot-breakdown-card">
+          <h3 style="font-family:var(--font-display); font-size:20px; font-weight:800; margin-bottom:24px;">
+            MATCH 1 SHOT SELECTION DISTRIBUTION
+          </h3>
+
+          <div class="shot-bar-item">
+            <div class="shot-bar-head">
+              <span>Kitchen Dinks (Soft Touch)</span>
+              <span style="color:var(--accent-lime);">45% (5 shots)</span>
+            </div>
+            <div class="shot-bar-track">
+              <div class="shot-bar-fill" style="width:45%; background:var(--accent-lime);"></div>
+            </div>
+          </div>
+
+          <div class="shot-bar-item">
+            <div class="shot-bar-head">
+              <span>Third-Shot Drops</span>
+              <span style="color:var(--accent-cyan);">27% (3 shots)</span>
+            </div>
+            <div class="shot-bar-track">
+              <div class="shot-bar-fill" style="width:27%; background:var(--accent-cyan);"></div>
+            </div>
+          </div>
+
+          <div class="shot-bar-item">
+            <div class="shot-bar-head">
+              <span>Baseline Drives &amp; Speed-Ups</span>
+              <span style="color:var(--accent-orange);">18% (2 shots)</span>
+            </div>
+            <div class="shot-bar-track">
+              <div class="shot-bar-fill" style="width:18%; background:var(--accent-orange);"></div>
+            </div>
+          </div>
+
+          <div class="shot-bar-item">
+            <div class="shot-bar-head">
+              <span>Overhead Put-Away Smashes</span>
+              <span style="color:var(--accent-purple);">10% (1 shot)</span>
+            </div>
+            <div class="shot-bar-track">
+              <div class="shot-bar-fill" style="width:10%; background:var(--accent-purple);"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           HOW IT WORKS (PHONE FENCE MOUNT EXPERIENCE)
+           ==================================================================== -->
+      <section class="section container" id="how-it-works">
+        <div class="sec-head">
+          <span class="sec-tag">SIMPLE HANDS-FREE HARDWARE</span>
+          <h2 class="sec-title">READY IN 60 SECONDS. ZERO CALIBRATION HARDWARE.</h2>
+          <p class="sec-desc">
+            Just mount your smartphone on the fence behind the baseline and tap Start Match.
+          </p>
+        </div>
+
+        <div class="setup-steps-grid">
+          <div class="step-card">
+            <div class="step-number">01</div>
+            <h3 class="step-title">Mount Phone on Fence</h3>
+            <p class="step-desc">
+              Attach any iPhone or Android phone to the court fence or high tripod centered behind the baseline.
+            </p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">02</div>
+            <h3 class="step-title">AI Auto-Detects Court</h3>
+            <p class="step-desc">
+              Computer vision homography identifies the 4 court corners, kitchen line, and net in under 2 seconds.
+            </p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">03</div>
+            <h3 class="step-title">Play &amp; Review Stats</h3>
+            <p class="step-desc">
+              Enjoy automated audio scoring calls, instant electronic line challenges, and auto-generated highlight reels.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           MEMBERSHIP & PRICING PLANS
+           ==================================================================== -->
+      <section class="section container" id="pricing">
+        <div class="sec-head">
+          <span class="sec-tag">SUBSCRIPTION PASSES</span>
+          <h2 class="sec-title">LEVEL UP YOUR PICKLEBALL GAME</h2>
+          <p class="sec-desc">
+            Flexible plans for recreational players, serious competitors, and tournament tournament clubs.
+          </p>
+        </div>
+
+        <div class="pricing-grid">
+          <!-- Free Tier -->
+          <div class="pricing-card">
+            <div>
+              <div class="plan-name">Paddle (Free)</div>
+              <div class="plan-desc">Essential match recording and standard stats.</div>
+              <div class="plan-price">$0 <span>/ month</span></div>
+              <ul class="plan-features-list">
+                <li><span>✓</span> 5 match recordings per month</li>
+                <li><span>✓</span> Basic ball speed radar</li>
+                <li><span>✓</span> 2D court replay minimap</li>
+                <li><span>✓</span> Standard highlight reel export</li>
+              </ul>
+            </div>
+            <button class="btn-pill-subtle" style="width:100%;">Get Started Free</button>
+          </div>
+
+          <!-- Pro Tier -->
+          <div class="pricing-card featured">
+            <span class="popular-badge">MOST POPULAR</span>
+            <div>
+              <div class="plan-name">Paddle Pro</div>
+              <div class="plan-desc">Full electronic line calling and deep AI analytics.</div>
+              <div class="plan-price">$29 <span>/ month</span></div>
+              <ul class="plan-features-list">
+                <li><span>✓</span> <strong>Unlimited match recordings</strong></li>
+                <li><span>✓</span> <strong>Millimeter Hawk-Eye Line Calling (ELC)</strong></li>
+                <li><span>✓</span> Kitchen (NVZ) foot-fault detection</li>
+                <li><span>✓</span> 17-keypoint biomechanics pose coach</li>
+                <li><span>✓</span> 4K 60 FPS video cloud backup</li>
+              </ul>
+            </div>
+            <button class="btn-pill-primary" style="width:100%; justify-content:center;">Start 14-Day Free Trial</button>
+          </div>
+
+          <!-- Tournament Club Tier -->
+          <div class="pricing-card">
+            <div>
+              <div class="plan-name">Paddle Club</div>
+              <div class="plan-desc">For pickleball clubs, coaches, and sanctioned leagues.</div>
+              <div class="plan-price">$79 <span>/ month</span></div>
+              <ul class="plan-features-list">
+                <li><span>✓</span> Multi-court tournament broadcast HUD</li>
+                <li><span>✓</span> Automated USAP referee scoring console</li>
+                <li><span>✓</span> Coach dashboard with player rosters</li>
+                <li><span>✓</span> TV-quality graphic overlays &amp; RTMP stream</li>
+                <li><span>✓</span> Dedicated VIP support</li>
+              </ul>
+            </div>
+            <button class="btn-pill-subtle" style="width:100%;">Contact Club Sales</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ====================================================================
+         FOOTER
+         ==================================================================== -->
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div>
+          <strong style="color:#FFF;">SWING•VISION PICKLEBALL AI</strong> — Inspired by SwingVision's Apple Design Award platform.
+        </div>
+        <div>
+          <span>Serving independently on </span>
+          <strong style="color:var(--accent-lime);">Port 3002</strong>
+          <span> • Classic Website on </span>
+          <strong style="color:var(--accent-cyan);"><a href="http://localhost:3000" target="_blank" style="color:inherit; text-decoration:underline;">Port 3000</a></strong>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script type="module" src="/js/swing_app.js"></script>
+</body>
+</html>
