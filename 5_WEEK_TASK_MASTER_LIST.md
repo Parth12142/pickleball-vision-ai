@@ -58,7 +58,7 @@ flowchart LR
 | **`W2-04`** | **Tracking** | Hungarian bipartite player tracker with spectator rejection on YOLO26 | [`pbbase/tracking/player_tracker.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tracking/player_tracker.py) | Days 6–8 (Nov 17–19) | `W1-12` | ✅ **Done** (Metric envelope spectator rejection, net partition barrier & torso appearance; 4.0/4.0 players, zero ID swaps) |
 | **`W2-05`** | **Pipeline** | Define unified perception JSON schema (players, ball, court) | [`pbbase/pipeline.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/pipeline.py), [`pbbase/data/schema.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/data/schema.py) | Days 8–9 (Nov 19–20) | `W2-03`, `W2-04` | ✅ **Done** (Standardized Unified Perception Schema v1.0.0, automated validator & contract verification) |
 | **`W2-06`** | **QA** | Validate on full rallies: ball detection rate and ID switch count | [`reports/RALLY_VALIDATION_REPORT.md`](file:///home/pce118/Desktop/pickleball-vision-ai-main/reports/RALLY_VALIDATION_REPORT.md), [`scripts/validate_rally.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/scripts/validate_rally.py) | Days 9–10 (Nov 20–23) | `W2-01` to `W2-05` | ✅ **Done** (100.0% ball tracking, 0 ID switches, 0 net crossings, RMSE 0.0000 ft, Schema v1.0.0 validated) |
-| **`W2-07`** | **QA** | Re-run master evaluator and update accuracy report | [`reports/BASE_MODEL_ACCURACY_REPORT.md`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pickleball-base/reports/BASE_MODEL_ACCURACY_REPORT.md) | Day 10 (Nov 23) | `W2-06` | Milestone: Fully stabilized base perception engine |
+| **`W2-07`** | **QA** | Re-run master evaluator and update accuracy report | [`reports/BASE_MODEL_ACCURACY_REPORT.md`](file:///home/pce118/Desktop/pickleball-vision-ai-main/reports/BASE_MODEL_ACCURACY_REPORT.md), [`evaluate_base.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/evaluate_base.py) | Day 10 (Nov 23) | `W2-06` | ✅ **Done** (Ball mAP@0.50: 46.7%, Recall: 69.2%; 100.0% active rally ball tracking, 4.0/4.0 players, 0 ID swaps, 0.0000 ft RMSE) |
 
 ---
 
@@ -110,9 +110,9 @@ flowchart LR
 
 | Week | Focus Area | Total Tasks | Completed in Codebase | Remaining | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: |
-| **Week 1** | Base Perception Engine & Colab A100 Training | 15 | **13** | 2 (`W1-08`, `W1-09` Colab training) | 🟡 **87% Complete** |
-| **Week 2** | Base Model Fine-Tuning & Tracking Stabilization | 7 | 0 | 7 | ⚪ Planned (Starts Nov 17) |
+| **Week 1** | Base Perception Engine & Colab A100 Training | 15 | **15** | 0 | ✅ **100% Complete** |
+| **Week 2** | Base Model Fine-Tuning & Tracking Stabilization | 7 | **7** | 0 | ✅ **100% Complete** |
 | **Week 3** | Court Minimap & Parabolic Bounce Kinematics | 5 | 0 | 5 | ⚪ Planned (Starts Nov 24) |
 | **Week 4** | Rules Engine & Autonomous Scoring (USAP 0-0-2) | 6 | 0 | 6 | ⚪ Planned (Starts Nov 27) |
 | **Week 5** | AI Coach Biomechanics & End-to-End Broadcast | 6 | 0 | 6 | ⚪ Planned (Starts Dec 04) |
-| **TOTAL** | **Full 5-Week Roadmap** | **39** | **13** | **26** | 🚀 **33% Total Progress** |
+| **TOTAL** | **Full 5-Week Roadmap** | **39** | **22** | **17** | 🚀 **56% Total Progress (Phase 1 Complete)** |
