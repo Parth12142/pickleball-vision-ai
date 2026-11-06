@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pickleball Vision AI — Direct HD Video Preview & Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #070A0F;
+      --card-bg: #0D131F;
+      --border: #1E293B;
+      --lime: #CCFF00;
+      --orange: #FF5A1F;
+      --cyan: #00F0FF;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      transition: all 0.3s ease;
+    }
+    body.theater-active {
+      padding: 8px 8px;
+    }
+    .header {
+      width: 100%;
+      max-width: 1400px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: max-width 0.3s;
+    }
+    body.theater-active .header {
+      max-width: 98vw;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo span { color: var(--lime); }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn {
+      background: #182234;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: var(--border);
+      border-color: var(--lime);
+    }
+    .btn-theater {
+      background: #1F2937;
+      color: var(--lime);
+      border-color: #374151;
+    }
+    .main-card {
+      width: 100%;
+      max-width: 1400px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      transition: max-width 0.3s;
+    }
+    body.theater-active .main-card {
+      max-width: 98vw;
+    }
+    .tabs-bar {
+      display: flex;
+      background: #090D15;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      padding: 8px;
+      gap: 8px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.04);
+    }
+    .tab-btn.active {
+      background: #151D2C;
+      border-color: #334155;
+      color: var(--lime);
+    }
+    .video-viewport {
+      position: relative;
+      background: #000;
+      width: 100%;
+      min-height: 540px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    body.theater-active .video-viewport {
+      min-height: 720px;
+    }
+    video {
+      width: 100%;
+      max-height: 780px;
+      display: block;
+      outline: none;
+    }
+    body.theater-active video {
+      max-height: 85vh;
+    }
+    .video-info-bar {
+      padding: 18px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-top: 1px solid var(--border);
+      background: #0B101A;
+    }
+    .file-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .file-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+    }
+    .badge-h264 {
+      background: rgba(204, 255, 0, 0.15);
+      color: var(--lime);
+      border: 1px solid rgba(204, 255, 0, 0.3);
+    }
+    .badge-kitchen {
+      background: rgba(255, 140, 0, 0.18);
+      color: #FFA500;
+      border: 1px solid rgba(255, 140, 0, 0.4);
+    }
+    .badge-stream {
+      background: rgba(0, 240, 255, 0.15);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+    }
+    .file-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .ctl-btn {
+      background: #1A2333;
+      color: #FFF;
+      border: 1px solid #334155;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .ctl-btn:hover {
+      background: #334155;
+      border-color: var(--lime);
+    }
+    .diagnostics-panel {
+      padding: 20px 24px;
+      background: #070B12;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+    .diag-box {
+      background: #0E1422;
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      border-radius: 8px;
+    }
+    .diag-box .lbl {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .diag-box .val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #E2E8F0;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo">
+      <span>🏓</span> PICKLEBALL VISION AI // DIRECT HD PLAYER
+    </div>
+    <div class="nav-actions">
+      <button class="btn btn-theater" onclick="toggleTheater()">⛶ Theater Mode</button>
+      <a href="/" class="btn">← Back to Main Dashboard</a>
+    </div>
+  </header>
+
+  <main class="main-card">
+    <!-- Clip Selection Tabs -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="loadClip('base')">
+        ⚡ 1. Base Model Perception &amp; Kitchen (Full Rally)
+      </button>
+      <button class="tab-btn" onclick="loadClip('match1')">
+        🎯 2. match1.mp4 Full Match Clip
+      </button>
+      <button class="tab-btn" onclick="loadClip('teams')">
+        🎬 3. MicrosoftTeams-video.mp4 (60fps)
+      </button>
+    </div>
+
+    <!-- Video Element -->
+    <div class="video-viewport">
+      <video id="player" controls autoplay loop playsinline>
+        <source id="video-source" src="/outputs/match1_base_preview.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+    </div>
+
+    <!-- Video Metadata and Controls -->
+    <div class="video-info-bar">
+      <div class="file-meta">
+        <div class="file-name">
+          <span id="clip-title">outputs/match1_base_preview.mp4</span>
+          <span class="badge badge-h264">H.264 / AVC1 (yuv420p)</span>
+          <span class="badge badge-kitchen">Kitchen (NVZ) Active</span>
+          <span class="badge badge-stream">HTTP 206 Byte Stream</span>
+        </div>
+        <div class="file-sub" id="clip-desc">
+          Unified Base Pickleball Model: 15-keypoint homography, 14-ft Kitchen detection, 4-player tracking, and ball trajectory. Decoupled from scoring rules.
+        </div>
+      </div>
+
+      <div class="playback-controls">
+        <button class="ctl-btn" onclick="setSpeed(0.5)">0.5x Slow-Mo</button>
+        <button class="ctl-btn" onclick="setSpeed(1.0)">1.0x Normal</button>
+        <button class="ctl-btn" onclick="setSpeed(1.5)">1.5x Fast</button>
+        <button class="ctl-btn" onclick="toggleMute()">Mute / Unmute</button>
+        <button class="ctl-btn" style="color: var(--lime);" onclick="toggleTheater()">⛶ Toggle Theater</button>
+      </div>
+    </div>
+
+    <!-- Diagnostics Panel -->
+    <div class="diagnostics-panel">
+      <div class="diag-box">
+        <div class="lbl">Video Codec &amp; Framerate</div>
+        <div class="val" style="color: var(--lime);">H.264 (libx264) @ 30 FPS</div>
+      </div>
+      <div class="diag-box">
+        <div class="lbl">Kitchen (NVZ) Subsystem</div>
+        <div class="val" style="color: #FFA500;">Active (7ft / 14ft Depth)</div>
+      </div>
+      <div class="diag-box">
+        <div class="lbl">Streaming Protocol</div>
+        <div class="val" style="color: var(--cyan);">RFC 7233 Byte-Range (206)</div>
+      </div>
+      <div class="diag-box">
+        <div class="lbl">Resolution &amp; Frames</div>
+        <div class="val" id="diag-res">1302 × 740 @ 30 FPS (Full Rally)</div>
+      </div>
+      <div class="diag-box">
+        <div class="lbl">Playback Status</div>
+        <div class="val" id="diag-status">Ready / Streaming</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const CLIPS = {
+      base: {
+        url: "/outputs/match1_base_preview.mp4",
+        title: "outputs/match1_base_preview.mp4",
+        desc: "Unified Base Pickleball Model: 15-keypoint homography, 14-ft Kitchen overlay with NVZ boundary lines, 4-player tracking with foot-fault detection, and ball tracking.",
+        res: "1302 × 740 @ 30 FPS (289 frames)"
+      },
+      match1: {
+        url: "/outputs/match1_players-ball.mp4",
+        title: "outputs/match1_players-ball.mp4",
+        desc: "Full tournament analysis clip: 4 players tracked, ball trajectory with bounce identification and line-calling.",
+        res: "1302 × 740 @ 30 FPS (289 frames)"
+      },
+      teams: {
+        url: "/outputs/MicrosoftTeams-video_players-ball.mp4",
+        title: "outputs/MicrosoftTeams-video_players-ball.mp4",
+        desc: "Vertical court tournament clip: 60 FPS high-speed rally tracking with kitchen NVZ line monitoring.",
+        res: "720 × 1280 @ 60 FPS (470 frames)"
+      }
+    };
+
+    const player = document.getElementById("player");
+    const source = document.getElementById("video-source");
+    const clipTitle = document.getElementById("clip-title");
+    const clipDesc = document.getElementById("clip-desc");
+    const diagRes = document.getElementById("diag-res");
+    const diagStatus = document.getElementById("diag-status");
+
+    function loadClip(key) {
+      document.querySelectorAll(".tab-btn").forEach((btn, idx) => {
+        btn.classList.toggle("active", (key === "base" && idx === 0) || (key === "match1" && idx === 1) || (key === "teams" && idx === 2));
+      });
+      const c = CLIPS[key];
+      if (!c) return;
+      clipTitle.textContent = c.title;
+      clipDesc.textContent = c.desc;
+      diagRes.textContent = c.res;
+      diagStatus.textContent = "Loading stream...";
+
+      source.src = c.url;
+      player.load();
+      player.play().then(() => {
+        diagStatus.textContent = "Playing (HTTP 206 Active)";
+      }).catch(err => {
+        diagStatus.textContent = "Paused / Ready (Click play)";
+      });
+    }
+
+    function setSpeed(speed) {
+      player.playbackRate = speed;
+    }
+
+    function toggleMute() {
+      player.muted = !player.muted;
+    }
+
+    function toggleTheater() {
+      document.body.classList.toggle("theater-active");
+    }
+
+    player.addEventListener("playing", () => {
+      diagStatus.textContent = "Playing (HTTP 206 Active)";
+    });
+    player.addEventListener("pause", () => {
+      diagStatus.textContent = "Paused";
+    });
+    player.addEventListener("error", (e) => {
+      diagStatus.textContent = "Error: " + (player.error ? player.error.message : "unknown");
+    });
+  </script>
+</body>
+</html>
