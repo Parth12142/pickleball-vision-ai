@@ -211,25 +211,33 @@ def main():
 
     # 1. Load config.yaml if available
     config_file = resolve_path(args.config, DEFAULT_CONFIG_PATH)
-    cfg = {}
+    cfg: dict = {}
     if config_file and os.path.exists(config_file):
         try:
             with open(config_file, "r", encoding="utf-8") as f:
-                cfg = yaml.safe_load(f) or {}
+                loaded = yaml.safe_load(f)
+                if isinstance(loaded, dict):
+                    cfg = loaded
+                else:
+                    print(f"[Config] Warning: {config_file} is not a valid YAML dictionary mapping. Using defaults.")
             print(f"[Config] Loaded pipeline settings from: {config_file}")
         except Exception as e:
             print(f"[Config] Warning: Failed to parse {config_file} ({e}). Using defaults.")
 
-    cfg_models = cfg.get("models", {})
-    cfg_paths = cfg.get("paths", {})
+    # Safe type-guarded extractions (immune to None / partial YAML sections)
+    cfg_models = cfg.get("models") if isinstance(cfg.get("models"), dict) else {}
+    cfg_paths = cfg.get("paths") if isinstance(cfg.get("paths"), dict) else {}
+
+    cfg_players = cfg_models.get("players") if isinstance(cfg_models.get("players"), dict) else {}
+    cfg_ball = cfg_models.get("ball") if isinstance(cfg_models.get("ball"), dict) else {}
 
     # 2. Resolve paths with fallback to PROJECT_ROOT
     clip_path = resolve_path(args.clip or cfg.get("clip"), DEFAULT_CLIP)
-    player_weights = resolve_path(args.player_weights or cfg_models.get("players", {}).get("weights"), os.path.join(PROJECT_ROOT, "weights/player_yolo26_best.pt"))
-    ball_weights = resolve_path(args.ball_weights or cfg_models.get("ball", {}).get("weights"), os.path.join(PROJECT_ROOT, "weights/ball_yolo26_best.pt"))
-    ball_imgsz = args.ball_imgsz or cfg_models.get("ball", {}).get("imgsz") or 1312
-    ball_max_coast = cfg_models.get("ball", {}).get("max_coast_frames", 3)
-    multiscale = args.multiscale or bool(cfg_models.get("ball", {}).get("multiscale", False))
+    player_weights = resolve_path(args.player_weights or cfg_players.get("weights"), os.path.join(PROJECT_ROOT, "weights/player_yolo26_best.pt"))
+    ball_weights = resolve_path(args.ball_weights or cfg_ball.get("weights"), os.path.join(PROJECT_ROOT, "weights/ball_yolo26_best.pt"))
+    ball_imgsz = args.ball_imgsz or cfg_ball.get("imgsz") or 1312
+    ball_max_coast = cfg_ball.get("max_coast_frames", 3) or 3
+    multiscale = args.multiscale or bool(cfg_ball.get("multiscale", False))
     out_dir = resolve_path(args.out_dir or cfg_paths.get("out_dir"), DEFAULT_OUT_DIR)
     timing_csv = resolve_path(cfg_paths.get("timing_log"), DEFAULT_TIMING_CSV)
     report_md = resolve_path(cfg_paths.get("run_report"), DEFAULT_REPORT_PATH)
