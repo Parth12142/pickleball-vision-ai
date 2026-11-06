@@ -2370,8 +2370,196 @@ a {
 }
 
 /* ==========================================================================
-   AUTHENTIC PICKLEBALL ATHLETIC SPORTS STYLING & THEATER MODE
+   DAY / NIGHT STADIUM THEME SYSTEM & PRO-TOUR ATHLETIC BUTTON DESIGN
    ========================================================================== */
+
+:root,
+[data-theme="light"] {
+  --bg-page: #EEF3F9;
+  --bg-white: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-surface-subtle: #F8FAFC;
+  --bg-navbar: rgba(255, 255, 255, 0.92);
+  --text-dark: #0A101D;
+  --text-body: #334155;
+  --text-muted: #64748B;
+  --border-light: #CBD5E1;
+  --shadow-card: 0 20px 44px rgba(10, 16, 29, 0.08);
+}
+
+[data-theme="dark"] {
+  --bg-page: #070B12;
+  --bg-white: #FFFFFF;
+  --bg-surface-elevated: #141D2F;
+  --bg-surface-subtle: #0D1422;
+  --bg-navbar: rgba(15, 23, 38, 0.92);
+  --text-dark: #F8FAFC;
+  --text-body: #94A3B8;
+  --text-muted: #64748B;
+  --border-light: #1E293B;
+  --shadow-card: 0 24px 56px rgba(0, 0, 0, 0.48);
+}
+
+html, body {
+  transition: background-color 0.28s ease, color 0.28s ease;
+}
+
+/* Navbar Right Cluster & Day/Night Switcher */
+.nav-right-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.pill-navbar {
+  background: var(--bg-navbar);
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-card);
+  transition: background-color 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+}
+
+.theme-switch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-surface-subtle);
+  color: var(--text-dark);
+  border: 1.5px solid var(--border-light);
+  border-radius: 10px;
+  padding: 8px 13px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--border-light);
+  transition: all 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.theme-switch-pill:hover {
+  border-color: var(--accent-orange);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 77, 0, 0.18);
+}
+
+.theme-switch-pill:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+[data-theme="dark"] .theme-switch-pill {
+  background: #162033;
+  border-color: #2B3B55;
+  color: #CCFF00;
+  box-shadow: 0 2px 0 #090E17;
+}
+
+[data-theme="dark"] .theme-switch-pill:hover {
+  border-color: #CCFF00;
+  box-shadow: 0 0 16px rgba(204, 255, 0, 0.25);
+}
+
+.theme-switch-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Dark Mode Surface Adaptations Across All Sections */
+[data-theme="dark"] .live-anim-tag {
+  background: rgba(20, 29, 47, 0.92);
+  border-color: #26354D;
+  color: #E2E8F0;
+}
+
+[data-theme="dark"] .hero-video-showcase {
+  border-color: #1E293B;
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.65);
+}
+
+[data-theme="dark"] .floating-card-inner-preview {
+  background: #0F1726;
+  color: #F8FAFC;
+}
+
+[data-theme="dark"] .mini-stat-box {
+  background: #182338;
+}
+
+[data-theme="dark"] .mini-stat-box strong {
+  color: #F8FAFC;
+}
+
+[data-theme="dark"] .dark-banner-sec {
+  background: #0C121E;
+  border: 1px solid #1E293B;
+  box-shadow: 0 28px 68px rgba(0, 0, 0, 0.65);
+}
+
+[data-theme="dark"] .telemetry-white-card,
+[data-theme="dark"] .clean-table-wrap,
+[data-theme="dark"] .coming-soon-card,
+[data-theme="dark"] .sub-tier-card,
+[data-theme="dark"] .plan-card,
+[data-theme="dark"] .spec-card,
+[data-theme="dark"] .auth-form-card {
+  background: rgba(16, 23, 38, 0.94);
+  border-color: #1E293B;
+  color: #F8FAFC;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.48);
+}
+
+[data-theme="dark"] .clean-table th {
+  background: #141D2F;
+  color: #CCFF00;
+  border-bottom-color: #1E293B;
+}
+
+[data-theme="dark"] .player-telemetry-card,
+[data-theme="dark"] .metric-summary-item,
+[data-theme="dark"] .p-mini-metric,
+[data-theme="dark"] .coming-soon-spec-box {
+  background: #162033;
+  border-color: #26354D;
+  color: #F8FAFC;
+}
+
+[data-theme="dark"] .nav-menu-btn:hover {
+  background: #1E293B;
+  color: #F8FAFC;
+}
+
+[data-theme="dark"] .nav-menu-btn.active {
+  background: #CCFF00;
+  color: #090E17;
+  box-shadow: 0 4px 14px rgba(204, 255, 0, 0.3);
+}
+
+.lens-pill {
+  border: 1.5px solid #26334D;
+  background: #111827;
+  color: #94A3B8;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 0 #070B12;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.lens-pill:hover {
+  border-color: #CCFF00;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.lens-pill.active {
+  background: #CCFF00;
+  color: #090E17;
+  border-color: #090E17;
+  box-shadow: 0 2px 0 #8FB300;
+}
 
 /* Brand & Pro League Badge */
 .brand-paddle-icon {
@@ -2379,8 +2567,9 @@ a {
   height: 22px;
   background: #CCFF00;
   border-radius: 6px;
+  border: 1.5px solid #0A111A;
   display: inline-block;
-  box-shadow: 0 0 10px rgba(204, 255, 0, 0.5);
+  box-shadow: 0 2px 8px rgba(204, 255, 0, 0.45);
   position: relative;
 }
 
@@ -2391,19 +2580,19 @@ a {
   height: 6px;
   border-radius: 50%;
   background: #0A111A;
-  top: 8px;
-  left: 8px;
+  top: 6.5px;
+  left: 6.5px;
 }
 
 .pro-league-tag {
   background: #0A111A;
   color: #CCFF00;
-  border: 1px solid rgba(204, 255, 0, 0.4);
+  border: 1px solid rgba(204, 255, 0, 0.45);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 800;
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: 5px;
   letter-spacing: 0.05em;
   margin-left: 6px;
 }
@@ -2434,8 +2623,8 @@ a {
   gap: 16px;
   background: #0B111A;
   border: 1.5px solid #1E293B;
-  border-radius: var(--radius-pill);
-  padding: 8px 18px;
+  border-radius: 14px;
+  padding: 10px 18px;
 }
 
 .match-badge-tag {
@@ -2462,9 +2651,9 @@ a {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
 }
 
 .match-actions-group {
@@ -2473,161 +2662,271 @@ a {
   gap: 10px;
 }
 
-/* Tactile Sports Equipment Buttons */
+/* ==========================================================================
+   HANDCRAFTED PRO-TOUR TACTILE SPORTS BUTTON SYSTEM
+   (Replaces generic AI pills with structured, bevel-edged sports hardware)
+   ========================================================================== */
+
+/* Navbar Sign Up CTA */
+.nav-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #FF5E1A 0%, #E64400 100%);
+  color: #FFFFFF;
+  border: 1.5px solid #CC3B00;
+  border-radius: 11px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 9px 16px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #992C00, 0 8px 18px rgba(255, 77, 0, 0.26);
+  transition: all 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.nav-cta-btn:hover {
+  background: linear-gradient(180deg, #FF6D2E 0%, #F04800 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #992C00, 0 12px 22px rgba(255, 77, 0, 0.34);
+}
+
+.nav-cta-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #992C00;
+}
+
+.cta-plus-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.22);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+/* Primary Hero & Action Button (Optic Yellow / Carbon Bevel) */
 .btn-sports-primary {
-  background: #CCFF00;
-  color: #0A111A;
+  background: linear-gradient(180deg, #D9FF1A 0%, #BFE600 100%);
+  color: #090E17;
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 12px 24px;
-  border-radius: var(--radius-pill);
-  border: 2px solid #B3E600;
-  box-shadow: 0 4px 14px rgba(204, 255, 0, 0.35);
+  padding: 13px 24px;
+  border-radius: 12px;
+  border: 2px solid #090E17;
+  box-shadow: 0 4px 0 #090E17, 0 10px 24px rgba(191, 230, 0, 0.28);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 10px;
+  transition: all 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.btn-sports-primary .btn-arrow-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #090E17;
+  color: #CCFF00;
+  font-size: 10px;
 }
 
 .btn-sports-primary:hover {
-  background: #D9FF33;
+  background: linear-gradient(180deg, #E2FF4D 0%, #CCFF00 100%);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(204, 255, 0, 0.5);
+  box-shadow: 0 6px 0 #090E17, 0 14px 28px rgba(204, 255, 0, 0.42);
 }
 
 .btn-sports-primary:active {
-  transform: translateY(1px);
-  box-shadow: 0 2px 8px rgba(204, 255, 0, 0.3);
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #090E17;
 }
 
+/* Secondary Outline Hero Button (Theme-Aware for Both Day & Night!) */
 .btn-sports-outline {
-  background: transparent;
-  color: #F8FAFC;
+  background: var(--bg-surface-elevated);
+  color: var(--text-dark);
   font-family: var(--font-sans);
   font-size: 14px;
-  font-weight: 700;
-  padding: 12px 24px;
-  border-radius: var(--radius-pill);
-  border: 2px solid #334155;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 13px 22px;
+  border-radius: 12px;
+  border: 2px solid var(--border-light);
+  box-shadow: 0 4px 0 var(--border-light);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.15s ease;
+  transition: all 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .btn-sports-outline:hover {
-  border-color: #CCFF00;
-  color: #CCFF00;
-  background: rgba(204, 255, 0, 0.08);
+  border-color: var(--accent-orange);
+  color: var(--accent-orange);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--accent-orange);
 }
 
-.btn-sports-theater {
-  background: #141C28;
+.btn-sports-outline:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--accent-orange);
+}
+
+[data-theme="dark"] .btn-sports-outline {
+  background: #141E30;
+  color: #F8FAFC;
+  border-color: #2E3F59;
+  box-shadow: 0 4px 0 #090E17;
+}
+
+[data-theme="dark"] .btn-sports-outline:hover {
+  border-color: #CCFF00;
   color: #CCFF00;
-  border: 1.5px solid #293548;
+  box-shadow: 0 6px 0 #CCFF00;
+}
+
+/* Broadcast Console Buttons: Theater Mode & Pin/Retrack Court
+   (Supports both .sports-btn-* and .btn-sports-* class names) */
+.sports-btn-theater,
+.btn-sports-theater {
+  background: linear-gradient(180deg, #1E293B 0%, #111827 100%);
+  color: #CCFF00;
+  border: 1.5px solid #334155;
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 800;
-  padding: 8px 18px;
-  border-radius: var(--radius-pill);
+  letter-spacing: 0.02em;
+  padding: 9px 16px;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 #070B12;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.15s ease;
+  transition: all 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.sports-btn-theater:hover,
 .btn-sports-theater:hover,
+.sports-btn-theater.active,
 .btn-sports-theater.active {
   background: #CCFF00;
-  color: #0A111A;
-  border-color: #CCFF00;
-  box-shadow: 0 0 16px rgba(204, 255, 0, 0.4);
+  color: #090E17;
+  border-color: #090E17;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #8FB300, 0 0 16px rgba(204, 255, 0, 0.4);
 }
 
+.sports-btn-theater:active,
+.btn-sports-theater:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #070B12;
+}
+
+.sports-btn-calib,
 .btn-sports-calib {
-  background: rgba(255, 87, 34, 0.15);
-  color: #FF7043;
-  border: 1.5px solid #FF5722;
+  background: linear-gradient(180deg, #FF5E1A 0%, #E04400 100%);
+  color: #FFFFFF;
+  border: 1.5px solid #FF8552;
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 800;
-  padding: 8px 18px;
-  border-radius: var(--radius-pill);
+  letter-spacing: 0.02em;
+  padding: 9px 16px;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 #8F2B00, 0 6px 14px rgba(255, 77, 0, 0.3);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.15s ease;
+  transition: all 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.sports-btn-calib:hover,
 .btn-sports-calib:hover {
-  background: #FF5722;
-  color: #FFFFFF;
-  box-shadow: 0 4px 16px rgba(255, 87, 34, 0.45);
+  background: linear-gradient(180deg, #FF7033 0%, #F04D00 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #8F2B00, 0 10px 20px rgba(255, 77, 0, 0.45);
 }
 
+.sports-btn-calib:active,
+.btn-sports-calib:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #8F2B00;
+}
+
+/* Workbench Action Buttons */
 .btn-sports-retrack {
-  background: linear-gradient(135deg, #FF5722, #FF8A00);
+  background: linear-gradient(180deg, #FF621F 0%, #E64500 100%);
   color: #FFFFFF;
-  border: none;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 800;
-  padding: 10px 22px;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 16px rgba(255, 87, 34, 0.4);
-  transition: all 0.15s ease;
-}
-
-.btn-sports-retrack:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 22px rgba(255, 87, 34, 0.6);
-}
-
-.btn-sports-save {
-  background: #10B981;
-  color: #FFFFFF;
-  border: none;
+  border: 1.5px solid #FF8A57;
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 800;
   padding: 10px 20px;
-  border-radius: var(--radius-pill);
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 3px 0 #8F2B00, 0 6px 18px rgba(255, 87, 34, 0.38);
+  transition: all 0.14s ease;
+}
+
+.btn-sports-retrack:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #8F2B00, 0 10px 24px rgba(255, 87, 34, 0.55);
+}
+
+.btn-sports-save {
+  background: linear-gradient(180deg, #10B981 0%, #059669 100%);
+  color: #FFFFFF;
+  border: 1.5px solid #34D399;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 18px;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 #065F46;
+  cursor: pointer;
+  transition: all 0.14s ease;
 }
 
 .btn-sports-save:hover {
-  background: #059669;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #065F46, 0 6px 16px rgba(16, 185, 129, 0.4);
 }
 
 .btn-sports-secondary {
   background: #1E293B;
-  color: #CBD5E1;
-  border: 1px solid #334155;
+  color: #E2E8F0;
+  border: 1.5px solid #334155;
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 700;
-  padding: 10px 18px;
-  border-radius: var(--radius-pill);
+  padding: 10px 16px;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 #090E17;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.14s ease;
 }
 
 .btn-sports-secondary:hover {
   background: #334155;
   color: #FFFFFF;
+  transform: translateY(-1px);
 }
 
 .single-clip-lock-badge {
@@ -2656,9 +2955,9 @@ a {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 800;
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(204, 255, 0, 0.3);
+  border: 1px solid rgba(204, 255, 0, 0.35);
 }
 
 /* ==========================================================================

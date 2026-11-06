@@ -460,8 +460,9 @@ export class PickleballBgAnimator {
     const nvzOffset = courtH * 0.16;
     const lerpW = (yFrac) => topW + (botW - topW) * yFrac;
 
-    ctx.strokeStyle = "rgba(27, 86, 138, 0.11)";
-    ctx.lineWidth = 1.5;
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    ctx.strokeStyle = isDark ? "rgba(56, 189, 248, 0.16)" : "rgba(27, 86, 138, 0.12)";
+    ctx.lineWidth = 1.6;
 
     ctx.beginPath();
     ctx.moveTo(cx - topW / 2, topY);
@@ -476,7 +477,7 @@ export class PickleballBgAnimator {
     const wTopNVZ = lerpW(nvzTopFrac);
     const wBotNVZ = lerpW(nvzBotFrac);
 
-    ctx.fillStyle = "rgba(27, 86, 138, 0.035)";
+    ctx.fillStyle = isDark ? "rgba(56, 189, 248, 0.05)" : "rgba(27, 86, 138, 0.04)";
     ctx.beginPath();
     ctx.moveTo(cx - wTopNVZ / 2, netY - nvzOffset);
     ctx.lineTo(cx + wTopNVZ / 2, netY - nvzOffset);
@@ -494,7 +495,7 @@ export class PickleballBgAnimator {
     ctx.stroke();
 
     const wNet = lerpW(0.5);
-    ctx.strokeStyle = "rgba(255, 77, 0, 0.22)";
+    ctx.strokeStyle = isDark ? "rgba(204, 255, 0, 0.28)" : "rgba(255, 77, 0, 0.24)";
     ctx.lineWidth = 2;
     ctx.setLineDash([8, 6]);
     ctx.lineDashOffset = -t * 18;

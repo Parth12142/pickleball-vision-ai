@@ -116,6 +116,9 @@ class PickleballWebsiteApp {
     this.isTransitioning = false;
     this.isTheaterMode = false;
     this.realTelemetry = null;
+    this.theme = "light";
+
+    this.initTheme();
 
     this.heroVideoEl = document.getElementById("hero-preview-video");
     this.demoVideoEl = document.getElementById("demo-video-player");
@@ -164,7 +167,46 @@ class PickleballWebsiteApp {
     this.startLoop();
   }
 
+  initTheme() {
+    const saved = localStorage.getItem("pb_theme_pref");
+    if (saved === "light" || saved === "dark") {
+      this.applyTheme(saved);
+    } else {
+      // Auto-detect based on local time of day: 6:00 AM - 6:29 PM = Day (light), else Night (dark)
+      const now = new Date();
+      const totalMins = now.getHours() * 60 + now.getMinutes();
+      const isDay = totalMins >= 360 && totalMins < 1110;
+      this.applyTheme(isDay ? "light" : "dark");
+    }
+  }
+
+  applyTheme(theme) {
+    this.theme = theme === "dark" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", this.theme);
+    document.body?.setAttribute("data-theme", this.theme);
+
+    const iconEl = document.getElementById("theme-toggle-icon");
+    const labelEl = document.getElementById("theme-toggle-label");
+    if (iconEl) {
+      iconEl.textContent = this.theme === "dark" ? "🌙" : "☀️";
+    }
+    if (labelEl) {
+      labelEl.textContent = this.theme === "dark" ? "Night Arena" : "Day Court";
+    }
+  }
+
+  toggleTheme() {
+    const next = this.theme === "dark" ? "light" : "dark";
+    localStorage.setItem("pb_theme_pref", next);
+    this.applyTheme(next);
+  }
+
   bindEvents() {
+    // 0. Day / Night Stadium Theme Toggle
+    document.getElementById("theme-toggle-btn")?.addEventListener("click", () => {
+      this.toggleTheme();
+    });
+
     // 1. Multi-Page Menu Navigation with Pickleball Smash & Spin Transition
     document.querySelectorAll("[data-page]").forEach((btn) => {
       btn.addEventListener("click", (e) => {

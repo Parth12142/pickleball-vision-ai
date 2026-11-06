@@ -55,26 +55,34 @@
           </button>
         </nav>
 
-        <!-- Guest Auth Actions -->
-        <div id="nav-guest-actions" class="nav-right-actions">
-          <button class="nav-menu-btn" data-page="login">
-            Log In
+        <div class="nav-right-cluster">
+          <!-- Day / Night Stadium Theme Toggle -->
+          <button id="theme-toggle-btn" class="theme-switch-pill" type="button" title="Toggle Day Sunlight / Night Floodlight Mode">
+            <span id="theme-toggle-icon" class="theme-switch-icon">☀️</span>
+            <span id="theme-toggle-label" class="theme-switch-label">Day Court</span>
           </button>
-          <button class="nav-cta-btn" data-page="signup">
-            <span>Sign Up</span>
-            <span>+</span>
-          </button>
-        </div>
 
-        <!-- Logged-In User Actions -->
-        <div id="nav-user-actions" class="nav-right-actions hidden" style="display: none;">
-          <div class="user-account-pill">
-            <span id="nav-user-name">Player</span>
-            <span id="nav-user-tier" class="user-tier-tag">PADDLE</span>
+          <!-- Guest Auth Actions -->
+          <div id="nav-guest-actions" class="nav-right-actions">
+            <button class="nav-menu-btn" data-page="login">
+              Log In
+            </button>
+            <button class="nav-cta-btn" data-page="signup">
+              <span>Sign Up</span>
+              <span class="cta-plus-badge">+</span>
+            </button>
           </div>
-          <button id="nav-logout-btn" class="nav-menu-btn">
-            Log Out
-          </button>
+
+          <!-- Logged-In User Actions -->
+          <div id="nav-user-actions" class="nav-right-actions hidden" style="display: none;">
+            <div class="user-account-pill">
+              <span id="nav-user-name">Player</span>
+              <span id="nav-user-tier" class="user-tier-tag">PADDLE</span>
+            </div>
+            <button id="nav-logout-btn" class="nav-menu-btn">
+              Log Out
+            </button>
+          </div>
         </div>
       </header>
     </div>
