@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pickleball Vision AI — 3D Open-World Complex (Port 3001)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style_3d.css" />
+</head>
+<body>
+
+  <!-- 3D Open-World Canvas -->
+  <canvas id="world-canvas"></canvas>
+
+  <!-- Bruno Simon Style "Click to Start Driving" Overlay -->
+  <div id="start-overlay" class="start-overlay">
+    <div class="start-card">
+      <div class="start-badge">🛞 PLAYABLE 3D STADIUM COMPLEX • PORT 3001</div>
+      <h1 class="start-title">DON'T SCROLL.<br /><span>DRIVE THE COURT.</span></h1>
+      <p class="start-subtitle">
+        Inspired by Bruno Simon's open-world portfolio. Take the wheel of the Pickleball AI Rover, launch off stadium ramps, discover 7 interactive computer-vision landmarks, and unlock hidden tournament achievements.
+      </p>
+
+      <div class="controls-grid">
+        <div class="ctrl-item">
+          <div class="key-cap">W A S D / ARROWS</div>
+          <span>Drive &amp; Steer</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="key-cap">SHIFT</div>
+          <span>Turbo Boost (45+ MPH)</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="key-cap">SPACEBAR</div>
+          <span>Airborne Dink Jump</span>
+        </div>
+        <div class="ctrl-item">
+          <div class="key-cap">ENTER / E</div>
+          <span>Inspect Landmark</span>
+        </div>
+      </div>
+
+      <button id="btn-start-drive" class="btn-start-drive">
+        🏁 CLICK TO START DRIVING
+      </button>
+    </div>
+  </div>
+
+  <!-- Top Broadcast HUD Bar -->
+  <header class="hud-top">
+    <div class="hud-brand">
+      <span style="font-size:20px;">🏓</span>
+      <div>
+        <div class="hud-brand-name">PICKLEBALL <span>3D WORLD</span></div>
+      </div>
+      <span class="hud-port-pill">EXP :3001</span>
+    </div>
+
+    <div class="hud-actions">
+      <button id="btn-open-achievements" class="hud-btn">
+        🏆 Achievements: <strong id="ach-count-text" style="color:#CCFF00;">0 / 7</strong>
+      </button>
+      <button id="btn-night-mode" class="hud-btn">
+        🌙 Night Mode (N)
+      </button>
+      <button id="btn-reset-car" class="hud-btn">
+        🔄 Reset Rover (R)
+      </button>
+      <a href="http://localhost:3000" target="_blank" rel="noopener" class="hud-btn">
+        📺 Classic Broadcast Site (:3000) ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- Achievement Unlocked Toast -->
+  <div id="achievement-toast" class="achievement-toast">
+    <div id="toast-icon" class="toast-icon">🏆</div>
+    <div class="toast-body">
+      <small>ACHIEVEMENT UNLOCKED</small>
+      <strong id="toast-title">First Serve</strong>
+    </div>
+  </div>
+
+  <!-- Proximity Zone Prompt -->
+  <div id="zone-prompt" class="zone-prompt hidden" style="cursor:pointer;">
+    <span class="key-badge">ENTER</span>
+    <span>Inspect <strong id="zone-prompt-name" style="color:#CCFF00;">Center Court</strong></span>
+  </div>
+
+  <!-- Bottom HUD: Minimap Radar + Digital Speedometer -->
+  <div class="hud-bottom">
+    <div class="minimap-card">
+      <div class="minimap-header">
+        <span>STADIUM RADAR</span>
+        <span>7 ZONES</span>
+      </div>
+      <canvas id="minimap-canvas" width="164" height="164"></canvas>
+    </div>
+
+    <div class="speedometer-card">
+      <div>
+        <div id="speed-val" class="speed-value">0</div>
+        <div class="speed-unit">MPH</div>
+      </div>
+      <div class="gear-badge">
+        <small>MODE</small>
+        <span id="gear-val">P</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Landmark Feature Modal -->
+  <div id="landmark-modal" class="landmark-modal hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <span id="modal-tag" class="modal-tag">LIVE TELEMETRY</span>
+          <h2 id="modal-title" class="modal-title">🏟️ Center Court</h2>
+        </div>
+        <button id="btn-close-modal" class="btn-close-modal">✕ ESC</button>
+      </div>
+      <div id="modal-body-content" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Achievements Drawer Modal -->
+  <div id="achievements-modal" class="landmark-modal hidden">
+    <div class="modal-dialog" style="max-width:720px;">
+      <div class="modal-header">
+        <div>
+          <span class="modal-tag">GAMIFIED EXPLORATION</span>
+          <h2 class="modal-title">🏆 Stadium Achievements &amp; Easter Eggs</h2>
+        </div>
+        <button id="btn-close-achievements" class="btn-close-modal">✕ ESC</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-top:0; color:#94A3B8; font-size:14px;">
+          Drive around the 3D Pickleball Complex to unlock all 7 achievements. Hint: Check behind the North Bleachers at (0, -42) for a secret monument!
+        </p>
+        <div id="ach-list-grid" class="ach-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/js/world.js"></script>
+</body>
+</html>
