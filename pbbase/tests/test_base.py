@@ -343,5 +343,68 @@ class TestPerceptionSchema(unittest.TestCase):
         self.assertTrue(any("missing key 'slot'" in e for e in errors))
 
 
+class TestRallyValidation(unittest.TestCase):
+    def test_audit_zero_swaps_on_normal_trajectory(self):
+        from scripts.validate_rally import audit_player_id_swaps
+        stream = [
+            {
+                "frame_index": 0,
+                "players": [
+                    {"id": 1, "slot": "P1", "court_ft": [4.0, 36.0], "side": "near"},
+                    {"id": 3, "slot": "P3", "court_ft": [5.0, 10.0], "side": "far"},
+                ]
+            },
+            {
+                "frame_index": 1,
+                "players": [
+                    {"id": 1, "slot": "P1", "court_ft": [4.2, 36.1], "side": "near"},
+                    {"id": 3, "slot": "P3", "court_ft": [5.1, 10.2], "side": "far"},
+                ]
+            },
+            {
+                "frame_index": 2,
+                "players": [
+                    {"id": 1, "slot": "P1", "court_ft": [4.4, 36.3], "side": "near"},
+                    {"id": 3, "slot": "P3", "court_ft": [5.3, 10.4], "side": "far"},
+                ]
+            },
+        ]
+        audit = audit_player_id_swaps(stream)
+        self.assertEqual(audit["total_switch_events"], 0)
+        self.assertEqual(audit["id_swaps"], 0)
+        self.assertEqual(audit["net_partition_violations"], 0)
+
+    def test_audit_detects_net_partition_violation(self):
+        from scripts.validate_rally import audit_player_id_swaps
+        stream = [
+            {"frame_index": 0, "players": [{"id": 1, "slot": "P1", "court_ft": [4.0, 36.0], "side": "near"}]},
+            {"frame_index": 1, "players": [{"id": 1, "slot": "P1", "court_ft": [4.0, 10.0], "side": "far"}]},
+        ]
+        audit = audit_player_id_swaps(stream)
+        self.assertGreaterEqual(audit["net_partition_violations"], 1)
+        self.assertGreaterEqual(audit["total_switch_events"], 1)
+
+    def test_audit_detects_unnatural_displacement_leap(self):
+        from scripts.validate_rally import audit_player_id_swaps
+        stream = [
+            {"frame_index": 0, "players": [{"id": 1, "slot": "P1", "court_ft": [2.0, 35.0], "side": "near"}]},
+            {"frame_index": 1, "players": [{"id": 1, "slot": "P1", "court_ft": [18.0, 35.0], "side": "near"}]},  # 16 ft leap
+        ]
+        audit = audit_player_id_swaps(stream, max_step_ft_per_frame=6.0)
+        self.assertGreaterEqual(audit["id_swaps"], 1)
+
+    def test_ball_detection_audit_rate(self):
+        from scripts.validate_rally import audit_ball_detection
+        stream_failing = [{"frame_index": i, "ball": {"pixel": [100.0, 200.0]} if i < 9 else None} for i in range(10)]
+        audit_f = audit_ball_detection(stream_failing)
+        self.assertEqual(audit_f["tracking_rate_pct"], 90.0)
+        self.assertFalse(audit_f["target_met"])
+
+        stream_passing = [{"frame_index": i, "ball": {"pixel": [100.0, 200.0]}} for i in range(10)]
+        audit_p = audit_ball_detection(stream_passing)
+        self.assertEqual(audit_p["tracking_rate_pct"], 100.0)
+        self.assertTrue(audit_p["target_met"])
+
+
 if __name__ == "__main__":
     unittest.main()
