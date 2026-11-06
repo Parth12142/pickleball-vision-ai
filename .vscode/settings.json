@@ -4,6 +4,7 @@
     "${workspaceFolder}",
     "${workspaceFolder}/pbbase",
     "${workspaceFolder}/.venv/lib/python3.14/site-packages",
+    "/home/pce118/snap/antigravity-cli/common/.local/lib/python3.14/site-packages",
     "/home/pce118/snap/antigravity-cli/common/local/lib/python3.14/dist-packages",
     "/snap/antigravity-cli/24/usr/lib/python3/dist-packages"
   ],
@@ -11,6 +12,7 @@
     "${workspaceFolder}",
     "${workspaceFolder}/pbbase",
     "${workspaceFolder}/.venv/lib/python3.14/site-packages",
+    "/home/pce118/snap/antigravity-cli/common/.local/lib/python3.14/site-packages",
     "/home/pce118/snap/antigravity-cli/common/local/lib/python3.14/dist-packages",
     "/snap/antigravity-cli/24/usr/lib/python3/dist-packages"
   ],

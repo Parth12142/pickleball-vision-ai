@@ -11,6 +11,7 @@ import datetime
 import json
 import os
 import sys
+from typing import Optional
 import yaml
 
 # Ensure project root is in sys.path and define anchor directories
