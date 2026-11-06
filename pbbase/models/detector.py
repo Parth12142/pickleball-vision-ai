@@ -8,17 +8,28 @@ import numpy as np
 from ultralytics import YOLO
 
 
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+
 class PlayerDetector:
     """Detects human players on court using pretrained or fine-tuned YOLO26."""
     def __init__(self, model_path: Optional[str] = None, conf_thresh: float = 0.25):
-        resolved_path = model_path or "weights/player_yolo26_best.pt"
-        if not os.path.exists(resolved_path):
-            if os.path.exists("weights/player_yolo26_best.pt"):
-                resolved_path = "weights/player_yolo26_best.pt"
-            elif os.path.exists("weights/yolo26n.pt"):
-                resolved_path = "weights/yolo26n.pt"
-            else:
-                raise FileNotFoundError(f"Player model weights not found at: {resolved_path}")
+        candidates = [
+            model_path,
+            os.path.join(REPO_ROOT, model_path) if model_path and not os.path.isabs(model_path) else None,
+            "weights/player_yolo26_best.pt",
+            os.path.join(REPO_ROOT, "weights/player_yolo26_best.pt"),
+            "weights/yolo26n.pt",
+            os.path.join(REPO_ROOT, "weights/yolo26n.pt"),
+        ]
+        resolved_path = None
+        for cand in candidates:
+            if cand and os.path.exists(cand):
+                resolved_path = cand
+                break
+
+        if not resolved_path:
+            raise FileNotFoundError(f"Player model weights not found at: {model_path or 'weights/player_yolo26_best.pt'}")
 
         self.model_path = resolved_path
         self.model = YOLO(resolved_path)
@@ -156,9 +167,23 @@ class BallDetector:
         iou_thresh: float = 0.25,
         dist_thresh_px: float = 24.0,
     ):
-        if not os.path.exists(model_path):
+        candidates = [
+            model_path,
+            os.path.join(REPO_ROOT, model_path) if model_path and not os.path.isabs(model_path) else None,
+            "weights/ball_yolo26_best.pt",
+            os.path.join(REPO_ROOT, "weights/ball_yolo26_best.pt"),
+            "weights/ball_colab_dukcv.pt",
+            os.path.join(REPO_ROOT, "weights/ball_colab_dukcv.pt"),
+        ]
+        resolved_path = None
+        for cand in candidates:
+            if cand and os.path.exists(cand):
+                resolved_path = cand
+                break
+
+        if not resolved_path:
             raise FileNotFoundError(f"Ball model weights not found at: {model_path}")
-        self.model = YOLO(model_path)
+        self.model = YOLO(resolved_path)
         self.conf_thresh = conf_thresh
         self.imgsz = imgsz
         self.multiscale = multiscale

@@ -16,6 +16,7 @@ yolo26n.pt
 
 # Datasets and Archives (Datasets built via scripts)
 datasets/
+pickleball-base
 archive/
 scratch/
 *.zip

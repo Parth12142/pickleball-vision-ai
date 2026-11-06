@@ -13,17 +13,34 @@ import os
 import sys
 import yaml
 
-# Ensure pickleball-base is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Ensure project root is in sys.path and define anchor directories
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 from pbbase.pipeline import BasePerceptionPipeline
 
-DEFAULT_CONFIG_PATH = "config.yaml"
-DEFAULT_CLIP = "clips/match1.mp4"
-DEFAULT_OUT_DIR = "outputs"
-DEFAULT_REPORT_PATH = "RUN_ACCURACY_REPORT.md"
-DEFAULT_HISTORY_PATH = "reports/run_history.json"
-DEFAULT_TIMING_CSV = "outputs/timing_log.csv"
+DEFAULT_CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
+DEFAULT_CLIP = os.path.join(PROJECT_ROOT, "clips/match1.mp4")
+DEFAULT_OUT_DIR = os.path.join(PROJECT_ROOT, "outputs")
+DEFAULT_REPORT_PATH = os.path.join(PROJECT_ROOT, "RUN_ACCURACY_REPORT.md")
+DEFAULT_HISTORY_PATH = os.path.join(PROJECT_ROOT, "reports/run_history.json")
+DEFAULT_TIMING_CSV = os.path.join(PROJECT_ROOT, "outputs/timing_log.csv")
+
+
+def resolve_path(path: Optional[str], default_path: Optional[str] = None) -> Optional[str]:
+    """Resolves a file path, checking both cwd and PROJECT_ROOT."""
+    target = path or default_path
+    if not target:
+        return None
+    if os.path.isabs(target):
+        return target
+    if os.path.exists(target):
+        return os.path.abspath(target)
+    project_rel = os.path.join(PROJECT_ROOT, target)
+    if os.path.exists(project_rel):
+        return project_rel
+    return os.path.abspath(target)
 
 
 def update_timing_log_csv(summary: dict, csv_path: str = DEFAULT_TIMING_CSV):
@@ -173,15 +190,18 @@ def update_run_accuracy_report(summary: dict, report_path: str = DEFAULT_REPORT_
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run Pickleball Base Perception Model (Zero Rules)")
-    parser.add_argument("--config", default=DEFAULT_CONFIG_PATH if os.path.exists(DEFAULT_CONFIG_PATH) else None, help="Path to config.yaml")
-    parser.add_argument("--clip", default=None, help="Path to input video clip (overrides config)")
+    parser = argparse.ArgumentParser(
+        description="Run Pickleball Base Perception Model (Zero Rules)",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("--config", "-c", default=DEFAULT_CONFIG_PATH if os.path.exists(DEFAULT_CONFIG_PATH) else None, help="Path to config.yaml")
+    parser.add_argument("--clip", "--video", "-v", dest="clip", default=None, help="Path to input video clip (overrides config)")
     parser.add_argument("--player-weights", default=None, help="Weights for player detection (YOLO26)")
     parser.add_argument("--ball-weights", default=None, help="Weights for ball detection (Colab A100 YOLO26)")
     parser.add_argument("--ball-imgsz", type=int, default=None, help="Input resolution for ball model (e.g. 1312)")
-    parser.add_argument("--multiscale", action="store_true", help="Enable multi-scale cropped-patch sliding inference for distant micro-balls")
-    parser.add_argument("--max-frames", type=int, default=None, help="Maximum frames to process")
-    parser.add_argument("--out-dir", default=None, help="Output directory")
+    parser.add_argument("--multiscale", "-m", action="store_true", help="Enable multi-scale cropped-patch sliding inference for distant micro-balls")
+    parser.add_argument("--max-frames", "--frames", "-n", dest="max_frames", type=int, default=None, help="Maximum frames to process")
+    parser.add_argument("--out-dir", "--output", "-o", dest="out_dir", default=None, help="Output directory")
     parser.add_argument("--no-preview", action="store_true", help="Disable generating diagnostic preview video")
     return parser.parse_args()
 
@@ -190,27 +210,53 @@ def main():
     args = parse_args()
 
     # 1. Load config.yaml if available
+    config_file = resolve_path(args.config, DEFAULT_CONFIG_PATH)
     cfg = {}
-    if args.config and os.path.exists(args.config):
+    if config_file and os.path.exists(config_file):
         try:
-            with open(args.config, "r", encoding="utf-8") as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 cfg = yaml.safe_load(f) or {}
-            print(f"[Config] Loaded pipeline settings from: {args.config}")
+            print(f"[Config] Loaded pipeline settings from: {config_file}")
         except Exception as e:
-            print(f"[Config] Warning: Failed to parse {args.config} ({e}). Using defaults.")
+            print(f"[Config] Warning: Failed to parse {config_file} ({e}). Using defaults.")
 
     cfg_models = cfg.get("models", {})
     cfg_paths = cfg.get("paths", {})
 
-    clip_path = args.clip or cfg.get("clip") or DEFAULT_CLIP
-    player_weights = args.player_weights or cfg_models.get("players", {}).get("weights") or "weights/player_yolo26_best.pt"
-    ball_weights = args.ball_weights or cfg_models.get("ball", {}).get("weights") or "weights/ball_yolo26_best.pt"
+    # 2. Resolve paths with fallback to PROJECT_ROOT
+    clip_path = resolve_path(args.clip or cfg.get("clip"), DEFAULT_CLIP)
+    player_weights = resolve_path(args.player_weights or cfg_models.get("players", {}).get("weights"), os.path.join(PROJECT_ROOT, "weights/player_yolo26_best.pt"))
+    ball_weights = resolve_path(args.ball_weights or cfg_models.get("ball", {}).get("weights"), os.path.join(PROJECT_ROOT, "weights/ball_yolo26_best.pt"))
     ball_imgsz = args.ball_imgsz or cfg_models.get("ball", {}).get("imgsz") or 1312
     ball_max_coast = cfg_models.get("ball", {}).get("max_coast_frames", 3)
     multiscale = args.multiscale or bool(cfg_models.get("ball", {}).get("multiscale", False))
-    out_dir = args.out_dir or cfg_paths.get("out_dir") or DEFAULT_OUT_DIR
-    timing_csv = cfg_paths.get("timing_log") or DEFAULT_TIMING_CSV
-    report_md = cfg_paths.get("run_report") or DEFAULT_REPORT_PATH
+    out_dir = resolve_path(args.out_dir or cfg_paths.get("out_dir"), DEFAULT_OUT_DIR)
+    timing_csv = resolve_path(cfg_paths.get("timing_log"), DEFAULT_TIMING_CSV)
+    report_md = resolve_path(cfg_paths.get("run_report"), DEFAULT_REPORT_PATH)
+
+    # 3. Pre-flight Validation
+    if not clip_path or not os.path.exists(clip_path):
+        print(f"\n[Error] Input video clip not found at: {clip_path}")
+        print("  Please specify an existing video with --video or --clip (e.g. --video clips/match1.mp4).")
+        sys.exit(1)
+
+    if not player_weights or not os.path.exists(player_weights):
+        fallback_player = os.path.join(PROJECT_ROOT, "weights/yolo26n.pt")
+        if os.path.exists(fallback_player):
+            print(f"[Warning] Player weights '{player_weights}' not found. Falling back to baseline: {fallback_player}")
+            player_weights = fallback_player
+        else:
+            print(f"\n[Error] Player model weights not found at: {player_weights}")
+            sys.exit(1)
+
+    if not ball_weights or not os.path.exists(ball_weights):
+        fallback_ball = os.path.join(PROJECT_ROOT, "weights/ball_colab_dukcv.pt")
+        if os.path.exists(fallback_ball):
+            print(f"[Warning] Ball weights '{ball_weights}' not found. Falling back to baseline: {fallback_ball}")
+            ball_weights = fallback_ball
+        else:
+            print(f"\n[Error] Ball model weights not found at: {ball_weights}")
+            sys.exit(1)
 
     os.makedirs(out_dir, exist_ok=True)
 
