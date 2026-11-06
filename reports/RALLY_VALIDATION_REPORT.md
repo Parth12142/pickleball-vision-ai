@@ -1,9 +1,9 @@
 # 🏓 Rally Validation Report (Task W2-06)
 
-> **Generated**: `2026-11-06 09:25:57`  
+> **Generated**: `2026-11-06 09:36:14`  
 > **Clip Tested**: `match1.mp4`  
-> **Frames Analyzed**: `90`  
-> **Status**: ✅ **ALL TARGETS PASSED**
+> **Frames Analyzed**: `289`  
+> **Status**: ⚠️ **ACTION REQUIRED**
 
 ---
 
@@ -11,9 +11,9 @@
 
 | Criterion | Measured Result | Benchmark Target | Status |
 | :--- | :---: | :---: | :---: |
-| **Ball Tracking Continuity** | **100.0%** (90/90 frames) | $\ge 92.0\%$ | ✅ PASS |
-| **Raw YOLO26 Detections** | **92.22%** (83 frames) | Baseline Info | ⚡ Active |
-| **Occlusion Interpolation** | **7 frames** | $\le 8\%$ of rally | ✅ Stable |
+| **Ball Tracking Continuity** | **91.0%** (263/289 frames) | $\ge 92.0\%$ | ❌ FAIL |
+| **Raw YOLO26 Detections** | **78.2%** (226 frames) | Baseline Info | ⚡ Active |
+| **Occlusion Interpolation** | **37 frames** | $\le 8\%$ of rally | ✅ Stable |
 | **Player ID Switches** | **0 switches** | **0 switches** | ✅ PASS |
 | **Net Barrier Crossings** | **0 violations** | **0 violations** | ✅ PASS |
 | **Active Player Slots** | **4 canonical slots** | **4 players** | ✅ Stable doubles |
@@ -23,9 +23,9 @@
 ---
 
 ## 2. Ball Tracking Analysis
-- **Total Analyzed Frames**: 90
-- **Sustained Localized Frames**: 90 (100.0%)
-- **Kinematic Occlusion Fills**: 7 frames recovered via ballistic physics coasting ($g_y=0.55$, $c_d=0.015$).
+- **Total Analyzed Frames**: 289
+- **Sustained Localized Frames**: 263 (91.0%)
+- **Kinematic Occlusion Fills**: 37 frames recovered via ballistic physics coasting ($g_y=0.55$, $c_d=0.015$).
 
 ---
 

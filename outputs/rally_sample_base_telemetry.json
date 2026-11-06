@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0.0",
+  "producer": "Pickleball Base Perception Engine (Zero-Rule Core)",
+  "timestamp": "2026-11-06 08:52:41",
+  "video_path": "clips/rally_sample.mp4",
+  "total_frames_processed": 5,
+  "fps": 29.97,
+  "resolution": "640x360",
+  "elapsed_s": 1.68,
+  "processing_fps": 2.98,
+  "court": {
+    "calibrated": true,
+    "reprojection_rmse_ft": 0.0,
+    "dimensions_ft": {
+      "width": 20.0,
+      "length": 44.0,
+      "net_y": 22.0,
+      "nvz_depth": 7.0
+    },
+    "corners_px": [
+      [
+        208.9,
+        86.1
+      ],
+      [
+        420.3,
+        86.1
+      ],
+      [
+        531.8,
+        292.9
+      ],
+      [
+        100.3,
+        292.9
+      ]
+    ]
+  },
+  "benchmark_summary": {
+    "ball_detection_rate_pct": 0.0,
+    "frames_with_ball": 0,
+    "mean_players_per_frame": 0.0,
+    "multiscale_inference": false,
+    "stage_latencies_ms": {
+      "player_ms": 195.9,
+      "ball_ms": 132.0,
+      "court_ms": 0.06,
+      "render_ms": 5.3
+    }
+  },
+  "court_calibrated": true,
+  "court_reprojection_rmse_ft": 0.0,
+  "multiscale_inference": false,
+  "mean_players_per_frame": 0.0,
+  "frames_with_ball": 0,
+  "ball_detection_rate_pct": 0.0,
+  "player_ms": 195.9,
+  "ball_ms": 132.0,
+  "court_ms": 0.06,
+  "render_ms": 5.3,
+  "telemetry_stream": [
+    {
+      "frame_idx": 0,
+      "timestamp_s": 0.0,
+      "court_calibrated": true,
+      "players": [],
+      "ball": null
+    },
+    {
+      "frame_idx": 1,
+      "timestamp_s": 0.033,
+      "court_calibrated": true,
+      "players": [],
+      "ball": null
+    },
+    {
+      "frame_idx": 2,
+      "timestamp_s": 0.067,
+      "court_calibrated": true,
+      "players": [],
+      "ball": null
+    },
+    {
+      "frame_idx": 3,
+      "timestamp_s": 0.1,
+      "court_calibrated": true,
+      "players": [],
+      "ball": null
+    },
+    {
+      "frame_idx": 4,
+      "timestamp_s": 0.133,
+      "court_calibrated": true,
+      "players": [],
+      "ball": null
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # 🏓 Pickleball Vision AI — Run Accuracy & Performance Report
 
-> **Last Updated**: `2026-11-05 10:44:57`  
-> **Total Pipeline Runs Recorded**: `10`  
+> **Last Updated**: `2026-11-06 09:36:14`  
+> **Total Pipeline Runs Recorded**: `21`  
 > **Output Guide & Telemetry Specification**: See [`OUTPUT_EXPLANATION.md`](OUTPUT_EXPLANATION.md) for full visual overlay and JSON schema definitions.
 
 ---
@@ -12,15 +12,15 @@
 | :--- | :--- | :--- | :--- |
 | **Clip Name** | `match1.mp4` | — | — |
 | **Resolution & Video FPS** | `1302x740` @ `30.0 FPS` | — | — |
-| **Frames Processed** | `90` frames | Full Rally | ✅ Analyzed |
-| **Inference Throughput** | **`4.59 FPS`** | > 30 FPS (Real-Time) | ⚡ Real-Time |
-| **Ball Detection Rate** | **`100.0%`** (90 frames) | > 85% Sustained | ✅ Target Met |
+| **Frames Processed** | `289` frames | Full Rally | ✅ Analyzed |
+| **Inference Throughput** | **`6.1 FPS`** | > 30 FPS (Real-Time) | ⚡ Real-Time |
+| **Ball Detection Rate** | **`91.0%`** (263 frames) | > 85% Sustained | ✅ Target Met |
 | **Active Players Tracked** | **`4.0 / 4.0`** | 4.0 Players (Doubles) | ✅ Locked (4/4) |
 | **Court Calibration (RMSE)** | **`0.0000 ft`** | < 0.05 ft Error | ✅ Sub-Millimeter |
 
 ### Generated Outputs for Latest Run:
-- 📊 **Structured JSON Telemetry**: [`outputs/match1_base_telemetry.json`](outputs/match1_base_telemetry.json)
-- 🎥 **Visual Overlay MP4**: [`outputs/match1_base_preview.mp4`](outputs/match1_base_preview.mp4)
+- 📊 **Structured JSON Telemetry**: [`/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json`](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json)
+- 🎥 **Visual Overlay MP4**: [`/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4`](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4)
 
 ---
 
@@ -28,6 +28,17 @@
 
 | Run | Timestamp | Clip Name | Res | Frames | Ball Detect % | Players / 4 | Court RMSE (ft) | FPS | Outputs |
 | :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| #21 | `2026-11-06 09:36:14` | **match1.mp4** | 1302x740 | 289 | **91.0%** (263f) | 4.0 / 4.0 | ✅ 0.0000 | 6.1 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #20 | `2026-11-06 09:21:06` | **match1.mp4** | 1302x740 | 3 | **100.0%** (3f) | 4.0 / 4.0 | ✅ 0.0000 | 2.2 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #19 | `2026-11-06 09:17:03` | **match1.mp4** | 1302x740 | 2 | **100.0%** (2f) | 4.0 / 4.0 | ✅ 0.0000 | 1.6 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #18 | `2026-11-06 09:16:59` | **match1.mp4** | 1302x740 | 2 | **100.0%** (2f) | 4.0 / 4.0 | ✅ 0.0000 | 1.6 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #17 | `2026-11-06 09:16:55` | **match1.mp4** | 1302x740 | 2 | **100.0%** (2f) | 4.0 / 4.0 | ✅ 0.0000 | 1.6 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #16 | `2026-11-06 09:16:52` | **match1.mp4** | 1302x740 | 2 | **100.0%** (2f) | 4.0 / 4.0 | ✅ 0.0000 | 1.6 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #15 | `2026-11-06 09:16:48` | **match1.mp4** | 1302x740 | 2 | **100.0%** (2f) | 4.0 / 4.0 | ✅ 0.0000 | 1.6 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #14 | `2026-11-06 09:13:25` | **match1.mp4** | 1302x740 | 3 | **100.0%** (3f) | 4.0 / 4.0 | ✅ 0.0000 | 2.1 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #13 | `2026-11-06 09:13:15` | **match1.mp4** | 1302x740 | 5 | **100.0%** (5f) | 4.0 / 4.0 | ✅ 0.0000 | 2.9 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #12 | `2026-11-06 08:52:41` | **rally_sample.mp4** | 640x360 | 5 | **0.0%** (0f) | 0.0 / 4.0 | ✅ 0.0000 | 3.0 | [JSON](outputs/rally_sample_base_telemetry.json) | [MP4](outputs/rally_sample_base_preview.mp4) |
+| #11 | `2026-11-06 08:52:15` | **match1.mp4** | 1302x740 | 5 | **100.0%** (5f) | 4.0 / 4.0 | ✅ 0.0000 | 3.0 | [JSON](outputs/match1_base_telemetry.json) | [MP4](outputs/match1_base_preview.mp4) |
 | #10 | `2026-11-05 10:44:57` | **match1.mp4** | 1302x740 | 90 | **100.0%** (90f) | 4.0 / 4.0 | ✅ 0.0000 | 4.6 | [JSON](outputs/match1_base_telemetry.json) | [MP4](outputs/match1_base_preview.mp4) |
 | #9 | `2026-11-05 10:30:53` | **match1.mp4** | 1302x740 | 90 | **100.0%** (90f) | 4.0 / 4.0 | ✅ 0.0000 | 4.6 | [JSON](outputs/match1_base_telemetry.json) | [MP4](outputs/match1_base_preview.mp4) |
 | #8 | `2026-11-05 09:38:56` | **match1.mp4** | 1302x740 | 90 | **100.0%** (90f) | 4.0 / 4.0 | ✅ 0.0000 | 4.5 | [JSON](outputs/match1_base_telemetry.json) | [MP4](outputs/match1_base_preview.mp4) |
