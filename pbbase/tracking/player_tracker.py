@@ -58,10 +58,15 @@ def _compare_appearance(hist1: Optional[np.ndarray], hist2: Optional[np.ndarray]
     """Computes Bhattacharyya distance between two appearance histograms in [0.0, 1.0]."""
     if hist1 is None or hist2 is None:
         return 0.5
-    dist = cv2.compareHist(
-        hist1.astype(np.float32), hist2.astype(np.float32), cv2.HISTCMP_BHATTACHARYYA
-    )
-    return float(np.clip(dist, 0.0, 1.0))
+    try:
+        dist = cv2.compareHist(
+            hist1.astype(np.float32), hist2.astype(np.float32), cv2.HISTCMP_BHATTACHARYYA
+        )
+        if np.isnan(dist) or np.isinf(dist):
+            return 0.5
+        return float(np.clip(dist, 0.0, 1.0))
+    except Exception:
+        return 0.5
 
 
 class CanonicalPlayerTracker:
@@ -213,6 +218,7 @@ class CanonicalPlayerTracker:
                     cost = 0.30 * dist_norm + 0.25 * (1.0 - iou) + 0.45 * app_dist + app_penalty
                     cost_matrix[s_idx, c_idx] = cost
 
+            cost_matrix = np.nan_to_num(cost_matrix, nan=1e5, posinf=1e5, neginf=1e5)
             row_ind, col_ind = linear_sum_assignment(cost_matrix)
             for r, c in zip(row_ind, col_ind):
                 if cost_matrix[r, c] < 0.88:
