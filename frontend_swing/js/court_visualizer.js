@@ -1,6 +1,6 @@
 /**
  * court_visualizer.js — 60 FPS HTML5 Canvas Background & VAR Visualizer
- * Athletic court perspective, particle ripples, and electronic line calling (ELC) graphics.
+ * Handcrafted Pro-Sports Palette: Yellow-Green (#BAFF39) • Dim Grey (#6E6E6E) • Crisp White (#FFFFFF)
  */
 
 export class BackgroundCourtAnimator {
@@ -32,17 +32,18 @@ export class BackgroundCourtAnimator {
     const courtH = Math.min(h * 0.7, 650);
 
     ctx.save();
-    ctx.strokeStyle = "rgba(0, 229, 255, 0.08)";
+    // Dim Grey (#6E6E6E) Outer Court Perimeter
+    ctx.strokeStyle = "rgba(110, 110, 110, 0.22)";
     ctx.lineWidth = 1.5;
 
-    // Outer Court Perimeter
     ctx.beginPath();
     ctx.rect(cx - courtW * 0.5, cy - courtH * 0.5, courtW, courtH);
     ctx.stroke();
 
     // 7-ft Kitchen Non-Volley Zone lines (7/44 ratio)
     const kitchenDist = courtH * (7 / 44);
-    ctx.strokeStyle = "rgba(204, 255, 0, 0.12)";
+    ctx.strokeStyle = "rgba(186, 255, 57, 0.25)";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(cx - courtW * 0.5, cy - kitchenDist);
     ctx.lineTo(cx + courtW * 0.5, cy - kitchenDist);
@@ -50,12 +51,12 @@ export class BackgroundCourtAnimator {
     ctx.lineTo(cx + courtW * 0.5, cy + kitchenDist);
     ctx.stroke();
 
-    // Kitchen tint
-    ctx.fillStyle = "rgba(0, 229, 255, 0.02)";
+    // Kitchen subtle tint
+    ctx.fillStyle = "rgba(186, 255, 57, 0.015)";
     ctx.fillRect(cx - courtW * 0.5, cy - kitchenDist, courtW, kitchenDist * 2);
 
-    // Center Net Line with dashed pulse
-    ctx.strokeStyle = "rgba(255, 77, 0, 0.22)";
+    // Center Net Line (Crisp White #FFFFFF with dashed pulse)
+    ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 2;
     ctx.setLineDash([8, 8]);
     ctx.lineDashOffset = -t * 15;
@@ -65,8 +66,8 @@ export class BackgroundCourtAnimator {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Center service line
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+    // Center service line in Dim Grey (#6E6E6E)
+    ctx.strokeStyle = "rgba(110, 110, 110, 0.35)";
     ctx.beginPath();
     ctx.moveTo(cx, cy - courtH * 0.5);
     ctx.lineTo(cx, cy - kitchenDist);
@@ -87,7 +88,7 @@ export class BackgroundCourtAnimator {
       ctx.clearRect(0, 0, w, h);
       this.drawCourt(ctx, w, h, t);
 
-      // Render expanding ground ripples
+      // Render expanding ground ripples in Yellow-Green (#BAFF39)
       for (let i = this.ripples.length - 1; i >= 0; i--) {
         const rp = this.ripples[i];
         rp.radius += 1.8;
@@ -97,7 +98,7 @@ export class BackgroundCourtAnimator {
           continue;
         }
         ctx.save();
-        ctx.strokeStyle = `rgba(204, 255, 0, ${rp.alpha})`;
+        ctx.strokeStyle = `rgba(186, 255, 57, ${rp.alpha})`;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.ellipse(rp.x, rp.y, rp.radius * 1.5, rp.radius * 0.6, 0, 0, Math.PI * 2);
@@ -105,8 +106,8 @@ export class BackgroundCourtAnimator {
         ctx.restore();
       }
 
-      // Render live animated pickleballs with neon trails
-      this.balls.forEach((b, idx) => {
+      // Render live animated pickleballs with Yellow-Green (#BAFF39) trails
+      this.balls.forEach((b) => {
         b.phase = (b.phase + b.speed) % 1;
         const courtW = Math.min(w * 0.8, 1000);
         const courtH = Math.min(h * 0.65, 580);
@@ -124,12 +125,12 @@ export class BackgroundCourtAnimator {
         b.trail.push({ x: bx, y: by });
         if (b.trail.length > 20) b.trail.shift();
 
-        // Trail Glow
+        // Trail in Yellow-Green (#BAFF39)
         if (b.trail.length > 1) {
           ctx.save();
           for (let j = 1; j < b.trail.length; j++) {
             const frac = j / b.trail.length;
-            ctx.strokeStyle = `rgba(204, 255, 0, ${frac * 0.35})`;
+            ctx.strokeStyle = `rgba(186, 255, 57, ${frac * 0.4})`;
             ctx.lineWidth = frac * 3.5;
             ctx.beginPath();
             ctx.moveTo(b.trail[j - 1].x, b.trail[j - 1].y);
@@ -139,10 +140,10 @@ export class BackgroundCourtAnimator {
           ctx.restore();
         }
 
-        // Optic Yellow Pickleball
+        // Optic Yellow-Green Pickleball
         ctx.save();
-        ctx.fillStyle = "#CCFF00";
-        ctx.shadowColor = "#CCFF00";
+        ctx.fillStyle = "#BAFF39";
+        ctx.shadowColor = "#BAFF39";
         ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.arc(bx, by, 6.5, 0, Math.PI * 2);
@@ -158,13 +159,13 @@ export class BackgroundCourtAnimator {
 
 /**
  * Interactive Electronic Line Calling (ELC) Hawk-Eye Zoom Station
+ * Handcrafted palette: Yellow-Green (#BAFF39) • Dim Grey (#6E6E6E) • White (#FFFFFF)
  */
 export class HawkEyeVARVisualizer {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.activeCall = null;
-    this.zoomScale = 1.0;
   }
 
   render(callData) {
@@ -175,21 +176,21 @@ export class HawkEyeVARVisualizer {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Court Surface Texture (Blue Tournament Surface)
-    ctx.fillStyle = "#11263F";
+    // Deep Tournament Surface
+    ctx.fillStyle = "#12151A";
     ctx.fillRect(0, 0, w, h);
 
-    // Grid lines
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+    // Architectural Grid Lines in Dim Grey (#6E6E6E)
+    ctx.strokeStyle = "rgba(110, 110, 110, 0.18)";
     ctx.lineWidth = 1;
-    for (let x = 0; x < w; x += 30) {
+    for (let x = 0; x < w; x += 32) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, h);
       ctx.stroke();
     }
 
-    // Court Line (2-inch regulation white court line)
+    // Court Line (2-inch regulation white court line in Crisp White #FFFFFF)
     const lineX = w * 0.55;
     ctx.fillStyle = "#FFFFFF";
     ctx.shadowColor = "rgba(255, 255, 255, 0.4)";
@@ -197,14 +198,14 @@ export class HawkEyeVARVisualizer {
     ctx.fillRect(lineX - 16, 0, 32, h);
     ctx.shadowBlur = 0;
 
-    // Line Label
-    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+    // Technical Line Label in Dim Grey (#6E6E6E)
+    ctx.fillStyle = "#6E6E6E";
     ctx.font = "800 11px 'JetBrains Mono', monospace";
     ctx.fillText("USAP REGULATION LINE (2 IN / 50 MM)", lineX + 24, 28);
 
     // Ball Impact Ellipse
     const isIn = callData.verdict === "IN";
-    const ballColor = isIn ? "#10B981" : "#EF4444";
+    const ballColor = isIn ? "#BAFF39" : "#EF4444";
     const ballX = lineX - 16 + (isIn ? 8 : -28) + (callData.margin_mm * 0.4);
     const ballY = h * 0.52;
 
@@ -218,14 +219,14 @@ export class HawkEyeVARVisualizer {
     ctx.shadowBlur = 0;
 
     // Ball core
-    ctx.fillStyle = "#CCFF00";
+    ctx.fillStyle = "#FFFFFF";
     ctx.beginPath();
-    ctx.ellipse(ballX, ballY, 26, 17, 0.1, 0, Math.PI * 2);
+    ctx.ellipse(ballX, ballY, 24, 16, 0.1, 0, Math.PI * 2);
     ctx.fill();
 
-    // Measurement Dimension Caliper
-    ctx.strokeStyle = ballColor;
-    ctx.lineWidth = 2;
+    // Measurement Dimension Caliper in Dim Grey (#6E6E6E) with Accent-YG endpoints
+    ctx.strokeStyle = "#6E6E6E";
+    ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 3]);
     ctx.beginPath();
     ctx.moveTo(ballX, ballY + 45);
@@ -233,10 +234,20 @@ export class HawkEyeVARVisualizer {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Distance Pill
+    // Caliper end marks
+    ctx.strokeStyle = ballColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ballX, ballY + 40);
+    ctx.lineTo(ballX, ballY + 50);
+    ctx.moveTo(lineX - 16, ballY + 40);
+    ctx.lineTo(lineX - 16, ballY + 50);
+    ctx.stroke();
+
+    // Distance Pill in #0D0F12 with Dim Grey border
     const tagW = 120;
     const tagH = 28;
-    ctx.fillStyle = "#090E17";
+    ctx.fillStyle = "#0D0F12";
     ctx.strokeStyle = ballColor;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -252,21 +263,21 @@ export class HawkEyeVARVisualizer {
     ctx.fillText(`${callData.verdict} (${sign}${callData.margin_mm} mm)`, (ballX + lineX) * 0.5, ballY + 68);
 
     // Callout Badge at Top-Left
-    ctx.fillStyle = "rgba(10, 16, 28, 0.85)";
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.fillStyle = "rgba(13, 15, 18, 0.94)";
+    ctx.strokeStyle = "#6E6E6E";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(16, 16, 180, 52, 8);
+    ctx.roundRect(16, 16, 190, 52, 6);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#94A3B8";
-    ctx.font = "600 10px 'JetBrains Mono', monospace";
+    ctx.fillStyle = "#6E6E6E";
+    ctx.font = "700 10px 'JetBrains Mono', monospace";
     ctx.textAlign = "left";
-    ctx.fillText("HAWK-EYE SUB-PIXEL VAR", 28, 34);
+    ctx.fillText("HAWK-EYE SUB-PIXEL VAR", 26, 34);
 
     ctx.fillStyle = ballColor;
-    ctx.font = "800 16px 'Outfit', sans-serif";
-    ctx.fillText(`BOUNCE #${callData.bounce_idx}: ${callData.verdict}`, 28, 54);
+    ctx.font = "800 15px 'Outfit', sans-serif";
+    ctx.fillText(`BOUNCE #${callData.bounce_idx}: ${callData.verdict}`, 26, 54);
   }
 }
