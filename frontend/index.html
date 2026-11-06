@@ -191,6 +191,208 @@
               <button class="clip-tab-btn" data-clip="base_preview">
                 ⚡ 3. Base Model Perception (H.264 Preview)
               </button>
+              <button id="btn-toggle-pin-court" class="clip-tab-btn pin-court-btn" title="Open Interactive 4-Point Court Calibrator">
+                🎯 Calibrate Court (Pin 4 Points)
+              </button>
+            </div>
+          </div>
+
+          <!-- ====================================================================
+               INTERACTIVE 4-POINT COURT CALIBRATION & PINNING WORKBENCH
+               ==================================================================== -->
+          <div id="court-pinning-workbench" class="court-workbench-panel hidden">
+            <div class="workbench-header">
+              <div class="workbench-header-left">
+                <span class="workbench-icon">🎯</span>
+                <div>
+                  <h3 class="workbench-title">Interactive Court Calibration Workbench</h3>
+                  <p class="workbench-subtitle">
+                    Drag the 4 corner pins on the video frame to visually align baseline corners. Regulation USAP court mesh transforms live.
+                  </p>
+                </div>
+                <span id="calib-status-badge" class="calib-badge warning">⚡ AI Recommended • Unsaved</span>
+              </div>
+
+              <div class="workbench-header-right">
+                <label for="calib-clip-select" class="workbench-label">Target Clip:</label>
+                <select id="calib-clip-select" class="workbench-select">
+                  <option value="MicrosoftTeams-video.mp4">MicrosoftTeams-video.mp4 (720x1280 • 📱 9:16 Portrait)</option>
+                  <option value="match1.mp4">match1.mp4 (1302x740 • 📺 16:9 Landscape)</option>
+                  <option value="rally_sample.mp4">rally_sample.mp4 (640x360 • 📺 16:9 Landscape)</option>
+                  <option value="match.mp4">match.mp4 (640x360 • 📺 16:9 Landscape)</option>
+                </select>
+                <button id="btn-close-pin-court" class="btn-workbench-close" title="Close calibration tool">✕</button>
+              </div>
+            </div>
+
+            <div class="workbench-content-grid">
+              <!-- Interactive Canvas Stage -->
+              <div class="pin-canvas-wrapper">
+                <div id="pin-canvas-loader" class="canvas-loader-overlay">
+                  <div class="spinner-ring"></div>
+                  <span id="pin-loader-text">Loading video frame...</span>
+                </div>
+                <canvas id="court-pin-canvas"></canvas>
+                <div class="canvas-hint-pill">
+                  💡 Tip: Drag pins or use pixel nudge controls. Net (orange) &amp; Kitchen NVZ (lime) update dynamically.
+                </div>
+              </div>
+
+              <!-- Controls & Coordinate Inputs -->
+              <div class="workbench-controls-col">
+                <div class="pins-cards-grid">
+                  <!-- P1 Far-Left -->
+                  <div class="pin-card p1-card">
+                    <div class="pin-card-head">
+                      <span class="pin-dot p1-dot"></span>
+                      <strong>P1: Far-Left (0, 0 ft)</strong>
+                    </div>
+                    <div class="coord-inputs-row">
+                      <div class="coord-group">
+                        <label>X (px)</label>
+                        <input type="number" id="pin-p1-x" value="245" />
+                      </div>
+                      <div class="coord-group">
+                        <label>Y (px)</label>
+                        <input type="number" id="pin-p1-y" value="520" />
+                      </div>
+                    </div>
+                    <div class="nudge-btns-row">
+                      <small>X Nudge:</small>
+                      <button type="button" data-nudge-pin="p1" data-axis="x" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="x" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="x" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="x" data-amount="5">+5</button>
+                      <span class="nudge-divider"></span>
+                      <small>Y Nudge:</small>
+                      <button type="button" data-nudge-pin="p1" data-axis="y" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="y" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="y" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="y" data-amount="5">+5</button>
+                    </div>
+                  </div>
+
+                  <!-- P2 Far-Right -->
+                  <div class="pin-card p2-card">
+                    <div class="pin-card-head">
+                      <span class="pin-dot p2-dot"></span>
+                      <strong>P2: Far-Right (20, 0 ft)</strong>
+                    </div>
+                    <div class="coord-inputs-row">
+                      <div class="coord-group">
+                        <label>X (px)</label>
+                        <input type="number" id="pin-p2-x" value="475" />
+                      </div>
+                      <div class="coord-group">
+                        <label>Y (px)</label>
+                        <input type="number" id="pin-p2-y" value="520" />
+                      </div>
+                    </div>
+                    <div class="nudge-btns-row">
+                      <small>X Nudge:</small>
+                      <button type="button" data-nudge-pin="p2" data-axis="x" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="x" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="x" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="x" data-amount="5">+5</button>
+                      <span class="nudge-divider"></span>
+                      <small>Y Nudge:</small>
+                      <button type="button" data-nudge-pin="p2" data-axis="y" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="y" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="y" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="y" data-amount="5">+5</button>
+                    </div>
+                  </div>
+
+                  <!-- P3 Near-Right -->
+                  <div class="pin-card p3-card">
+                    <div class="pin-card-head">
+                      <span class="pin-dot p3-dot"></span>
+                      <strong>P3: Near-Right (20, 44 ft)</strong>
+                    </div>
+                    <div class="coord-inputs-row">
+                      <div class="coord-group">
+                        <label>X (px)</label>
+                        <input type="number" id="pin-p3-x" value="680" />
+                      </div>
+                      <div class="coord-group">
+                        <label>Y (px)</label>
+                        <input type="number" id="pin-p3-y" value="1040" />
+                      </div>
+                    </div>
+                    <div class="nudge-btns-row">
+                      <small>X Nudge:</small>
+                      <button type="button" data-nudge-pin="p3" data-axis="x" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="x" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="x" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="x" data-amount="5">+5</button>
+                      <span class="nudge-divider"></span>
+                      <small>Y Nudge:</small>
+                      <button type="button" data-nudge-pin="p3" data-axis="y" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="y" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="y" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="y" data-amount="5">+5</button>
+                    </div>
+                  </div>
+
+                  <!-- P4 Near-Left -->
+                  <div class="pin-card p4-card">
+                    <div class="pin-card-head">
+                      <span class="pin-dot p4-dot"></span>
+                      <strong>P4: Near-Left (0, 44 ft)</strong>
+                    </div>
+                    <div class="coord-inputs-row">
+                      <div class="coord-group">
+                        <label>X (px)</label>
+                        <input type="number" id="pin-p4-x" value="40" />
+                      </div>
+                      <div class="coord-group">
+                        <label>Y (px)</label>
+                        <input type="number" id="pin-p4-y" value="1040" />
+                      </div>
+                    </div>
+                    <div class="nudge-btns-row">
+                      <small>X Nudge:</small>
+                      <button type="button" data-nudge-pin="p4" data-axis="x" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="x" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="x" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="x" data-amount="5">+5</button>
+                      <span class="nudge-divider"></span>
+                      <small>Y Nudge:</small>
+                      <button type="button" data-nudge-pin="p4" data-axis="y" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="y" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="y" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="y" data-amount="5">+5</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="workbench-action-row">
+                  <button type="button" id="btn-calib-recommend" class="btn-workbench-secondary" title="Reset to aspect-ratio-aware AI suggestion">
+                    🤖 Recommend Court
+                  </button>
+                  <button type="button" id="btn-calib-save" class="btn-workbench-primary" title="Save coordinates to court_calibrations.json">
+                    💾 Save &amp; Calibrate
+                  </button>
+                  <button type="button" id="btn-calib-run-pipeline" class="btn-workbench-orange" title="Run perception pipeline with these corners">
+                    ⚡ Run AI Analysis on Pinned Court
+                  </button>
+                </div>
+
+                <!-- Live Pipeline Progress HUD -->
+                <div id="pipeline-progress-hud" class="pipeline-progress-hud" style="display: none;">
+                  <div class="hud-top">
+                    <span id="pipeline-hud-status" class="hud-status">Initializing Perception Pipeline...</span>
+                    <span class="hud-indicator-pulse"></span>
+                  </div>
+                  <div class="hud-track">
+                    <div id="pipeline-hud-bar" class="hud-bar" style="width: 20%;"></div>
+                  </div>
+                </div>
+
+                <!-- Toast Notification -->
+                <div id="calib-toast" class="calib-toast" style="display: none;"></div>
+              </div>
             </div>
           </div>
 

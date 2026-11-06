@@ -12,6 +12,7 @@ import {
   PickleballBgAnimator,
   AuthPaddleDuelAnimator
 } from "./court_canvas.js";
+import { CourtPinningWorkbench } from "./court_pinning.js";
 
 const UPCOMING_PAGES = {
   "ai-coach": {
@@ -128,6 +129,30 @@ class PickleballWebsiteApp {
     // 3. Dedicated Sign Up / Login Paddle-vs-Paddle Volley Animation
     const authCanvas = document.getElementById("auth-duel-canvas");
     this.authAnimator = authCanvas ? new AuthPaddleDuelAnimator(authCanvas) : null;
+
+    // 4. Interactive 4-Point Court Calibration & Pinning Workbench
+    this.pinningWorkbench = new CourtPinningWorkbench({
+      defaultClip: "MicrosoftTeams-video.mp4",
+      onCalibrated: (clipName, corners) => {
+        console.log(`[App] Court calibrated for ${clipName}:`, corners);
+      },
+      onPipelineCompleted: (result) => {
+        console.log(`[App] Pipeline run completed:`, result);
+        if (this.demoVideoEl && result.preview_url) {
+          const freshUrl = `${result.preview_url}?t=${Date.now()}`;
+          this.demoVideoEl.src = freshUrl;
+          this.demoVideoEl.load();
+          this.demoVideoEl.play().catch(() => {});
+        }
+        if (this.heroVideoEl && result.preview_url) {
+          this.heroVideoEl.src = `${result.preview_url}?t=${Date.now()}`;
+          this.heroVideoEl.load();
+          this.heroVideoEl.play().catch(() => {});
+        }
+        this.setText("demo-score-call", `Court Verified • RMSE ${result.court_rmse_ft} ft`);
+        this.setText("demo-ball-tracked", `${result.ball_detect_pct}% frames tracked`);
+      }
+    });
 
     this.bindEvents();
     this.loadClip(this.activeClipKey);
@@ -552,6 +577,20 @@ class PickleballWebsiteApp {
     const clip = CLIPS_DATA[clipKey];
     if (!clip) return;
     this.activeClipKey = clipKey;
+
+    const clipFilenameMap = {
+      "MicrosoftTeams-video": "MicrosoftTeams-video.mp4",
+      "match1": "match1.mp4",
+      "base_preview": "match1.mp4",
+      "rally_sample": "rally_sample.mp4",
+      "match": "match.mp4",
+    };
+    const clipFilename = clipFilenameMap[clipKey] || `${clipKey}.mp4`;
+    if (this.pinningWorkbench && this.pinningWorkbench.activeClip !== clipFilename) {
+      this.pinningWorkbench.loadClipCalibration(clipFilename);
+      const sel = document.getElementById("calib-clip-select");
+      if (sel) sel.value = clipFilename;
+    }
 
     if (this.courtRenderer) {
       this.courtRenderer.clearTrail();

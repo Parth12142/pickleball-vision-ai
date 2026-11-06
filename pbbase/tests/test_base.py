@@ -406,5 +406,51 @@ class TestRallyValidation(unittest.TestCase):
         self.assertTrue(audit_p["target_met"])
 
 
+class TestCourtCalibrationStore(unittest.TestCase):
+    def test_load_stored_calibration(self):
+        calib = CourtCalibrator.load_calibration_for_clip("MicrosoftTeams-video.mp4")
+        self.assertIsNotNone(calib)
+        self.assertEqual(len(calib), 4)
+        # Verify corner coordinates
+        self.assertEqual(calib[0], (245.0, 520.0))
+        self.assertEqual(calib[1], (475.0, 520.0))
+        self.assertEqual(calib[2], (680.0, 1040.0))
+        self.assertEqual(calib[3], (40.0, 1040.0))
+
+    def test_portrait_vs_landscape_recommendation(self):
+        # Portrait (720x1280)
+        portrait_corners = CourtCalibrator.get_recommended_corners(720, 1280)
+        self.assertEqual(len(portrait_corners), 4)
+
+        # Landscape (1302x740)
+        landscape_corners = CourtCalibrator.get_recommended_corners(1302, 740)
+        self.assertEqual(len(landscape_corners), 4)
+
+        # Portrait far baseline y should be lower (higher y value in pixels, near frame center)
+        self.assertGreater(portrait_corners[0][1], 1280 * 0.35)
+
+    def test_custom_pinned_calibration_accuracy(self):
+        custom_corners = [
+            (245.0, 520.0),
+            (475.0, 520.0),
+            (680.0, 1040.0),
+            (40.0, 1040.0),
+        ]
+        calibrator = CourtCalibrator(custom_corners)
+        self.assertTrue(calibrator.result.calibrated)
+        self.assertLess(calibrator.result.reprojection_rmse_ft, 1e-4)
+
+        # Test feet to pixel and pixel to feet round-trip
+        pt_ft = calibrator.pixel_to_court_ft(245.0, 520.0)
+        self.assertIsNotNone(pt_ft)
+        self.assertAlmostEqual(pt_ft[0], 0.0, places=2)
+        self.assertAlmostEqual(pt_ft[1], 0.0, places=2)
+
+        px_back = calibrator.court_to_pixel(0.0, 0.0)
+        self.assertIsNotNone(px_back)
+        self.assertAlmostEqual(px_back[0], 245.0, places=1)
+        self.assertAlmostEqual(px_back[1], 520.0, places=1)
+
+
 if __name__ == "__main__":
     unittest.main()

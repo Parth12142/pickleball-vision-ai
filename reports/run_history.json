@@ -355,5 +355,39 @@
     "court_rmse_ft": 0.0,
     "telemetry_json": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json",
     "preview_mp4": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4"
+  },
+  {
+    "run_id": 22,
+    "timestamp": "2026-11-06 09:51:43",
+    "clip": "MicrosoftTeams-video.mp4",
+    "video_path": "/home/pce118/Desktop/pickleball-vision-ai-main/clips/MicrosoftTeams-video.mp4",
+    "resolution": "720x1280",
+    "fps": 59.98,
+    "frames_processed": 10,
+    "processing_fps": 4.13,
+    "ball_detection_rate_pct": 50.0,
+    "frames_with_ball": 5,
+    "mean_players_per_frame": 4.0,
+    "court_calibrated": true,
+    "court_rmse_ft": 0.0,
+    "telemetry_json": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/MicrosoftTeams-video_base_telemetry.json",
+    "preview_mp4": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/MicrosoftTeams-video_base_preview.mp4"
+  },
+  {
+    "run_id": 23,
+    "timestamp": "2026-11-06 09:59:30",
+    "clip": "MicrosoftTeams-video.mp4",
+    "video_path": "/home/pce118/Desktop/pickleball-vision-ai-main/clips/MicrosoftTeams-video.mp4",
+    "resolution": "720x1280",
+    "fps": 59.98,
+    "frames_processed": 60,
+    "processing_fps": 6.42,
+    "ball_detection_rate_pct": 25.0,
+    "frames_with_ball": 15,
+    "mean_players_per_frame": 4.0,
+    "court_calibrated": true,
+    "court_rmse_ft": 0.0,
+    "telemetry_json": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/MicrosoftTeams-video_base_telemetry.json",
+    "preview_mp4": "/home/pce118/Desktop/pickleball-vision-ai-main/outputs/MicrosoftTeams-video_base_preview.mp4"
   }
 ]

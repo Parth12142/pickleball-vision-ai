@@ -4,9 +4,15 @@ Zero scoring or referee rules. Strictly computes the geometric mapping between
 camera image pixels (u, v) and regulation USAP 2D court plane coordinates (X, Y) in feet and meters.
 """
 from dataclasses import dataclass, field
+import json
+import os
 from typing import Dict, List, Optional, Tuple, Any
 import cv2
 import numpy as np
+
+CALIBRATION_FILE = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "court_calibrations.json")
+)
 
 
 @dataclass
@@ -129,19 +135,98 @@ class CourtCalibrator:
             return None
         return (pos_ft[0] * CourtGeometry.FT_TO_METERS, pos_ft[1] * CourtGeometry.FT_TO_METERS)
 
-    def auto_calibrate_broadcast(self, frame: np.ndarray) -> bool:
+    @classmethod
+    def load_calibration_for_clip(cls, clip_name: str) -> Optional[List[Tuple[float, float]]]:
+        """Load stored corner coordinates for a clip from court_calibrations.json."""
+        if not os.path.exists(CALIBRATION_FILE):
+            return None
+        try:
+            with open(CALIBRATION_FILE, "r") as f:
+                data = json.load(f)
+            # Match directly or by basename
+            base = os.path.basename(clip_name)
+            entry = data.get(base) or data.get(clip_name)
+            if entry and "corners_px" in entry:
+                return [(float(pt[0]), float(pt[1])) for pt in entry["corners_px"]]
+        except Exception:
+            return None
+        return None
+
+    @classmethod
+    def save_calibration_for_clip(
+        cls,
+        clip_name: str,
+        corners_px: List[Tuple[float, float]],
+        resolution: Tuple[int, int],
+        rmse_ft: float = 0.0,
+        source: str = "human_pinned_calibrated",
+    ) -> bool:
+        """Save calibrated corner coordinates for a clip to court_calibrations.json."""
+        base = os.path.basename(clip_name)
+        data = {}
+        if os.path.exists(CALIBRATION_FILE):
+            try:
+                with open(CALIBRATION_FILE, "r") as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+
+        w, h = resolution
+        aspect_ratio = "9:16_portrait" if h > w else "16:9_landscape"
+        data[base] = {
+            "resolution": [int(w), int(h)],
+            "aspect_ratio": aspect_ratio,
+            "corners_px": [[round(float(pt[0]), 2), round(float(pt[1]), 2)] for pt in corners_px],
+            "rmse_ft": round(float(rmse_ft), 4),
+            "source": source,
+        }
+
+        try:
+            with open(CALIBRATION_FILE, "w") as f:
+                json.dump(data, f, indent=2)
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    def get_recommended_corners(
+        cls, width: int, height: int, clip_name: Optional[str] = None
+    ) -> List[Tuple[float, float]]:
         """
-        Detects standard court perspective in broadcast cameras.
-        If high-contrast white lines are visible, locates outer baseline intersections.
-        Otherwise falls back to robust known baseline corner anchors.
+        Computes recommended court corners based on resolution and aspect ratio:
+        - Checks persistent calibration store first
+        - Portrait (h > w): calibrated smartphone camera geometry
+        - Landscape (w >= h): calibrated broadcast camera geometry
+        """
+        if clip_name:
+            saved = cls.load_calibration_for_clip(clip_name)
+            if saved and len(saved) == 4:
+                return saved
+
+        w, h = float(width), float(height)
+        if h > w:
+            # Vertical smartphone perspective (e.g. 720x1280)
+            return [
+                (float(w * 0.3403), float(h * 0.40625)),  # Far-Left
+                (float(w * 0.6597), float(h * 0.40625)),  # Far-Right
+                (float(w * 0.9444), float(h * 0.81250)),  # Near-Right
+                (float(w * 0.0556), float(h * 0.81250)),  # Near-Left
+            ]
+        else:
+            # Landscape broadcast perspective (e.g. 1302x740 / 1280x720)
+            return [
+                (float(w * 0.3264), float(h * 0.2392)),   # Far-Left
+                (float(w * 0.6567), float(h * 0.2392)),   # Far-Right
+                (float(w * 0.8310), float(h * 0.8135)),   # Near-Right
+                (float(w * 0.1567), float(h * 0.8135)),   # Near-Left
+            ]
+
+    def auto_calibrate_broadcast(self, frame: np.ndarray, clip_name: Optional[str] = None) -> bool:
+        """
+        Calibrate court perspective with smart fallback:
+        1. Checks stored human calibration in court_calibrations.json
+        2. Applies aspect-ratio-aware defaults (portrait vs landscape)
         """
         h, w = frame.shape[:2]
-        # Standard broadcast perspective for match1 / match clips (1302x740)
-        # Scaled relative to resolution
-        default_corners = [
-            (float(w * 0.3264), float(h * 0.2392)),  # Far-Left
-            (float(w * 0.6567), float(h * 0.2392)),  # Far-Right
-            (float(w * 0.8310), float(h * 0.8135)),  # Near-Right
-            (float(w * 0.1567), float(h * 0.8135)),  # Near-Left
-        ]
-        return self.calibrate(default_corners)
+        corners = self.get_recommended_corners(w, h, clip_name=clip_name)
+        return self.calibrate(corners)

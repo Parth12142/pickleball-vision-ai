@@ -23,8 +23,21 @@ import os
 import secrets
 import shutil
 import socketserver
+import sys
+import threading
+import time
 import urllib.parse
 from datetime import datetime
+
+PORT = 3000
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+import cv2
+from pbbase.court.homography import CourtCalibrator, CourtGeometry
+from pbbase.pipeline import BasePerceptionPipeline
+import pbbase.patch_env
 
 from sqlalchemy import Column, DateTime, Integer, String, create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -177,6 +190,157 @@ def verify_token(token: str):
 
 
 # ============================================================================
+# COURT CALIBRATION & VIDEO CLIP PIPELINE HELPERS
+# ============================================================================
+
+PIPELINE_LOCK = threading.Lock()
+PIPELINE_STATUS = {
+    "running": False,
+    "clip": None,
+    "progress_pct": 0,
+    "current_frame": 0,
+    "total_frames": 0,
+    "status": "idle",
+    "result": None,
+    "error": None,
+}
+
+
+def get_clip_metadata(clip_path: str) -> dict:
+    if not os.path.exists(clip_path):
+        return None
+    cap = cv2.VideoCapture(clip_path)
+    if not cap.isOpened():
+        return None
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = float(cap.get(cv2.CAP_PROP_FPS) or 30.0)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    duration_s = total_frames / fps if fps > 0 else 0.0
+    cap.release()
+
+    base = os.path.basename(clip_path)
+    stem = os.path.splitext(base)[0]
+    has_preview = os.path.exists(os.path.join(ROOT_DIR, f"outputs/{stem}_base_preview.mp4"))
+    has_telemetry = os.path.exists(os.path.join(ROOT_DIR, f"outputs/{stem}_base_telemetry.json"))
+
+    saved_calib = CourtCalibrator.load_calibration_for_clip(base)
+
+    return {
+        "name": base,
+        "stem": stem,
+        "video_url": f"/clips/{base}",
+        "width": w,
+        "height": h,
+        "resolution": f"{w}x{h}",
+        "aspect_ratio": "9:16_portrait" if h > w else "16:9_landscape",
+        "is_portrait": bool(h > w),
+        "fps": round(fps, 2),
+        "total_frames": total_frames,
+        "duration_s": round(duration_s, 2),
+        "calibrated": saved_calib is not None,
+        "preview_url": f"/outputs/{stem}_base_preview.mp4" if has_preview else None,
+        "telemetry_url": f"/outputs/{stem}_base_telemetry.json" if has_telemetry else None,
+    }
+
+
+def extract_frame0_path(clip_name: str) -> str:
+    base = os.path.basename(clip_name)
+    clip_path = os.path.join(ROOT_DIR, "clips", base)
+    if not os.path.exists(clip_path):
+        return None
+    cache_path = os.path.join(ROOT_DIR, "outputs", f"frame0_{base}.jpg")
+    if os.path.exists(cache_path):
+        return cache_path
+
+    cap = cv2.VideoCapture(clip_path)
+    if not cap.isOpened():
+        return None
+    ok, frame = cap.read()
+    cap.release()
+    if not ok or frame is None:
+        return None
+
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    cv2.imwrite(cache_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+    return cache_path
+
+
+def run_pipeline_worker(clip_name: str, max_frames: int = 60, multiscale: bool = False):
+    global PIPELINE_STATUS
+    base = os.path.basename(clip_name)
+    stem = os.path.splitext(base)[0]
+    clip_path = os.path.join(ROOT_DIR, "clips", base)
+    out_dir = os.path.join(ROOT_DIR, "outputs")
+    os.makedirs(out_dir, exist_ok=True)
+
+    out_json = os.path.join(out_dir, f"{stem}_base_telemetry.json")
+    out_preview = os.path.join(out_dir, f"{stem}_base_preview.mp4")
+
+    with PIPELINE_LOCK:
+        PIPELINE_STATUS.update({
+            "running": True,
+            "clip": base,
+            "progress_pct": 10,
+            "status": f"Initializing models for {base}...",
+            "result": None,
+            "error": None,
+        })
+
+    try:
+        player_weights = os.path.join(ROOT_DIR, "weights/yolo26n.pt")
+        ball_weights = os.path.join(ROOT_DIR, "weights/ball_yolo26_best.pt")
+        if not os.path.exists(ball_weights):
+            ball_weights = os.path.join(ROOT_DIR, "weights/ball_colab_dukcv.pt")
+
+        pipeline = BasePerceptionPipeline(
+            player_weights=player_weights,
+            ball_weights=ball_weights,
+            ball_imgsz=1312,
+            multiscale=multiscale,
+            ball_max_coast=3,
+        )
+
+        with PIPELINE_LOCK:
+            PIPELINE_STATUS["progress_pct"] = 30
+            PIPELINE_STATUS["status"] = f"Processing video frames for {base}..."
+
+        summary = pipeline.process_video(
+            video_path=clip_path,
+            max_frames=max_frames,
+            out_json=out_json,
+            out_preview=out_preview,
+        )
+
+        with PIPELINE_LOCK:
+            PIPELINE_STATUS.update({
+                "running": False,
+                "progress_pct": 100,
+                "status": "completed",
+                "result": {
+                    "clip": base,
+                    "frames_processed": summary["total_frames_processed"],
+                    "processing_fps": summary["processing_fps"],
+                    "ball_detect_pct": summary["ball_detection_rate_pct"],
+                    "mean_players": summary["mean_players_per_frame"],
+                    "court_rmse_ft": summary["court_reprojection_rmse_ft"],
+                    "preview_url": f"/outputs/{stem}_base_preview.mp4",
+                    "telemetry_url": f"/outputs/{stem}_base_telemetry.json",
+                },
+                "error": None,
+            })
+    except Exception as e:
+        with PIPELINE_LOCK:
+            PIPELINE_STATUS.update({
+                "running": False,
+                "progress_pct": 0,
+                "status": "error",
+                "result": None,
+                "error": str(e),
+            })
+
+
+# ============================================================================
 # HTTP SERVER & API ROUTER
 # ============================================================================
 
@@ -187,7 +351,11 @@ class ReusableTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path):
         parsed = urllib.parse.urlparse(path).path
-        if parsed.startswith("/outputs/") or parsed.startswith("/results/"):
+        if (
+            parsed.startswith("/outputs/")
+            or parsed.startswith("/results/")
+            or parsed.startswith("/clips/")
+        ):
             rel = parsed.lstrip("/")
             return os.path.join(ROOT_DIR, rel)
         rel = parsed.lstrip("/")
@@ -304,7 +472,67 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
                 bytes_left -= len(chunk)
 
     def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path).path
+        url_obj = urllib.parse.urlparse(self.path)
+        parsed = url_obj.path
+        query_params = urllib.parse.parse_qs(url_obj.query)
+
+        if parsed == "/api/clips":
+            clips_dir = os.path.join(ROOT_DIR, "clips")
+            clips_list = []
+            if os.path.exists(clips_dir):
+                for f in sorted(os.listdir(clips_dir)):
+                    if f.lower().endswith((".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv")):
+                        meta = get_clip_metadata(os.path.join(clips_dir, f))
+                        if meta:
+                            clips_list.append(meta)
+            return self.send_json(200, {"ok": True, "clips": clips_list})
+
+        if parsed == "/api/frame0":
+            clip_name = query_params.get("clip", ["MicrosoftTeams-video.mp4"])[0]
+            cache_path = extract_frame0_path(clip_name)
+            if not cache_path or not os.path.exists(cache_path):
+                return self.send_json(404, {"ok": False, "error": f"Could not extract frame0 for clip {clip_name}"})
+            return self.send_file_with_range(cache_path)
+
+        if parsed == "/api/court-calibration":
+            clip_name = query_params.get("clip", ["MicrosoftTeams-video.mp4"])[0]
+            base = os.path.basename(clip_name)
+            clip_path = os.path.join(ROOT_DIR, "clips", base)
+            meta = get_clip_metadata(clip_path)
+            if not meta:
+                return self.send_json(404, {"ok": False, "error": f"Clip '{base}' not found in clips/"})
+
+            w, h = meta["width"], meta["height"]
+            saved = CourtCalibrator.load_calibration_for_clip(base)
+            if saved:
+                corners = saved
+                is_saved = True
+            else:
+                corners = CourtCalibrator.get_recommended_corners(w, h, clip_name=base)
+                is_saved = False
+
+            calibrator = CourtCalibrator(corners)
+            return self.send_json(200, {
+                "ok": True,
+                "clip": base,
+                "resolution": [w, h],
+                "aspect_ratio": meta["aspect_ratio"],
+                "is_portrait": meta["is_portrait"],
+                "is_saved": is_saved,
+                "corners_px": corners,
+                "rmse_ft": round(calibrator.result.reprojection_rmse_ft, 4),
+                "court_dimensions": {
+                    "width_ft": 20.0,
+                    "length_ft": 44.0,
+                    "net_y_ft": 22.0,
+                    "nvz_depth_ft": 7.0,
+                },
+                "homography": calibrator.result.homography.tolist() if calibrator.result.homography is not None else None,
+            })
+
+        if parsed == "/api/pipeline-status":
+            with PIPELINE_LOCK:
+                return self.send_json(200, {"ok": True, **PIPELINE_STATUS})
 
         if parsed == "/api/db-status":
             with SessionLocal() as db:
@@ -327,7 +555,7 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Intercept video and static file range requests
         filepath = self.translate_path(self.path)
         if os.path.isfile(filepath):
-            if filepath.lower().endswith((".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv", ".jpg", ".png", ".gif")):
+            if filepath.lower().endswith((".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv", ".jpg", ".jpeg", ".png", ".gif")):
                 return self.send_file_with_range(filepath)
 
         return super().do_GET()
@@ -433,6 +661,84 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
                     "message": f"Subscription updated to {SUBSCRIPTION_QUOTAS[tier]['name']} ({billing_cycle})!",
                     "user": user.to_dict(),
                 })
+
+        if parsed == "/api/court-calibration":
+            clip_name = data.get("clip", "MicrosoftTeams-video.mp4")
+            base = os.path.basename(clip_name)
+            corners_raw = data.get("corners_px", [])
+            if not isinstance(corners_raw, list) or len(corners_raw) != 4:
+                return self.send_json(400, {
+                    "ok": False,
+                    "error": "corners_px must be a list of 4 points: [[x1,y1],[x2,y2],[x3,y3],[x4,y4]]"
+                })
+
+            clip_path = os.path.join(ROOT_DIR, "clips", base)
+            meta = get_clip_metadata(clip_path)
+            if not meta:
+                return self.send_json(404, {"ok": False, "error": f"Clip '{base}' not found in clips/"})
+
+            try:
+                pts = [(float(p[0]), float(p[1])) for p in corners_raw]
+            except Exception as e:
+                return self.send_json(400, {"ok": False, "error": f"Invalid coordinate format: {e}"})
+
+            calibrator = CourtCalibrator(pts)
+            if not calibrator.result.calibrated:
+                return self.send_json(400, {
+                    "ok": False,
+                    "error": "Failed to compute valid homography matrix from the given 4 points."
+                })
+
+            saved_ok = CourtCalibrator.save_calibration_for_clip(
+                clip_name=base,
+                corners_px=pts,
+                resolution=(meta["width"], meta["height"]),
+                rmse_ft=calibrator.result.reprojection_rmse_ft,
+                source="human_pinned_calibrated",
+            )
+
+            return self.send_json(200, {
+                "ok": True,
+                "saved": saved_ok,
+                "clip": base,
+                "corners_px": pts,
+                "rmse_ft": round(calibrator.result.reprojection_rmse_ft, 4),
+                "homography": calibrator.result.homography.tolist(),
+                "message": f"Court corners successfully calibrated & saved for {base}!",
+            })
+
+        if parsed == "/api/run-pipeline":
+            clip_name = data.get("clip", "MicrosoftTeams-video.mp4")
+            base = os.path.basename(clip_name)
+            clip_path = os.path.join(ROOT_DIR, "clips", base)
+            if not os.path.exists(clip_path):
+                return self.send_json(404, {"ok": False, "error": f"Clip '{base}' not found in clips/"})
+
+            max_frames = data.get("frames", 60)
+            multiscale = bool(data.get("multiscale", False))
+
+            with PIPELINE_LOCK:
+                if PIPELINE_STATUS.get("running"):
+                    return self.send_json(409, {
+                        "ok": False,
+                        "error": f"A pipeline run is already in progress for '{PIPELINE_STATUS.get('clip')}'. Please wait.",
+                        "status": PIPELINE_STATUS,
+                    })
+
+            # Launch background runner
+            worker_t = threading.Thread(
+                target=run_pipeline_worker,
+                args=(base, max_frames, multiscale),
+                daemon=True,
+            )
+            worker_t.start()
+
+            return self.send_json(202, {
+                "ok": True,
+                "message": f"AI Perception Pipeline analysis started for {base}.",
+                "clip": base,
+                "max_frames": max_frames,
+            })
 
         return self.send_json(404, {"ok": False, "error": "Endpoint not found"})
 

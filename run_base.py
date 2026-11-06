@@ -201,6 +201,7 @@ def parse_args():
     parser.add_argument("--ball-weights", default=None, help="Weights for ball detection (Colab A100 YOLO26)")
     parser.add_argument("--ball-imgsz", type=int, default=None, help="Input resolution for ball model (e.g. 1312)")
     parser.add_argument("--multiscale", "-m", action="store_true", help="Enable multi-scale cropped-patch sliding inference for distant micro-balls")
+    parser.add_argument("--corners", default=None, help="Comma-separated 4 corners 'x1,y1,x2,y2,x3,y3,x4,y4' for manual court calibration")
     parser.add_argument("--max-frames", "--frames", "-n", dest="max_frames", type=int, default=None, help="Maximum frames to process")
     parser.add_argument("--out-dir", "--output", "-o", dest="out_dir", default=None, help="Output directory")
     parser.add_argument("--no-preview", action="store_true", help="Disable generating diagnostic preview video")
@@ -273,6 +274,23 @@ def main():
     out_json = os.path.join(out_dir, f"{stem}_base_telemetry.json")
     out_preview = None if args.no_preview else os.path.join(out_dir, f"{stem}_base_preview.mp4")
 
+    custom_corners = None
+    if args.corners:
+        try:
+            nums = [float(x.strip()) for x in args.corners.split(",")]
+            if len(nums) == 8:
+                custom_corners = [
+                    (nums[0], nums[1]),
+                    (nums[2], nums[3]),
+                    (nums[4], nums[5]),
+                    (nums[6], nums[7]),
+                ]
+                print(f"[Court] Overriding court corners with CLI args: {custom_corners}")
+            else:
+                print(f"[Warning] --corners expects 8 numbers, got {len(nums)}. Ignoring.")
+        except Exception as e:
+            print(f"[Warning] Failed to parse --corners: {e}")
+
     print("=" * 80)
     print(" 🏓 PICKLEBALL BASE VISION MODEL — RUNNER (ZERO RULES)")
     print("=" * 80)
@@ -299,6 +317,7 @@ def main():
         max_frames=args.max_frames,
         out_json=out_json,
         out_preview=out_preview,
+        court_corners=custom_corners,
     )
 
     print("\n" + "=" * 80)

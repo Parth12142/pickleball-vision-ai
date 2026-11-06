@@ -43,6 +43,7 @@ class BasePerceptionPipeline:
         ball_patch_slices: Optional[List[Tuple[float, float, float, float]]] = None,
         ball_max_coast: int = 3,
         ball_max_jump_px: float = 85.0,
+        court_corners: Optional[List[Tuple[float, float]]] = None,
     ):
         print(f"[BasePerceptionPipeline] Loading Player Model: {player_weights}")
         self.player_detector = PlayerDetector(player_weights, conf_thresh=player_conf)
@@ -55,7 +56,7 @@ class BasePerceptionPipeline:
             patch_slices=ball_patch_slices,
         )
 
-        self.court_calibrator = CourtCalibrator()
+        self.court_calibrator = CourtCalibrator(corners_px=court_corners)
         self.player_tracker = CanonicalPlayerTracker(max_players=4)
         self.ball_tracker = BallTrajectoryTracker(
             max_jump_px=ball_max_jump_px,
@@ -68,9 +69,13 @@ class BasePerceptionPipeline:
         max_frames: Optional[int] = None,
         out_json: Optional[str] = None,
         out_preview: Optional[str] = None,
+        court_corners: Optional[List[Tuple[float, float]]] = None,
     ) -> Dict[str, Any]:
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Input video not found: {video_path}")
+
+        if court_corners and len(court_corners) == 4:
+            self.court_calibrator.calibrate(court_corners)
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -119,7 +124,7 @@ class BasePerceptionPipeline:
             # 1. Calibrate Court on first frame
             t_c_start = time.time()
             if not self.court_calibrator.result.calibrated:
-                self.court_calibrator.auto_calibrate_broadcast(frame)
+                self.court_calibrator.auto_calibrate_broadcast(frame, clip_name=os.path.basename(video_path))
             t_court_total += (time.time() - t_c_start)
 
             # 2. Detect & Track Players
