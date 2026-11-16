@@ -201,9 +201,12 @@ class CourtMinimap:
         self.active_bounces = surviving_bounces
 
         # 2. Update and render Ball Trajectory Trail
-        if ball and ball.get("court_ft") is not None:
-            cft = ball["court_ft"]
-            self.ball_trail.append((float(cft[0]), float(cft[1])))
+        ball_cft = None
+        if ball is not None:
+            ball_cft = ball.get("minimap_court_ft") or ball.get("court_ft")
+
+        if ball_cft is not None:
+            self.ball_trail.append((float(ball_cft[0]), float(ball_cft[1])))
             if len(self.ball_trail) > self.trail_len:
                 self.ball_trail.pop(0)
 
@@ -216,11 +219,12 @@ class CourtMinimap:
                 cv2.line(canvas, pt1, pt2, COLOR_BALL, thickness, cv2.LINE_AA)
 
         # 3. Render Current Ball Position
-        if ball and ball.get("court_ft") is not None:
-            bx, by = self.court_to_canvas(ball["court_ft"][0], ball["court_ft"][1])
-            if -10 <= bx < self.canvas_w + 10 and -10 <= by < self.canvas_h + 10:
-                cv2.circle(canvas, (bx, by), 5, COLOR_BALL, -1, cv2.LINE_AA)
-                cv2.circle(canvas, (bx, by), 2, (255, 255, 255), -1, cv2.LINE_AA)
+        if ball_cft is not None:
+            bx, by = self.court_to_canvas(ball_cft[0], ball_cft[1])
+            bx_c = max(5, min(self.canvas_w - 6, bx))
+            by_c = max(5, min(self.canvas_h - 6, by))
+            cv2.circle(canvas, (bx_c, by_c), 5, COLOR_BALL, -1, cv2.LINE_AA)
+            cv2.circle(canvas, (bx_c, by_c), 2, (255, 255, 255), -1, cv2.LINE_AA)
 
         # 4. Render Player Badges
         if players:
