@@ -1,10 +1,14 @@
 """
-ball_3d_tracker.py - 3D Camera-Ray Ballistic Reconstruction for Accurate 2D Minimap Tracking.
-Eliminates 3D-to-2D planar homography parallax distortion on airborne pickleballs by:
-  1. Scrubbing isolated detector teleport outliers.
-  2. Segmenting rallies into shot arcs bounded by ground bounces (Z=0) and paddle hits (Z=player paddle height).
-  3. Solving bounded 3D ballistic trajectories (X(t), Y(t), Z(t)) against calibrated camera extrinsics (solvePnP).
-  4. Projecting observed ball pixels onto the solved physical height plane Z(t) and filling occlusion gaps.
+ball_3d_tracker.py - 3D Camera-Ray Ballistic Reconstruction for Unified 1-to-1 Minimap Tracking.
+Ensures the video overlay ball and 2D minimap dot always represent the EXACT SAME ball:
+  1. Works strictly from genuine model detections (ignoring stale/coasted interpolations)
+     and scrubs isolated teleport outliers.
+  2. Segments rallies by Ground Bounces (Z=0) and Player Paddle Contacts, resolving exact
+     contact vertices inside close-player hitting envelopes during motion-blur gaps.
+  3. Fits bounded 3D gravity arcs (X(t), Y(t), Z(t)) via solvePnP extrinsics.
+  4. On every observed frame, projects the EXACT model pixel (u_obs, v_obs) at solved height Z(t)
+     so video reticle and minimap dot stay locked 1-to-1 (< 2 px discrepancy).
+  5. On occluded frames, computes synchronized 3D point (X, Y, Z) -> both video pixel & minimap.
 """
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Any
@@ -12,7 +16,6 @@ import numpy as np
 from scipy.optimize import least_squares
 
 from pbbase.court.homography import CourtCalibrator, CourtGeometry
-from pbbase.tracking.bounce_detector import BounceEvent
 
 
 @dataclass
@@ -29,12 +32,12 @@ class ShotAnchor:
 class Ball3DReconstructor:
     """
     Reconstructs physically accurate top-down court positions (X_ft, Y_ft) and
-    estimated flight height (height_ft) across full rally telemetry streams.
+    estimated flight height (height_ft) while keeping 1-to-1 sync with model tracking.
     """
 
     def __init__(
         self,
-        gravity_ft_s2: float = 30.0,       # Effective gravity incl. pickleball aerodynamic lift/drag
+        gravity_ft_s2: float = 30.0,
         max_outlier_jump_px: float = 135.0,
         paddle_prox_px: float = 95.0,
     ):
@@ -54,7 +57,6 @@ class Ball3DReconstructor:
         """Estimate 3D height of ball contact along player bounding box."""
         _, y1, _, y2 = box
         bh = max(20.0, y2 - y1)
-        # Foot is at y2 (height ~0), head is at y1 (height ~5.8 ft)
         frac = (y2 - py) / bh
         return float(np.clip(frac * 5.8, 0.6, 6.2))
 
@@ -67,7 +69,6 @@ class Ball3DReconstructor:
         if not valid:
             return None
 
-        # Score combines distance to box AND preference for torso center vs distant foreground cap edge
         def score_player(p: Dict[str, Any]) -> float:
             x1, y1, x2, y2 = p["box"]
             dx = max(x1 - px, 0.0, px - x2)
@@ -85,27 +86,20 @@ class Ball3DReconstructor:
         self, telemetry_stream: List[Dict[str, Any]]
     ) -> List[Optional[Tuple[float, float]]]:
         """
-        Extracts pixel centers (u, v) from telemetry_stream and removes isolated
-        teleport false positives that jump > max_outlier_jump_px and do not persist.
+        Extracts ONLY genuine observed pixel centers (interpolated=False) from
+        telemetry_stream and removes isolated teleport spikes (> max_outlier_jump_px).
         """
-        n = len(telemetry_stream)
-        raw_pts: List[Optional[Tuple[float, float]]] = []
-        is_interp: List[bool] = []
+        cleaned: List[Optional[Tuple[float, float]]] = []
         for rec in telemetry_stream:
             b = rec.get("ball")
-            if b and b.get("pixel"):
-                raw_pts.append((float(b["pixel"][0]), float(b["pixel"][1])))
-                is_interp.append(bool(b.get("interpolated", False)))
+            if b and b.get("pixel") and not b.get("interpolated", False):
+                cleaned.append((float(b["pixel"][0]), float(b["pixel"][1])))
             else:
-                raw_pts.append(None)
-                is_interp.append(False)
+                cleaned.append(None)
 
-        cleaned = list(raw_pts)
-        # Iterate and check isolated spikes
         valid_indices = [i for i, p in enumerate(cleaned) if p is not None]
         for idx_pos, i in enumerate(valid_indices):
             p_curr = cleaned[i]
-            # Look backward and forward up to 3 valid observations
             prev_pts = [cleaned[valid_indices[j]] for j in range(max(0, idx_pos - 2), idx_pos) if cleaned[valid_indices[j]] is not None]
             next_pts = [cleaned[valid_indices[j]] for j in range(idx_pos + 1, min(len(valid_indices), idx_pos + 3)) if cleaned[valid_indices[j]] is not None]
 
@@ -116,7 +110,6 @@ class Ball3DReconstructor:
                 d_next = np.hypot(p_next[0] - p_curr[0], p_next[1] - p_curr[1])
                 d_bridge = np.hypot(p_next[0] - p_prev[0], p_next[1] - p_prev[1])
 
-                # Isolated outlier jump (prev -> next is smooth, but curr is far away from both)
                 if d_prev > self.max_outlier_jump_px and d_next > self.max_outlier_jump_px and d_bridge < self.max_outlier_jump_px * 1.4:
                     cleaned[i] = None
 
@@ -130,12 +123,9 @@ class Ball3DReconstructor:
         calibrator: CourtCalibrator,
     ) -> Tuple[List[ShotAnchor], List[Dict[str, Any]]]:
         """
-        Finds ordered ShotAnchors partitioning the rally into individual ballistic flights:
-          - Verified Ground Bounces (Z = 0.0 ft)
-          - Player Paddle Contacts (Z ~ 1.5 - 5.8 ft)
-          - Post-bounce upward->downward far-court player hits
-          - Rally start/end boundary points
-        Also returns updated bounce dictionaries if a foot-level ground bounce was detected.
+        Finds ordered ShotAnchors partitioning the rally into individual ballistic flights.
+        Handles close-player occlusion hits cleanly by resolving contact vertices inside
+        the hitting player's envelope rather than letting gap noise pull anchors astray.
         """
         n = len(telemetry_stream)
         valid_frames = [i for i, p in enumerate(clean_pts) if p is not None]
@@ -145,7 +135,7 @@ class Ball3DReconstructor:
         anchors: Dict[int, ShotAnchor] = {}
         updated_bounces = [dict(b) for b in bounces]
 
-        # 1. Process detected bounces (from BallBounceDetector)
+        # 1. Ground bounces and low/torso bounces from BallBounceDetector
         ground_bounce_frames: List[int] = []
         for b in updated_bounces:
             f_idx = int(b["frame_idx"])
@@ -156,7 +146,6 @@ class Ball3DReconstructor:
             players = telemetry_stream[f_idx].get("players", [])
             is_ground = bool(b.get("is_ground_bounce", True))
 
-            # Check height above nearest player's feet if flagged as paddle hit
             p_height = 0.0
             if not is_ground:
                 best_p = self._find_closest_player_box(px[0], px[1], players)
@@ -165,7 +154,6 @@ class Ball3DReconstructor:
                 else:
                     p_height = 2.5
 
-            # Recompute accurate court coordinates at estimated height
             if is_ground:
                 cft = calibrator.pixel_to_court_ft(px[0], px[1]) or tuple(b["court_ft"])
                 ground_bounce_frames.append(f_idx)
@@ -184,17 +172,14 @@ class Ball3DReconstructor:
         # 2. Detect post-bounce far-court return hits (local pixel-y minimum after a ground bounce)
         for gb_f in ground_bounce_frames:
             gb_anchor = anchors[gb_f]
-            # Look forward 5..26 frames after far-court ground bounce (Y < 24 ft)
             if gb_anchor.court_xy_ft[1] < 24.0:
                 best_min_y = float("inf")
                 best_f = None
                 for k in range(gb_f + 5, min(n - 3, gb_f + 28)):
                     if clean_pts[k] is None:
                         continue
-                    # Don't search past another existing anchor
                     if any(a_f > gb_f and a_f <= k for a_f in anchors.keys()):
                         break
-                    # Check if local minimum in y (upward rebound ending and heading back to near court)
                     pre_pts = [clean_pts[j] for j in range(max(0, k - 4), k) if clean_pts[j] is not None]
                     post_pts = [clean_pts[j] for j in range(k + 1, min(n, k + 5)) if clean_pts[j] is not None]
                     if not pre_pts or not post_pts:
@@ -202,7 +187,6 @@ class Ball3DReconstructor:
                     vy_in = (clean_pts[k][1] - pre_pts[0][1]) / max(1, k - max(0, k - 4))
                     vy_out = (post_pts[-1][1] - clean_pts[k][1]) / max(1, min(n, k + 5) - 1 - k)
                     if vy_in < -0.8 and vy_out > 0.3 and clean_pts[k][1] < best_min_y:
-                        # Confirm proximity to a player on the far side
                         players = telemetry_stream[k].get("players", [])
                         if any(self._dist_point_to_box(clean_pts[k][0], clean_pts[k][1], p["box"]) < self.paddle_prox_px for p in players if p.get("box")):
                             best_min_y = clean_pts[k][1]
@@ -224,65 +208,89 @@ class Ball3DReconstructor:
                             pixel_xy=px,
                         )
 
-        # 3. Detect fast-hit occlusion reversals near players (e.g. smash/pass occluded briefly behind hitter)
+        # 3. Detect fast-hit occlusion reversals & close-player strikes
         for i in range(4, n - 4):
             if any(abs(i - af) < 7 for af in anchors):
                 continue
             if clean_pts[i] is None:
                 continue
 
-            # Check pre/post valid neighbors across short/medium gaps (up to 18 frames)
             pre_idx = next((j for j in range(i - 3, max(-1, i - 8), -1) if clean_pts[j] is not None), None)
             if pre_idx is None:
                 pre_idx = next((j for j in range(i - 1, max(-1, i - 4), -1) if clean_pts[j] is not None), None)
 
-            post_idx = next((j for j in range(i + 3, min(n, i + 18)) if clean_pts[j] is not None), None)
-            if post_idx is None:
-                post_idx = next((j for j in range(i + 1, min(n, i + 4)) if clean_pts[j] is not None), None)
-
+            post_idx = next((j for j in range(i + 1, min(n, i + 18)) if clean_pts[j] is not None), None)
             if pre_idx is None or post_idx is None:
                 continue
+
+            # Find a second post point slightly further out to verify outgoing velocity vector
+            post_idx2 = next((j for j in range(post_idx + 2, min(n, post_idx + 7)) if clean_pts[j] is not None), post_idx)
 
             gap = post_idx - i
             p_curr = clean_pts[i]
             players = telemetry_stream[i].get("players", [])
             near_players = [
                 p for p in players
-                if p.get("box") and self._dist_point_to_box(p_curr[0], p_curr[1], p["box"]) < 65.0
+                if p.get("box") and self._dist_point_to_box(p_curr[0], p_curr[1], p["box"]) < 105.0
             ]
             if not near_players:
                 continue
 
             v_in = np.array([p_curr[0] - clean_pts[pre_idx][0], p_curr[1] - clean_pts[pre_idx][1]]) / max(1, i - pre_idx)
-            v_out = np.array([clean_pts[post_idx][0] - p_curr[0], clean_pts[post_idx][1] - p_curr[1]]) / max(1, gap)
-            n_in, n_out = np.linalg.norm(v_in), np.linalg.norm(v_out)
+            if post_idx2 > post_idx:
+                v_out = np.array([clean_pts[post_idx2][0] - clean_pts[post_idx][0], clean_pts[post_idx2][1] - clean_pts[post_idx][1]]) / max(1, post_idx2 - post_idx)
+            else:
+                v_out = np.array([clean_pts[post_idx][0] - p_curr[0], clean_pts[post_idx][1] - p_curr[1]]) / max(1, gap)
 
-            if n_in > 3.0 and n_out > 3.0:
+            n_in, n_out = np.linalg.norm(v_in), np.linalg.norm(v_out)
+            if n_in > 3.0 and n_out > 2.5:
                 cos_theta = float(np.dot(v_in, v_out) / (n_in * n_out))
-                # Distinguish true paddle hits from smooth mid-air gravity apexes:
-                # 1) Occlusion gap >= 5 frames right at player
-                # 2) Upward-concavity bounce/hit (vy_in > 1.5 and vy_out < -1.5, anti-gravity)
-                # 3) Lateral reversal (vx flips sign) or steep acute kink (cos < -0.55) with non-parabolic jerk
-                is_gap_hit = (gap >= 5 and (v_in[1] * v_out[1] < 0 or cos_theta < 0.35))
+                is_gap_hit = (gap >= 3 and (v_in[1] * v_out[1] < 0 or cos_theta < 0.35))
                 is_antigravity_hit = (v_in[1] > 1.5 and v_out[1] < -1.5 and cos_theta < 0.45)
                 is_lateral_kink = (v_in[0] * v_out[0] < -1.0 and cos_theta < 0.25)
                 speed_jump = max(n_in, n_out) / max(0.5, min(n_in, n_out))
                 is_acute_impulse = (cos_theta < -0.55 and speed_jump > 1.45)
 
                 if is_gap_hit or is_antigravity_hit or is_lateral_kink or is_acute_impulse:
-                    best_p = self._find_closest_player_box(p_curr[0], p_curr[1], near_players)
-                    if best_p is None:
+                    # Resolve true hit frame & coordinate inside the player's hitting zone if gap > 1
+                    hit_frame = i
+                    hit_px = p_curr
+                    if gap >= 2:
+                        # Interpolate contact time between i and post_idx based on gap midpoint toward closest player
+                        mid_k = i + max(1, min(gap - 1, gap // 3 if gap >= 6 else gap // 2))
+                        hit_frame = mid_k
+                        # Predict ball position entering player's torso plane
+                        best_p = self._find_closest_player_box(p_curr[0], p_curr[1], telemetry_stream[min(n - 1, hit_frame)].get("players", near_players))
+                        if best_p and best_p.get("box"):
+                            bx1, by1, bx2, by2 = best_p["box"]
+                            pred_px = (
+                                float(np.clip(p_curr[0] + v_in[0] * (hit_frame - i), bx1 - 15.0, bx2 + 15.0)),
+                                float(np.clip(p_curr[1] + v_in[1] * (hit_frame - i), by1, by2 - 0.15 * (by2 - by1))),
+                            )
+                            hit_px = pred_px
+                            players_hit = telemetry_stream[hit_frame].get("players", near_players)
+                            best_p = self._find_closest_player_box(hit_px[0], hit_px[1], players_hit)
+                    else:
+                        best_p = self._find_closest_player_box(hit_px[0], hit_px[1], near_players)
+
+                    if best_p is None or any(abs(hit_frame - af) < 6 for af in anchors):
                         continue
-                    p_h = self._estimate_paddle_height_ft(p_curr[1], best_p["box"])
-                    cft = calibrator.pixel_to_court_at_height_ft(p_curr[0], p_curr[1], p_h) or calibrator.pixel_to_court_ft(p_curr[0], p_curr[1])
+
+                    p_h = self._estimate_paddle_height_ft(hit_px[1], best_p["box"])
+                    # Anchor tightly at player's actual court position (with paddle offset) to prevent parallax confusion
+                    if best_p.get("court_ft"):
+                        cft = (float(best_p["court_ft"][0]), float(best_p["court_ft"][1]))
+                    else:
+                        cft = calibrator.pixel_to_court_at_height_ft(hit_px[0], hit_px[1], p_h) or calibrator.pixel_to_court_ft(hit_px[0], hit_px[1])
+
                     if cft:
-                        anchors[i] = ShotAnchor(
-                            frame_idx=i,
-                            timestamp_s=float(telemetry_stream[i].get("timestamp_s", i / 30.0)),
+                        anchors[hit_frame] = ShotAnchor(
+                            frame_idx=hit_frame,
+                            timestamp_s=float(telemetry_stream[hit_frame].get("timestamp_s", hit_frame / 30.0)),
                             kind="paddle_hit",
                             court_xy_ft=(float(cft[0]), float(cft[1])),
                             height_ft=p_h,
-                            pixel_xy=p_curr,
+                            pixel_xy=hit_px,
                         )
 
         # 4. Ensure start and end endpoints are anchored
@@ -290,7 +298,7 @@ class Ball3DReconstructor:
         if not any(abs(f_start - af) < 5 for af in anchors):
             px = clean_pts[f_start]
             players = telemetry_stream[f_start].get("players", [])
-            best_p = min([p for p in players if p.get("box")], key=lambda p: self._dist_point_to_box(px[0], px[1], p["box"]), default=None)
+            best_p = self._find_closest_player_box(px[0], px[1], players)
             h_start = self._estimate_paddle_height_ft(px[1], best_p["box"]) if best_p and self._dist_point_to_box(px[0], px[1], best_p["box"]) < 140.0 else 3.0
             cft = calibrator.pixel_to_court_at_height_ft(px[0], px[1], h_start) or calibrator.pixel_to_court_ft(px[0], px[1])
             if cft:
@@ -328,18 +336,16 @@ class Ball3DReconstructor:
         a1: ShotAnchor,
         a2: ShotAnchor,
         calibrator: CourtCalibrator,
-    ) -> Dict[int, Tuple[float, float, float]]:
+        prev_anchor_state: Optional[Tuple[float, float, float]] = None,
+    ) -> Dict[int, Tuple[float, float, float, bool]]:
         """
-        Reconstructs 3D trajectory (X_ft, Y_ft, Z_ft) between two consecutive anchors a1 -> a2.
-        Combines 3D ballistic projectile fitting (when camera 3D pose is available) with
-        height-compensated pixel ray intersection for physically exact ground tracks.
-        Returns mapping: frame_idx -> (X_ft, Y_ft, height_ft).
+        Reconstructs 3D trajectory (X_ft, Y_ft, Z_ft, is_observed) between anchors a1 -> a2.
+        Enforces 1-to-1 consistency and strict C0 continuity across shared shot anchors.
         """
         k1, k2 = a1.frame_idx, a2.frame_idx
         t1, t2 = a1.timestamp_s, a2.timestamp_s
         dt_total = max(1e-3, t2 - t1)
 
-        # Gather observed non-null pixels in [k1, k2]
         obs_k, obs_t, obs_u, obs_v = [], [], [], []
         for k in range(k1, k2 + 1):
             if clean_pts[k] is not None:
@@ -352,31 +358,32 @@ class Ball3DReconstructor:
         obs_u_arr = np.array(obs_u, dtype=np.float64)
         obs_v_arr = np.array(obs_v, dtype=np.float64)
 
-        x1_init, y1_init = a1.court_xy_ft
+        if prev_anchor_state is not None:
+            x1_init, y1_init, z1_init = prev_anchor_state
+        else:
+            x1_init, y1_init = a1.court_xy_ft
+            z1_init = float(a1.height_ft)
+
         x2_init, y2_init = a2.court_xy_ft
-        z1_init = float(a1.height_ft)
         z2_init = float(a2.height_ft)
         g_eff = self.gravity_ft_s2
         k_d = 0.25
 
-        # Fit 3D projectile parameters if 3D pose is calibrated and enough points exist
-        if calibrator.result.pose_calibrated and len(obs_k) >= 4:
-            # Pin endpoints strictly if ground bounce; lightly constrain paddle/endpoint heights
-            w_end1 = 6.0 if a1.kind == "ground_bounce" else 1.5
-            w_end2 = 6.0 if a2.kind == "ground_bounce" else 1.5
-            z1_min = 0.0 if a1.kind == "ground_bounce" else 0.5
+        if calibrator.result.pose_calibrated and len(obs_k) >= 3:
+            w_end1 = 22.0 if prev_anchor_state is not None else (6.0 if a1.kind == "ground_bounce" else 2.8)
+            w_end2 = 6.0 if a2.kind == "ground_bounce" else 2.8
+            wz1 = 22.0 if prev_anchor_state is not None else (10.0 if a1.kind == "ground_bounce" else 4.5)
+            wz2 = 10.0 if a2.kind == "ground_bounce" else 4.5
+            z1_min = 0.0 if a1.kind == "ground_bounce" else (0.5 if prev_anchor_state is not None else (1.2 if a1.height_ft >= 1.5 else 0.5))
             z1_max = 0.05 if a1.kind == "ground_bounce" else 7.5
-            z2_min = 0.0 if a2.kind == "ground_bounce" else 0.5
+            z2_min = 0.0 if a2.kind == "ground_bounce" else (1.2 if a2.height_ft >= 1.5 else 0.5)
             z2_max = 0.05 if a2.kind == "ground_bounce" else 7.5
 
             def residuals(params):
                 px1, py1, pz1, px2, py2, pz2, kd, g = params
                 tau = (obs_t_arr - t1) / dt_total
                 dt = obs_t_arr - t1
-                if abs(kd) > 1e-3:
-                    s_tau = (1.0 - np.exp(-kd * tau)) / (1.0 - np.exp(-kd))
-                else:
-                    s_tau = tau
+                s_tau = (1.0 - np.exp(-kd * tau)) / (1.0 - np.exp(-kd)) if abs(kd) > 1e-3 else tau
 
                 X = px1 + (px2 - px1) * s_tau
                 Y = py1 + (py2 - py1) * s_tau
@@ -396,27 +403,44 @@ class Ball3DReconstructor:
                 priors = np.array([
                     (px1 - x1_init) * w_end1,
                     (py1 - y1_init) * w_end1,
-                    (pz1 - z1_init) * (10.0 if a1.kind == "ground_bounce" else 2.5),
+                    (pz1 - z1_init) * wz1,
                     (px2 - x2_init) * w_end2,
                     (py2 - y2_init) * w_end2,
-                    (pz2 - z2_init) * (10.0 if a2.kind == "ground_bounce" else 2.5),
+                    (pz2 - z2_init) * wz2,
                     (kd - 0.25) * 4.0,
                     (g - 30.0) * 0.6,
                 ])
                 return np.concatenate([res_px, priors])
 
-            x0 = [
-                np.clip(x1_init, -15.0, 35.0),
-                np.clip(y1_init, -15.0, 58.0),
-                np.clip(z1_init, z1_min, z1_max),
-                np.clip(x2_init, -15.0, 35.0),
-                np.clip(y2_init, -15.0, 58.0),
-                np.clip(z2_init, z2_min, z2_max),
-                0.25,
-                30.0,
-            ]
-            lb = [-15.0, -18.0, z1_min, -15.0, -18.0, z2_min, 0.0, 20.0]
-            ub = [38.0, 60.0, z1_max, 38.0, 60.0, z2_max, 1.2, 38.0]
+            if prev_anchor_state is not None:
+                px1_c = float(np.clip(x1_init, -15.0, 38.0))
+                py1_c = float(np.clip(y1_init, -18.0, 60.0))
+                pz1_c = float(np.clip(z1_init, z1_min, z1_max))
+                x0 = [
+                    px1_c,
+                    py1_c,
+                    pz1_c,
+                    np.clip(x2_init, -15.0, 35.0),
+                    np.clip(y2_init, -15.0, 58.0),
+                    np.clip(z2_init, z2_min, z2_max),
+                    0.25,
+                    30.0,
+                ]
+                lb = [px1_c - 0.05, py1_c - 0.05, max(0.0, pz1_c - 0.05), -15.0, -18.0, z2_min, 0.0, 20.0]
+                ub = [px1_c + 0.05, py1_c + 0.05, min(7.5, pz1_c + 0.05), 38.0, 60.0, z2_max, 1.2, 38.0]
+            else:
+                x0 = [
+                    np.clip(x1_init, -15.0, 35.0),
+                    np.clip(y1_init, -15.0, 58.0),
+                    np.clip(z1_init, z1_min, z1_max),
+                    np.clip(x2_init, -15.0, 35.0),
+                    np.clip(y2_init, -15.0, 58.0),
+                    np.clip(z2_init, z2_min, z2_max),
+                    0.25,
+                    30.0,
+                ]
+                lb = [-15.0, -18.0, z1_min, -15.0, -18.0, z2_min, 0.0, 20.0]
+                ub = [38.0, 60.0, z1_max, 38.0, 60.0, z2_max, 1.2, 38.0]
 
             try:
                 opt = least_squares(residuals, x0, bounds=(lb, ub), max_nfev=80)
@@ -424,9 +448,8 @@ class Ball3DReconstructor:
             except Exception:
                 pass
 
-        # Evaluate trajectory across every frame k in [k1, k2]
         vz0 = (z2_init - z1_init) / dt_total + 0.5 * g_eff * dt_total
-        segment_out: Dict[int, Tuple[float, float, float]] = {}
+        segment_out: Dict[int, Tuple[float, float, float, bool]] = {}
 
         for k in range(k1, k2 + 1):
             t = float(telemetry_stream[k].get("timestamp_s", k / 30.0))
@@ -440,18 +463,19 @@ class Ball3DReconstructor:
 
             px = clean_pts[k]
             if px is not None and calibrator.result.pose_calibrated:
+                # 1-to-1 Pixel-to-Ray locking at solved flight height z_fit:
+                # Ensures the minimap projects the EXACT same ball seen in camera frame (reproj_err -> ~0 px)
                 ray_xy = calibrator.pixel_to_court_at_height_ft(px[0], px[1], z_fit)
                 if ray_xy is not None:
                     rx, ry = ray_xy
-                    # Check ray sanity (avoid extreme horizon blowups)
-                    if abs(rx - x_fit) < 8.0 and abs(ry - y_fit) < 12.0:
-                        # Lateral X from camera ray captures genuine ball curve; Y stays smoothly anchored
-                        x_final = 0.65 * rx + 0.35 * x_fit
-                        y_final = 0.25 * ry + 0.75 * y_fit
-                        segment_out[k] = (float(x_final), float(y_final), z_fit)
+                    if abs(rx - x_fit) < 5.5 and abs(ry - y_fit) < 8.0:
+                        segment_out[k] = (float(rx), float(ry), z_fit, True)
+                        continue
+                    elif abs(rx - x_fit) < 10.0 and abs(ry - y_fit) < 14.0:
+                        segment_out[k] = (float(0.65 * rx + 0.35 * x_fit), float(0.65 * ry + 0.35 * y_fit), z_fit, True)
                         continue
 
-            segment_out[k] = (float(x_fit), float(y_fit), z_fit)
+            segment_out[k] = (float(x_fit), float(y_fit), z_fit, False)
 
         return segment_out
 
@@ -462,8 +486,8 @@ class Ball3DReconstructor:
         calibrator: CourtCalibrator,
     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
-        Post-processes the full rally telemetry_stream to populate accurate 3D-compensated
-        `minimap_court_ft` and `height_ft` on every frame (including occlusion gap fills).
+        Post-processes the full rally telemetry_stream so camera reticle AND 2D minimap
+        remain 1-to-1 locked onto the exact same physical 3D ball across all frames.
         """
         if not telemetry_stream or not calibrator.result.calibrated:
             return telemetry_stream, bounces
@@ -472,56 +496,67 @@ class Ball3DReconstructor:
         anchors, updated_bounces = self._find_shot_anchors(telemetry_stream, clean_pts, bounces, calibrator)
 
         if len(anchors) < 2:
-            # Not enough anchors for ballistic segments; apply fallback smoothing
             return telemetry_stream, updated_bounces
 
-        reconstructed: Dict[int, Tuple[float, float, float]] = {}
+        reconstructed: Dict[int, Tuple[float, float, float, bool]] = {}
+        prev_state: Optional[Tuple[float, float, float]] = None
         for i in range(len(anchors) - 1):
             seg = self._reconstruct_segment(
-                telemetry_stream, clean_pts, anchors[i], anchors[i + 1], calibrator
+                telemetry_stream,
+                clean_pts,
+                anchors[i],
+                anchors[i + 1],
+                calibrator,
+                prev_anchor_state=prev_state,
             )
             reconstructed.update(seg)
+            end_k = anchors[i + 1].frame_idx
+            if end_k in seg:
+                prev_state = (seg[end_k][0], seg[end_k][1], seg[end_k][2])
+            else:
+                prev_state = None
 
-        # Gentle 3-point weighted temporal smoothing (preserving pinned bounce positions)
-        pinned_frames = {a.frame_idx for a in anchors if a.kind == "ground_bounce"}
-        smoothed: Dict[int, Tuple[float, float, float]] = {}
+        # Preserve exact ray-locked observed positions; lightly smooth only extreme spikes
         keys = sorted(reconstructed.keys())
-        for idx in keys:
-            if idx in pinned_frames:
-                smoothed[idx] = reconstructed[idx]
-                continue
-            pts_w = []
-            for offset, w in [(-1, 0.25), (0, 0.50), (1, 0.25)]:
-                if (idx + offset) in reconstructed:
-                    pts_w.append((reconstructed[idx + offset], w))
-            w_sum = sum(w for _, w in pts_w)
-            sx = sum(pt[0] * w for pt, w in pts_w) / w_sum
-            sy = sum(pt[1] * w for pt, w in pts_w) / w_sum
-            sz = sum(pt[2] * w for pt, w in pts_w) / w_sum
-            smoothed[idx] = (round(float(sx), 2), round(float(sy), 2), round(float(sz), 2))
-
-        # Inject reconstructed coordinates into telemetry_stream
-        for k, (mx, my, mz) in smoothed.items():
+        for k in keys:
+            mx, my, mz, is_obs = reconstructed[k]
+            mx_r, my_r, mz_r = round(float(mx), 2), round(float(my), 2), round(float(mz), 2)
             rec = telemetry_stream[k]
             ball = rec.get("ball")
-            if ball is not None:
-                ball["minimap_court_ft"] = [mx, my]
-                ball["height_ft"] = mz
+
+            if is_obs and ball is not None and not ball.get("interpolated", False):
+                # Observed frame: keep EXACT tracked pixel, sync minimap_court_ft to 3D ray intersection
+                ball["minimap_court_ft"] = [mx_r, my_r]
+                ball["court_ft"] = [mx_r, my_r]
+                ball["height_ft"] = mz_r
             else:
-                # Reconstructed occlusion gap fill for continuous smooth minimap trajectory
+                # Occluded / Coasted frame: synchronize BOTH camera pixel AND minimap from unified 3D curve!
                 px_proj = calibrator.court_3d_to_pixel(mx, my, mz)
-                rec["ball"] = {
-                    "frame_idx": k,
-                    "timestamp_s": rec.get("timestamp_s", round(k / 30.0, 3)),
-                    "pixel": [round(px_proj[0], 1), round(px_proj[1], 1)] if px_proj else None,
-                    "box": [round(px_proj[0] - 6, 1), round(px_proj[1] - 6, 1), round(px_proj[0] + 6, 1), round(px_proj[1] + 6, 1)] if px_proj else [0, 0, 0, 0],
-                    "conf": 0.0,
-                    "speed_mph": 0.0,
-                    "speed_px_per_frame": 0.0,
-                    "court_ft": [mx, my],
-                    "minimap_court_ft": [mx, my],
-                    "height_ft": mz,
-                    "interpolated": True,
-                }
+                px_list = [round(px_proj[0], 1), round(px_proj[1], 1)] if px_proj else (ball.get("pixel") if ball else None)
+                box_list = (
+                    [round(px_list[0] - 6.0, 1), round(px_list[1] - 6.0, 1), round(px_list[0] + 6.0, 1), round(px_list[1] + 6.0, 1)]
+                    if px_list else [0.0, 0.0, 0.0, 0.0]
+                )
+                if ball is not None:
+                    ball["pixel"] = px_list
+                    ball["box"] = box_list
+                    ball["court_ft"] = [mx_r, my_r]
+                    ball["minimap_court_ft"] = [mx_r, my_r]
+                    ball["height_ft"] = mz_r
+                    ball["interpolated"] = True
+                else:
+                    rec["ball"] = {
+                        "frame_idx": k,
+                        "timestamp_s": rec.get("timestamp_s", round(k / 30.0, 3)),
+                        "pixel": px_list,
+                        "box": box_list,
+                        "conf": 0.0,
+                        "speed_mph": 0.0,
+                        "speed_px_per_frame": 0.0,
+                        "court_ft": [mx_r, my_r],
+                        "minimap_court_ft": [mx_r, my_r],
+                        "height_ft": mz_r,
+                        "interpolated": True,
+                    }
 
         return telemetry_stream, updated_bounces

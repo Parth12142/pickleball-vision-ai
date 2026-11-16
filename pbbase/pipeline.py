@@ -52,7 +52,7 @@ class BasePerceptionPipeline:
         player_weights: str = "weights/yolo26n.pt",
         ball_weights: Optional[str] = None,
         player_conf: float = 0.25,
-        ball_conf: float = 0.15,
+        ball_conf: float = 0.08,
         ball_imgsz: Optional[int] = None,
         multiscale: bool = False,
         ball_patch_slices: Optional[List[Tuple[float, float, float, float]]] = None,
@@ -168,7 +168,14 @@ class BasePerceptionPipeline:
             # 3. Detect & Track Ball
             t_b_start = time.time()
             raw_ball_cands = self.ball_detector.detect(frame)
-            ball_result = self.ball_tracker.process_candidates(raw_ball_cands, frame_idx, timestamp_s, self.court_calibrator)
+            ball_result = self.ball_tracker.process_candidates(
+                raw_ball_cands,
+                frame_idx,
+                timestamp_s,
+                self.court_calibrator,
+                frame=frame,
+                players=active_players,
+            )
             t_ball_total += (time.time() - t_b_start)
 
             # 4. Kinematic Bounce Detection & Sub-Pixel Nadir Fitting (Week 3)

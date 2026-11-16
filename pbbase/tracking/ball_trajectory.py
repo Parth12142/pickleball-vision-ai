@@ -1,8 +1,11 @@
 """
 ball_trajectory.py - Kinematic Gating, Ball Trajectory Smoothing & Parabolic Interpolation.
 Zero scoring or line-call rules: strictly physics-based kinematic tracking.
+Includes close-player sneaker/apparel decoy suppression, tight-gate low-conf blur rescue,
+and paddle-box coast damping.
 """
 from typing import Dict, List, Optional, Tuple, Any
+import cv2
 import numpy as np
 
 from pbbase.court.homography import CourtCalibrator
@@ -12,9 +15,10 @@ class BallTrajectoryTracker:
     """
     Trajectory tracker for fast-moving small pickleball:
     - Kinematic velocity gating with physical momentum prediction
-    - Ballistic occlusion coasting bridging brief occlusions (1-4 frames)
+    - Player-box HSV decoy suppression (rejects white sneakers/apparel false detections)
+    - Tight-gate low-confidence rescue for motion-blurred paddle impacts
+    - Player-box coast damping & ballistic occlusion coasting
     - Retroactive parabolic arc interpolation across gap buffers
-    - Moving average position & velocity smoothing
     - Metric speed estimation via court planar homography
     """
     def __init__(
@@ -25,6 +29,9 @@ class BallTrajectoryTracker:
         gravity_px: float = 0.55,
         drag_coeff: float = 0.015,
         min_init_conf: float = 0.20,
+        min_active_conf: float = 0.14,
+        min_gated_conf: float = 0.08,
+        tight_gate_px: float = 38.0,
     ):
         self.max_jump_px = max_jump_px
         self.trail_len = trail_len
@@ -32,11 +39,15 @@ class BallTrajectoryTracker:
         self.gravity_px = gravity_px
         self.drag_coeff = drag_coeff
         self.min_init_conf = min_init_conf
+        self.min_active_conf = min_active_conf
+        self.min_gated_conf = min_gated_conf
+        self.tight_gate_px = tight_gate_px
 
         self.last_pos: Optional[Dict[str, Any]] = None
         self.last_observed_pos: Optional[Dict[str, Any]] = None
         self.velocity: List[float] = [0.0, 0.0]
         self.consecutive_lost: int = 0
+        self.coast_near_player: bool = False
         self.gap_buffer: List[Dict[str, Any]] = []
         self.raw_history: List[Optional[Dict[str, Any]]] = []
 
@@ -45,8 +56,93 @@ class BallTrajectoryTracker:
         self.last_observed_pos = None
         self.velocity = [0.0, 0.0]
         self.consecutive_lost = 0
+        self.coast_near_player = False
         self.gap_buffer.clear()
         self.raw_history.clear()
+
+    @staticmethod
+    def _is_inside_player_box(
+        px: float,
+        py: float,
+        players: Optional[List[Dict[str, Any]]],
+        margin_x: float = 22.0,
+        margin_y: float = 8.0,
+    ) -> bool:
+        """Checks if (px, py) lies inside or adjacent to any active player's bounding box."""
+        if not players:
+            return False
+        for p in players:
+            box = p.get("box")
+            if not box or len(box) < 4:
+                continue
+            bx1, by1, bx2, by2 = box
+            if (bx1 - margin_x) <= px <= (bx2 + margin_x) and (by1 - margin_y) <= py <= (by2 + margin_y):
+                return True
+        return False
+
+    @staticmethod
+    def _is_achromatic_player_decoy(
+        frame: Optional[np.ndarray],
+        cx: float,
+        cy: float,
+        players: Optional[List[Dict[str, Any]]],
+    ) -> bool:
+        """
+        Detects white sneakers, socks, wristbands, or shirt reflections misclassified
+        as pickleballs when candidates overlap a player's bounding box.
+        Real optic pickleballs exhibit clear yellow-green chromatic contrast (G - B >= 18, S >= 30);
+        white apparel decoys are achromatic (low HSV Saturation, G - B near 0).
+        """
+        if frame is None or frame.size == 0 or not players:
+            return False
+
+        in_shoe_zone = False
+        in_any_box = False
+        for p in players:
+            box = p.get("box")
+            if not box or len(box) < 4:
+                continue
+            bx1, by1, bx2, by2 = box
+            bh = max(20.0, by2 - by1)
+            if (bx1 - 15.0) <= cx <= (bx2 + 15.0) and (by1 - 5.0) <= cy <= (by2 + 10.0):
+                in_any_box = True
+                if cy >= (by2 - 0.24 * bh):
+                    in_shoe_zone = True
+
+        if not in_any_box:
+            return False
+
+        h, w = frame.shape[:2]
+        ix, iy = int(round(cx)), int(round(cy))
+        x1 = max(0, ix - 4)
+        x2 = min(w, ix + 5)
+        y1 = max(0, iy - 4)
+        y2 = min(h, iy + 5)
+        patch = frame[y1:y2, x1:x2]
+        if patch.size == 0:
+            return False
+
+        hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
+        v_flat = hsv[:, :, 2].flatten()
+        thresh = np.percentile(v_flat, 70)
+        core_mask = hsv[:, :, 2] >= thresh
+        if not np.any(core_mask):
+            return False
+
+        b_mean = float(np.mean(patch[:, :, 0][core_mask]))
+        g_mean = float(np.mean(patch[:, :, 1][core_mask]))
+        s_mean = float(np.mean(hsv[:, :, 1][core_mask]))
+        gb_diff = g_mean - b_mean
+
+        # Pure white sneaker in bottom 24% foot zone
+        if in_shoe_zone and s_mean < 38.0 and gb_diff < 25.0:
+            return True
+
+        # Pure white wristband/shirt spot anywhere inside player box
+        if s_mean < 28.0 and gb_diff < 10.0:
+            return True
+
+        return False
 
     def _apply_retroactive_parabolic_fit(
         self,
@@ -75,7 +171,6 @@ class BallTrajectoryTracker:
 
         vy0 = self.velocity[1]
         # Ballistic acceleration: y1 = y0 + vy0 * N + 0.5 * a_y * N^2
-        # a_y = 2 * (y1 - y0 - vy0 * N) / N^2
         ay = 2.0 * ((y1 - y0) - vy0 * total_frames) / (total_frames * total_frames)
 
         # Fallback to linear if acceleration is implausibly sharp (|ay| > 12 px/f^2)
@@ -110,20 +205,30 @@ class BallTrajectoryTracker:
         frame_idx: int,
         timestamp_s: float,
         court_calibrator: CourtCalibrator,
+        frame: Optional[np.ndarray] = None,
+        players: Optional[List[Dict[str, Any]]] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Associates candidates with ongoing trajectory using kinematic velocity prediction.
-        Performs ballistic occlusion coasting and retroactive parabolic interpolation.
+        Suppresses white sneaker/apparel false detections near players, performs blurred
+        paddle-approach rescue inside tight gates, and dampens coasting near players.
         """
+        # Filter out obvious white sneaker / apparel decoys inside player bounding boxes
+        clean_cands = []
+        for c in (candidates or []):
+            cx, cy = c["center_px"]
+            if not self._is_achromatic_player_decoy(frame, cx, cy, players):
+                clean_cands.append(c)
+
         # Case 1: Initial track start (no active track)
         if self.last_pos is None:
-            if not candidates:
+            valid_cands = [c for c in clean_cands if c.get("conf", 0.0) >= self.min_init_conf]
+            if not valid_cands:
+                valid_cands = [c for c in clean_cands if c.get("conf", 0.0) >= self.min_active_conf]
+
+            if not valid_cands:
                 self.raw_history.append(None)
                 return None
-
-            valid_cands = [c for c in candidates if c.get("conf", 0.0) >= self.min_init_conf]
-            if not valid_cands:
-                valid_cands = candidates
 
             best = max(valid_cands, key=lambda c: c["conf"])
             cx, cy = best["center_px"]
@@ -143,6 +248,7 @@ class BallTrajectoryTracker:
             self.last_observed_pos = point_data
             self.velocity = [0.0, 0.0]
             self.consecutive_lost = 0
+            self.coast_near_player = False
             self.gap_buffer.clear()
             self.raw_history.append(point_data)
             return point_data
@@ -151,19 +257,27 @@ class BallTrajectoryTracker:
         pred_x = self.last_pos["pixel"][0] + self.velocity[0]
         pred_y = self.last_pos["pixel"][1] + self.velocity[1] + 0.5 * self.gravity_px
 
+        # Expand gate moderately when recovering immediately after a clamped player-paddle coast
+        gate_limit = max(self.max_jump_px, 130.0) if (self.consecutive_lost > 0 and self.coast_near_player) else self.max_jump_px
+
         best_cand = None
         best_cost = float("inf")
 
-        if candidates:
-            for c in candidates:
-                cx, cy = c["center_px"]
-                dist = float(np.hypot(cx - pred_x, cy - pred_y))
-                # Gating threshold: reject impossible teleport jumps
-                if dist < self.max_jump_px:
-                    cost = dist - 25.0 * c.get("conf", 0.0)
-                    if cost < best_cost:
-                        best_cost = cost
-                        best_cand = c
+        for c in clean_cands:
+            cx, cy = c["center_px"]
+            conf = float(c.get("conf", 0.0))
+            dist = float(np.hypot(cx - pred_x, cy - pred_y))
+
+            # Confidence tiering: very low conf (0.08-0.14) accepted ONLY inside tight prediction gate
+            if conf < self.min_active_conf:
+                if conf < self.min_gated_conf or dist > self.tight_gate_px:
+                    continue
+
+            if dist < gate_limit:
+                cost = dist - 25.0 * conf
+                if cost < best_cost:
+                    best_cost = cost
+                    best_cand = c
 
         # Subcase 2A: Candidate matched within kinematic gate
         if best_cand is not None:
@@ -193,13 +307,12 @@ class BallTrajectoryTracker:
                 "interpolated": False,
             }
 
-            # If recovering from brief gap, apply retroactive parabolic fit
             if self.consecutive_lost > 0:
                 self._apply_retroactive_parabolic_fit(point_data, court_calibrator=court_calibrator)
 
-            # Update momentum with exponential moving average
             self.velocity = [0.75 * vx + 0.25 * self.velocity[0], 0.75 * vy + 0.25 * self.velocity[1]]
             self.consecutive_lost = 0
+            self.coast_near_player = False
             self.last_pos = point_data
             self.last_observed_pos = point_data
             self.raw_history.append(point_data)
@@ -214,9 +327,18 @@ class BallTrajectoryTracker:
 
         if can_coast:
             self.consecutive_lost += 1
-            # Apply aerodynamic drag and vertical gravity
-            self.velocity[0] *= (1.0 - self.drag_coeff)
-            self.velocity[1] += self.gravity_px
+
+            # Check if ball is entering/inside a player's hitting zone -> dampen coasting to prevent overshoot
+            in_player = self._is_inside_player_box(pred_x, pred_y, players) or self._is_inside_player_box(
+                self.last_pos["pixel"][0], self.last_pos["pixel"][1], players
+            )
+            if in_player:
+                self.coast_near_player = True
+                self.velocity[0] *= 0.30
+                self.velocity[1] *= 0.30
+            else:
+                self.velocity[0] *= (1.0 - self.drag_coeff)
+                self.velocity[1] += self.gravity_px
 
             cx = self.last_pos["pixel"][0] + self.velocity[0]
             cy = self.last_pos["pixel"][1] + self.velocity[1]

@@ -15,6 +15,7 @@ from pbbase.court.homography import CourtCalibrator, CourtGeometry
 from pbbase.court.minimap import CourtMinimap, MinimapBounceMarker
 from pbbase.tracking.bounce_detector import BallBounceDetector, BounceEvent
 from pbbase.tracking.ball_3d_tracker import Ball3DReconstructor
+from pbbase.tracking.ball_trajectory import BallTrajectoryTracker
 from pbbase.data.schema import validate_telemetry_schema, SCHEMA_VERSION, SCHEMA_PRODUCER
 
 
@@ -331,15 +332,47 @@ class TestWeek3MinimapAndBounce(unittest.TestCase):
             "is_ground_bounce": True,
         }]
 
+        naive_mid_y = stream[12]["ball"]["court_ft"][1]
         reconstructor = Ball3DReconstructor()
         out_stream, _ = reconstructor.reconstruct_stream(stream, bounces, cal)
 
         # At mid-flight (frame 12, true Y=22.0 over the net!), check naive vs 3D-reconstructed Y error
         mid = out_stream[12]["ball"]
-        naive_err = abs(mid["court_ft"][1] - true_xy[12][1])
+        naive_err = abs(naive_mid_y - true_xy[12][1])
         rec_err = abs(mid["minimap_court_ft"][1] - true_xy[12][1])
         self.assertGreater(naive_err, 8.0)   # Naive ground homography is off by >8 ft!
         self.assertLess(rec_err, 1.5)        # 3D Reconstructor recovers true Y within <1.5 ft!
+
+        # Verify 1-to-1 reprojection consistency between model ball pixel and reconstructed 3D minimap point
+        px_rec = cal.court_3d_to_pixel(mid["minimap_court_ft"][0], mid["minimap_court_ft"][1], mid["height_ft"])
+        reproj_diff = np.hypot(px_rec[0] - mid["pixel"][0], px_rec[1] - mid["pixel"][1])
+        self.assertLess(reproj_diff, 3.0)
+
+    def test_player_shoe_decoy_suppression_and_coast_damping(self):
+        """Verify white sneakers inside player shoe zones are rejected and coasting dampens near players."""
+        frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        frame[:, :] = (160, 100, 40)  # Blue court background
+        # Paint white sneaker near P1 feet (cx=200, cy=385)
+        frame[378:392, 192:208] = (255, 253, 236)
+        # Paint real optic pickleball near torso (cx=180, cy=320)
+        frame[315:325, 175:185] = (133, 238, 178)
+
+        players = [{"id": 1, "box": [160.0, 260.0, 220.0, 400.0]}]
+        self.assertTrue(BallTrajectoryTracker._is_achromatic_player_decoy(frame, 200.0, 385.0, players))
+        self.assertFalse(BallTrajectoryTracker._is_achromatic_player_decoy(frame, 180.0, 320.0, players))
+
+        # Test coast damping when track enters player box with missing frame
+        tracker = BallTrajectoryTracker(max_jump_px=85.0, max_coast_frames=3)
+        corners = [(100.0, 100.0), (540.0, 100.0), (600.0, 440.0), (40.0, 440.0)]
+        cal = CourtCalibrator(corners_px=corners, image_size=(640, 480))
+        tracker.process_candidates([{"box": [134, 294, 146, 306], "conf": 0.8, "center_px": (140.0, 300.0)}], 0, 0.0, cal, frame=frame, players=players)
+        tracker.process_candidates([{"box": [154, 304, 166, 316], "conf": 0.8, "center_px": (160.0, 310.0)}], 1, 0.033, cal, frame=frame, players=players)
+
+        # Frame 2 drops inside player box -> coasting velocity should dampen sharply
+        coasted = tracker.process_candidates([], 2, 0.066, cal, frame=frame, players=players)
+        self.assertIsNotNone(coasted)
+        self.assertTrue(coasted["interpolated"])
+        self.assertLess(coasted["pixel"][0] - 160.0, 10.0)  # Dampened below original 20px/frame speed!
 
     def test_minimap_asymmetric_apron_bounds(self):
         """Verify expanded minimap apron keeps wide out-of-bounds balls visible inside canvas."""

@@ -247,7 +247,11 @@ class BallDetector:
             if patch_crop.size == 0 or patch_crop.shape[0] < 10 or patch_crop.shape[1] < 10:
                 continue
 
-            raw_patch = self._predict_frame(patch_crop, imgsz=self.patch_imgsz, conf_thresh=self.patch_conf_thresh)
+            raw_patch = self._predict_frame(
+                patch_crop,
+                imgsz=self.patch_imgsz,
+                conf_thresh=min(self.patch_conf_thresh, self.conf_thresh),
+            )
             for c in raw_patch:
                 bx1, by1, bx2, by2 = c["box"]
                 gx1 = bx1 + px1

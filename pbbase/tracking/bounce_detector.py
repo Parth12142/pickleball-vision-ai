@@ -129,9 +129,9 @@ class BallBounceDetector:
             bx1, by1, bx2, by2 = box
             player_h = max(20.0, by2 - by1)
 
-            # Torso/chest hitting zone (excludes top 8% head edge to prevent foreground overlap)
-            in_x = (bx1 - 25.0) <= px <= (bx2 + 25.0)
-            in_y_torso = (by1 + 0.08 * player_h) <= py <= (by2 - 0.25 * player_h)
+            # Torso/chest + outstretched paddle reach zone (excludes top 5% head edge to prevent foreground overlap)
+            in_x = (bx1 - 48.0) <= px <= (bx2 + 48.0)
+            in_y_torso = (by1 + 0.05 * player_h) <= py <= (by2 - 0.20 * player_h)
 
             if in_x and in_y_torso:
                 # Ball contact happened at torso/shoulder height of player -> Paddle Volley
@@ -195,18 +195,15 @@ class BallBounceDetector:
         xs = [float(pt["pixel"][0]) for pt in win]
 
         # In image coordinates, y increases downward.
-        # Approaching ground: y increases -> v_y = y[t] - y[t-1] > 0
-        # Rebounding up: y decreases -> v_y = y[t+1] - y[t] < 0
-        # Local nadir: y[2] >= y[1] and y[2] >= y[3] (or y[2] is local maximum)
-        is_local_max_y = (ys[2] >= ys[1]) and (ys[2] >= ys[3])
+        # Approaching ground: y increases -> v_y > 0; Rebounding up: y decreases -> v_y < 0
+        # Require true upward reversal across window (rejects monotonic slowdown on duplicate frames)
+        vy_in = ys[2] - ys[0]    # positive if descending into center
+        vy_out = ys[4] - ys[2]   # negative if ascending out of center
 
-        # Vertical velocity change across center
-        vy_in = ys[2] - ys[0]    # positive if downward
-        vy_out = ys[4] - ys[2]   # negative if upward
+        is_true_nadir = (ys[2] >= ys[1]) and (ys[2] >= ys[3]) and (vy_in > 0.5) and (vy_out < -0.5)
+        velocity_reversal = (vy_in > 1.0) and (vy_out < -1.0)
 
-        velocity_reversal = (vy_in > 0.5) and (vy_out < -0.5)
-
-        if not (is_local_max_y or velocity_reversal):
+        if not (is_true_nadir or velocity_reversal):
             return None
 
         # Closed-form 5-point quadratic fit: y(t) = a * t^2 + b * t + c
