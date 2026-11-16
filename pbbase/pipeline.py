@@ -1,11 +1,12 @@
 """
 pipeline.py - Master Unified Base Perception Pipeline (Zero-Rule Core).
 Streams video frames through:
-  1. Court Geometry Calibration
+  1. Court Geometry Calibration & 3D Camera Pose Estimation (solvePnP)
   2. Multi-Player Detection & Canonical Tracking
   3. Micro-Ball Detection & Kinematic Trajectory
   4. Kinematic Bounce Detection & Sub-Pixel Localization (Week 3)
-  5. 2D Orthographic Court Minimap & Broadcast HUD Composition (Week 3)
+  5. 3D Ballistic Ray-Height Trajectory Reconstruction (Parallax-Free Minimap)
+  6. 2D Orthographic Court Minimap & Broadcast HUD Composition (Week 3)
 Emits clean, structured perception telemetry JSON and diagnostic preview video.
 """
 import json
@@ -23,7 +24,8 @@ from pbbase.court.minimap import CourtMinimap
 from pbbase.models.detector import PlayerDetector, BallDetector
 from pbbase.tracking.player_tracker import CanonicalPlayerTracker
 from pbbase.tracking.ball_trajectory import BallTrajectoryTracker, get_speed_color
-from pbbase.tracking.bounce_detector import BallBounceDetector, BounceEvent
+from pbbase.tracking.bounce_detector import BallBounceDetector
+from pbbase.tracking.ball_3d_tracker import Ball3DReconstructor
 from pbbase.data.schema import SCHEMA_VERSION, SCHEMA_PRODUCER
 
 
@@ -35,32 +37,41 @@ PLAYER_THEMES = [
 ]
 
 
+def _default_ball_weights() -> str:
+    best_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "weights", "ball_yolo26_best.pt")
+    )
+    if os.path.exists(best_path):
+        return "weights/ball_yolo26_best.pt"
+    return "weights/ball_colab_dukcv.pt"
+
+
 class BasePerceptionPipeline:
     def __init__(
         self,
         player_weights: str = "weights/yolo26n.pt",
-        ball_weights: str = "weights/ball_yolo26_best.pt",
+        ball_weights: Optional[str] = None,
         player_conf: float = 0.25,
         ball_conf: float = 0.15,
-        ball_imgsz: int = 1312,
+        ball_imgsz: Optional[int] = None,
         multiscale: bool = False,
         ball_patch_slices: Optional[List[Tuple[float, float, float, float]]] = None,
         ball_max_coast: int = 3,
-        ball_max_jump_px: float = 85.0,
+        ball_max_jump_px: float = 95.0,
         court_corners: Optional[List[Tuple[float, float]]] = None,
         render_minimap: bool = True,
         minimap_position: str = "bottom-right",
     ):
-        if not os.path.exists(ball_weights) and os.path.exists("weights/ball_colab_dukcv.pt"):
-            ball_weights = "weights/ball_colab_dukcv.pt"
+        resolved_ball_weights = ball_weights or _default_ball_weights()
+        resolved_ball_imgsz = ball_imgsz if ball_imgsz is not None else (1312 if "best" in resolved_ball_weights else 1280)
 
         print(f"[BasePerceptionPipeline] Loading Player Model: {player_weights}")
         self.player_detector = PlayerDetector(player_weights, conf_thresh=player_conf)
-        print(f"[BasePerceptionPipeline] Loading Ball Model  : {ball_weights} (imgsz={ball_imgsz}, multiscale={multiscale})")
+        print(f"[BasePerceptionPipeline] Loading Ball Model  : {resolved_ball_weights} (imgsz={resolved_ball_imgsz}, multiscale={multiscale})")
         self.ball_detector = BallDetector(
-            ball_weights,
+            resolved_ball_weights,
             conf_thresh=ball_conf,
-            imgsz=ball_imgsz,
+            imgsz=resolved_ball_imgsz,
             multiscale=multiscale,
             patch_slices=ball_patch_slices,
         )
@@ -72,7 +83,8 @@ class BasePerceptionPipeline:
             max_coast_frames=ball_max_coast,
         )
         self.bounce_detector = BallBounceDetector()
-        self.court_minimap = CourtMinimap(court_scale=8.5, padding=45, trail_len=12, ema_alpha=0.60)
+        self.ball_3d_reconstructor = Ball3DReconstructor()
+        self.court_minimap = CourtMinimap(court_scale=9.0, padding_x=54, padding_y=50, trail_len=20)
         self.render_minimap = render_minimap
         self.minimap_position = minimap_position
 
@@ -88,9 +100,6 @@ class BasePerceptionPipeline:
     ) -> Dict[str, Any]:
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Input video not found: {video_path}")
-
-        if court_corners and len(court_corners) == 4:
-            self.court_calibrator.calibrate(court_corners)
 
         do_render_minimap = render_minimap if render_minimap is not None else self.render_minimap
         m_pos = minimap_position if minimap_position is not None else self.minimap_position
@@ -113,23 +122,15 @@ class BasePerceptionPipeline:
         w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        frames_to_read = min(total_frames, max_frames) if max_frames else total_frames
-        print(f"[BasePerceptionPipeline] Processing: {video_path} ({w}x{h} @ {fps:.1f} FPS, {frames_to_read} frames)")
+        if court_corners and len(court_corners) == 4:
+            self.court_calibrator.calibrate(court_corners, image_size=(w, h))
 
-        # Prepare preview writer if requested
-        writer = None
-        raw_preview_tmp = None
-        if out_preview:
-            os.makedirs(os.path.dirname(os.path.abspath(out_preview)), exist_ok=True)
-            raw_preview_tmp = f"{out_preview}.tmp.mp4"
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            writer = cv2.VideoWriter(raw_preview_tmp, fourcc, fps, (w, h))
+        frames_to_read = min(total_frames, max_frames) if max_frames else total_frames
+        print(f"[BasePerceptionPipeline] Processing Pass 1 (Perception): {video_path} ({w}x{h} @ {fps:.1f} FPS, {frames_to_read} frames)")
 
         t0 = time.time()
         telemetry_stream: List[Dict[str, Any]] = []
         frame_idx = 0
-        ball_pts_history: List[Optional[Tuple[float, float, float]]] = []  # (cx, cy, speed_px)
-        frames_with_ball = 0
         player_counts = []
 
         # Feature timing accumulators (seconds)
@@ -139,6 +140,9 @@ class BasePerceptionPipeline:
         t_court_total = 0.0
         t_render_total = 0.0
 
+        # =====================================================================
+        # PASS 1: Object Detection, Canonical Tracking & Bounce Kinetics
+        # =====================================================================
         while cap.isOpened():
             ok, frame = cap.read()
             if not ok or (max_frames and frame_idx >= max_frames):
@@ -146,10 +150,12 @@ class BasePerceptionPipeline:
 
             timestamp_s = frame_idx / fps
 
-            # 1. Calibrate Court on first frame
+            # 1. Calibrate Court + 3D Pose on first frame
             t_c_start = time.time()
             if not self.court_calibrator.result.calibrated:
                 self.court_calibrator.auto_calibrate_broadcast(frame, clip_name=os.path.basename(video_path))
+            elif not self.court_calibrator.result.pose_calibrated:
+                self.court_calibrator.solve_3d_pose(w, h)
             t_court_total += (time.time() - t_c_start)
 
             # 2. Detect & Track Players
@@ -163,13 +169,6 @@ class BasePerceptionPipeline:
             t_b_start = time.time()
             raw_ball_cands = self.ball_detector.detect(frame)
             ball_result = self.ball_tracker.process_candidates(raw_ball_cands, frame_idx, timestamp_s, self.court_calibrator)
-            if ball_result is not None:
-                frames_with_ball += 1
-                bx, by = ball_result["pixel"]
-                bspeed = ball_result.get("speed_px_per_frame", 0.0)
-                ball_pts_history.append((bx, by, bspeed))
-            else:
-                ball_pts_history.append(None)
             t_ball_total += (time.time() - t_b_start)
 
             # 4. Kinematic Bounce Detection & Sub-Pixel Nadir Fitting (Week 3)
@@ -181,11 +180,8 @@ class BasePerceptionPipeline:
                 self.court_calibrator,
                 players=active_players,
             )
-            if bounce_event is not None and bounce_event.is_ground_bounce:
-                self.court_minimap.add_bounce(bounce_event.court_xy_ft, frame_idx)
             t_bounce_total += (time.time() - t_bnc_start)
 
-            # Telemetry record for this frame
             frame_record = {
                 "frame_idx": frame_idx,
                 "timestamp_s": round(timestamp_s, 3),
@@ -196,39 +192,90 @@ class BasePerceptionPipeline:
             }
             telemetry_stream.append(frame_record)
 
-            # 5. Render diagnostic overlay & direct 1:1 Minimap HUD if preview requested
-            if writer:
-                t_r_start = time.time()
-                annotated = self._render_frame(
-                    frame,
-                    frame_record,
-                    ball_pts_history,
-                    frame_idx,
-                    frames_to_read,
-                    fps,
-                    render_minimap=do_render_minimap,
-                    minimap_position=m_pos,
-                )
-                writer.write(annotated)
-                t_render_total += (time.time() - t_r_start)
-
             frame_idx += 1
             if frame_idx % 30 == 0:
                 elapsed = time.time() - t0
                 print(f"  Processed {frame_idx}/{frames_to_read} frames ({frame_idx / max(0.01, elapsed):.1f} FPS)...")
 
         cap.release()
-        elapsed_total = time.time() - t0
 
-        if writer:
+        # =====================================================================
+        # 3D BALLISTIC RECONSTRUCTION (Eliminates Aerial Parallax for Minimap)
+        # =====================================================================
+        t_3d_start = time.time()
+        raw_bounces = [b.to_dict() for b in self.bounce_detector.detected_bounces]
+        telemetry_stream, all_bounces = self.ball_3d_reconstructor.reconstruct_stream(
+            telemetry_stream, raw_bounces, self.court_calibrator
+        )
+        t_3d_ms = round((time.time() - t_3d_start) * 1000, 1)
+
+        # Recompute ball continuity metrics & camera history after 3D gap reconstruction
+        frames_with_ball = sum(1 for r in telemetry_stream if r.get("ball") is not None)
+        ball_pts_history: List[Optional[Tuple[float, float, float]]] = []
+        for r in telemetry_stream:
+            b = r.get("ball")
+            if b is not None and b.get("pixel"):
+                ball_pts_history.append((b["pixel"][0], b["pixel"][1], b.get("speed_px_per_frame", 0.0)))
+            else:
+                ball_pts_history.append(None)
+
+        # =====================================================================
+        # PASS 2: Render H.264 Preview Video with Parallax-Free 3D Minimap HUD
+        # =====================================================================
+        if out_preview:
+            print(f"[BasePerceptionPipeline] Rendering Pass 2 (3D Minimap HUD Preview)...")
+            os.makedirs(os.path.dirname(os.path.abspath(out_preview)), exist_ok=True)
+            raw_preview_tmp = f"{out_preview}.tmp.mp4"
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            writer = cv2.VideoWriter(raw_preview_tmp, fourcc, fps, (w, h))
+
+            self.court_minimap.reset()
+            cap_vis = cv2.VideoCapture(video_path)
+            cumulative_bounces = 0
+
+            for r_idx in range(len(telemetry_stream)):
+                ok_v, v_frame = cap_vis.read()
+                if not ok_v:
+                    break
+
+                t_r_start = time.time()
+                rec = telemetry_stream[r_idx]
+                rec_bounce = rec.get("bounce")
+                if rec_bounce is not None:
+                    cumulative_bounces += 1
+                    if rec_bounce.get("is_ground_bounce", True) and rec_bounce.get("court_ft"):
+                        self.court_minimap.add_bounce(
+                            (float(rec_bounce["court_ft"][0]), float(rec_bounce["court_ft"][1])),
+                            r_idx,
+                        )
+
+                annotated = self._render_frame(
+                    v_frame,
+                    rec,
+                    ball_pts_history[: r_idx + 1],
+                    r_idx,
+                    frames_to_read,
+                    fps,
+                    cumulative_bounces=cumulative_bounces,
+                    render_minimap=do_render_minimap,
+                    minimap_position=m_pos,
+                )
+                writer.write(annotated)
+                t_render_total += (time.time() - t_r_start)
+
+            cap_vis.release()
             writer.release()
             self._encode_h264(raw_preview_tmp, out_preview)
             print(f"[BasePerceptionPipeline] Saved H.264 preview to: {out_preview}")
+
+        elapsed_total = time.time() - t0
 
         corners_list = [[round(x, 1), round(y, 1)] for x, y in self.court_calibrator.result.corners_px]
         court_schema = {
             "calibrated": self.court_calibrator.result.calibrated,
             "reprojection_rmse_ft": round(self.court_calibrator.result.reprojection_rmse_ft, 4),
+            "pose_calibrated": self.court_calibrator.result.pose_calibrated,
+            "camera_pos_ft": [round(v, 2) for v in self.court_calibrator.result.camera_pos_ft] if self.court_calibrator.result.camera_pos_ft else None,
             "dimensions_ft": {
                 "width": 20.0,
                 "length": 44.0,
@@ -238,14 +285,13 @@ class BasePerceptionPipeline:
             "corners_px": corners_list,
         }
 
-        all_bounces = [b.to_dict() for b in self.bounce_detector.detected_bounces]
-
         bench_schema = {
             "ball_detection_rate_pct": round((frames_with_ball / max(1, frame_idx)) * 100, 1),
             "frames_with_ball": frames_with_ball,
             "mean_players_per_frame": round(float(np.mean(player_counts)) if player_counts else 0.0, 2),
             "multiscale_inference": self.ball_detector.multiscale,
             "total_bounces_detected": len(all_bounces),
+            "ball_3d_reconstruction_ms": t_3d_ms,
             "stage_latencies_ms": {
                 "player_ms": round((t_player_total / max(1, frame_idx)) * 1000, 1),
                 "ball_ms": round((t_ball_total / max(1, frame_idx)) * 1000, 1),
@@ -300,6 +346,7 @@ class BasePerceptionPipeline:
         frame_idx: int,
         total_frames: int,
         fps: float,
+        cumulative_bounces: Optional[int] = None,
         render_minimap: bool = True,
         minimap_position: str = "bottom-right",
     ) -> np.ndarray:
@@ -347,7 +394,7 @@ class BasePerceptionPipeline:
 
         # 3. Ball Trajectory Ribbon & Reticle
         ball = record["ball"]
-        if ball is not None and ball["pixel"]:
+        if ball is not None and ball.get("pixel"):
             trail_len = 16
             valid_pts = []
             for i in range(len(ball_history) - 1, max(-1, len(ball_history) - 1 - trail_len), -1):
@@ -374,7 +421,7 @@ class BasePerceptionPipeline:
             if is_interpolated:
                 cv2.circle(vis, (bx, by), 8, (120, 200, 255), 1, cv2.LINE_AA)
                 cv2.circle(vis, (bx, by), 2, (120, 200, 255), -1, cv2.LINE_AA)
-                cv2.putText(vis, "COAST", (bx + 10, by + 12), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (120, 200, 255), 1, cv2.LINE_AA)
+                cv2.putText(vis, "3D-EST", (bx + 10, by + 12), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (120, 200, 255), 1, cv2.LINE_AA)
             else:
                 cv2.circle(vis, (bx, by), 8, ret_col, 2, cv2.LINE_AA)
                 cv2.circle(vis, (bx, by), 2, (255, 255, 255), -1, cv2.LINE_AA)
@@ -410,11 +457,11 @@ class BasePerceptionPipeline:
             )
 
         # 6. Clean Telemetry Header HUD
-        cv2.rectangle(vis, (16, 16), (395, 84), (15, 23, 42), -1)
-        cv2.rectangle(vis, (16, 16), (395, 84), (0, 255, 220), 1)
-        cv2.putText(vis, "PICKLEBALL BASE VISION MODEL", (26, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 220), 1, cv2.LINE_AA)
-        ball_status = "COAST" if (ball and ball.get("interpolated")) else ("LOCKED" if ball else "SEARCH")
-        total_bncs = len(self.bounce_detector.detected_bounces)
+        cv2.rectangle(vis, (16, 16), (410, 84), (15, 23, 42), -1)
+        cv2.rectangle(vis, (16, 16), (410, 84), (0, 255, 220), 1)
+        cv2.putText(vis, "PICKLEBALL BASE VISION MODEL (3D MINIMAP)", (26, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.43, (0, 255, 220), 1, cv2.LINE_AA)
+        ball_status = "3D-EST" if (ball and ball.get("interpolated")) else ("LOCKED" if ball else "SEARCH")
+        total_bncs = cumulative_bounces if cumulative_bounces is not None else len(self.bounce_detector.detected_bounces)
         status_line = f"F: {frame_idx + 1}/{total_frames} | Players: {len(record['players'])}/4 | Ball: {ball_status} | Bounces: {total_bncs}"
         cv2.putText(vis, status_line, (26, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (250, 250, 250), 1, cv2.LINE_AA)
         sec = frame_idx / fps

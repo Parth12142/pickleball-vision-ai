@@ -31,18 +31,20 @@ def validate_week3(
     max_frames: int = 289,
     out_json: str = "data/week3_match1_telemetry.json",
     out_preview: str = "output/week3_match1_minimap_preview.mp4",
+    multiscale: bool = True,
 ) -> Dict[str, Any]:
     print("=" * 72)
     print("🏓 WEEK 3 EMPIRICAL VALIDATOR: COURT MINIMAP & BOUNCE KINEMATICS")
     print("=" * 72)
     print(f"Video Source : {video_path}")
     print(f"Max Frames   : {max_frames}")
+    print(f"Multiscale   : {multiscale}")
     print(f"Output JSON  : {out_json}")
     print(f"Output Video : {out_preview}")
     print("-" * 72)
 
     pipeline = BasePerceptionPipeline(
-        multiscale=False,
+        multiscale=multiscale,
         render_minimap=True,
         minimap_position="bottom-right",
     )

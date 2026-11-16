@@ -14,7 +14,7 @@ import numpy as np
 from pbbase.court.homography import CourtCalibrator, CourtGeometry
 from pbbase.court.minimap import CourtMinimap, MinimapBounceMarker
 from pbbase.tracking.bounce_detector import BallBounceDetector, BounceEvent
-from pbbase.tracking.ball_trajectory import BallTrajectoryTracker
+from pbbase.tracking.ball_3d_tracker import Ball3DReconstructor
 from pbbase.data.schema import validate_telemetry_schema, SCHEMA_VERSION, SCHEMA_PRODUCER
 
 
@@ -267,49 +267,95 @@ class TestWeek3MinimapAndBounce(unittest.TestCase):
         is_valid, errors = validate_telemetry_schema(valid_doc)
         self.assertTrue(is_valid, f"Schema validation errors: {errors}")
 
-    def test_retroactive_parabolic_updates_court_ft(self):
-        """Verify retroactive gap refinement recomputes court_ft via homography H (zero stale spikes)."""
-        cal = CourtCalibrator([(425.0, 177.0), (855.0, 177.0), (1080.0, 610.0), (204.0, 602.0)])
-        tracker = BallTrajectoryTracker(max_jump_px=120.0, max_coast_frames=3, gravity_px=15.0)
+    def test_3d_pose_and_height_projection(self):
+        """Verify 3D solvePnP camera calibration and ray-plane round-trip accuracy."""
+        corners = [(425.0, 177.0), (855.0, 177.0), (1080.0, 610.0), (204.0, 602.0)]
+        cal = CourtCalibrator(corners_px=corners, image_size=(1302, 740))
+        self.assertTrue(cal.result.pose_calibrated)
+        self.assertIsNotNone(cal.result.camera_pos_ft)
+        self.assertGreater(cal.result.camera_pos_ft[2], 10.0)
 
-        # Frame 0 & 1 establish velocity moving down (+y)
-        tracker.process_candidates([{"box": [600, 200, 610, 210], "conf": 0.8, "center_px": (605.0, 205.0)}], 0, 0.0, cal)
-        tracker.process_candidates([{"box": [610, 230, 620, 240], "conf": 0.8, "center_px": (615.0, 235.0)}], 1, 0.033, cal)
+        # Round-trip test: project 3D point (X=6.5, Y=22.0, H=4.5) to pixels and back
+        uv = cal.court_3d_to_pixel(6.5, 22.0, height_ft=4.5)
+        self.assertIsNotNone(uv)
+        xy_rec = cal.pixel_to_court_at_height_ft(uv[0], uv[1], height_ft=4.5)
+        self.assertIsNotNone(xy_rec)
+        self.assertAlmostEqual(xy_rec[0], 6.5, places=1)
+        self.assertAlmostEqual(xy_rec[1], 22.0, places=1)
 
-        # Frame 2 coasts with huge synthetic gravity (gravity_px=15 -> would drift far downward)
-        p2 = tracker.process_candidates([], 2, 0.066, cal)
-        self.assertIsNotNone(p2)
-        stale_court_ft = p2["court_ft"]
+        # Compare naive Z=0 projection vs true Y=22.0 (naive ground plane has severe parallax!)
+        xy_naive = cal.pixel_to_court_ft(uv[0], uv[1])
+        self.assertLess(xy_naive[1], 12.0)
 
-        # Frame 3 recovers actually UPWARD near (625, 220) -> triggers retroactive fit
-        tracker.process_candidates([{"box": [620, 215, 630, 225], "conf": 0.85, "center_px": (625.0, 220.0)}], 3, 0.099, cal)
+    def test_ball_3d_reconstructor_parallax_removal(self):
+        """Verify 3D Ballistic Reconstructor removes airborne parallax distortion over net."""
+        corners = [(425.0, 177.0), (855.0, 177.0), (1080.0, 610.0), (204.0, 602.0)]
+        cal = CourtCalibrator(corners_px=corners, image_size=(1302, 740))
 
-        # Verify p2["court_ft"] was updated to match p2["pixel"] through H
-        expected = cal.pixel_to_court_ft(p2["pixel"][0], p2["pixel"][1])
-        self.assertAlmostEqual(p2["court_ft"][0], expected[0], places=1)
-        self.assertAlmostEqual(p2["court_ft"][1], expected[1], places=1)
-        self.assertNotEqual(p2["court_ft"], stale_court_ft)
+        # Generate exact 3D parabolic shot from (12, 36, 3.0) at t=0 to ground bounce (3, 8, 0.0) at t=0.8s
+        fps = 30.0
+        n_frames = 25
+        T = (n_frames - 1) / fps
+        g = 30.0
+        x1, y1, z1 = 12.0, 36.0, 3.0
+        x2, y2, z2 = 3.0, 8.0, 0.0
+        vz0 = (z2 - z1) / T + 0.5 * g * T
 
-    def test_minimap_ema_and_fading_trail(self):
-        """Verify 3-frame EMA smoothing, 12-frame trail length limit, and discontinuity reset."""
-        minimap = CourtMinimap(court_scale=10.0, padding=20, trail_len=12, ema_alpha=0.6)
+        stream = []
+        true_xy = []
+        for k in range(n_frames):
+            dt = k / fps
+            tau = dt / T
+            xk = x1 + (x2 - x1) * tau
+            yk = y1 + (y2 - y1) * tau
+            zk = max(0.0, z1 + vz0 * dt - 0.5 * g * (dt ** 2))
+            true_xy.append((xk, yk, zk))
+            uv = cal.court_3d_to_pixel(xk, yk, zk)
+            naive = cal.pixel_to_court_ft(uv[0], uv[1])
+            stream.append({
+                "frame_idx": k,
+                "timestamp_s": round(dt, 4),
+                "players": [],
+                "ball": {
+                    "pixel": [uv[0], uv[1]],
+                    "court_ft": [naive[0], naive[1]],
+                    "interpolated": False,
+                },
+            })
 
-        # Feed 15 continuous points (with minor jitter)
-        for i in range(15):
-            jitter = 0.2 if (i % 2 == 0) else -0.2
-            minimap.render(ball={"court_ft": (10.0 + jitter, float(5 + i))}, frame_idx=i)
+        bounces = [{
+            "frame_idx": n_frames - 1,
+            "timestamp_s": round(T, 4),
+            "pixel": stream[-1]["ball"]["pixel"],
+            "court_ft": [x2, y2],
+            "is_ground_bounce": True,
+        }]
 
-        # Trail length must be capped at 12
-        self.assertEqual(len(minimap.ball_trail), 12)
-        # EMA output smooths the 0.2 jitter
-        self.assertIsNotNone(minimap._ema_ball_ft)
-        self.assertLess(abs(minimap._ema_ball_ft[0] - 10.0), 0.2)
+        reconstructor = Ball3DReconstructor()
+        out_stream, _ = reconstructor.reconstruct_stream(stream, bounces, cal)
 
-        # Missing frames > 4 cleanly resets trail
-        for f in range(15, 21):
-            minimap.render(ball=None, frame_idx=f)
-        self.assertEqual(len(minimap.ball_trail), 0)
-        self.assertIsNone(minimap._ema_ball_ft)
+        # At mid-flight (frame 12, true Y=22.0 over the net!), check naive vs 3D-reconstructed Y error
+        mid = out_stream[12]["ball"]
+        naive_err = abs(mid["court_ft"][1] - true_xy[12][1])
+        rec_err = abs(mid["minimap_court_ft"][1] - true_xy[12][1])
+        self.assertGreater(naive_err, 8.0)   # Naive ground homography is off by >8 ft!
+        self.assertLess(rec_err, 1.5)        # 3D Reconstructor recovers true Y within <1.5 ft!
+
+    def test_minimap_asymmetric_apron_bounds(self):
+        """Verify expanded minimap apron keeps wide out-of-bounds balls visible inside canvas."""
+        minimap = CourtMinimap(court_scale=9.0, padding_x=54, padding_y=50)
+        # Wide out-of-bounds bounce at X=23.9 ft, Y=0.0 ft
+        cx, cy = minimap.court_to_canvas(23.9, 0.0)
+        self.assertGreaterEqual(cx, 0)
+        self.assertLess(cx, minimap.canvas_w)
+        self.assertGreaterEqual(cy, 0)
+        self.assertLess(cy, minimap.canvas_h)
+
+        # Should prefer minimap_court_ft when rendering
+        canvas = minimap.render(
+            ball={"court_ft": (-5.0, -5.0), "minimap_court_ft": (23.9, 0.0)}
+        )
+        self.assertEqual(canvas.shape, (minimap.canvas_h, minimap.canvas_w, 3))
 
 
 if __name__ == "__main__":

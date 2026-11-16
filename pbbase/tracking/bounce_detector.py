@@ -110,18 +110,28 @@ class BallBounceDetector:
 
         px, py = pixel_xy
 
+        # First check if impact is right at floor level beside any player's shoes
+        for p in players:
+            box = p.get("box")
+            if not box or len(box) < 4:
+                continue
+            bx1, by1, bx2, by2 = box
+            player_h = max(20.0, by2 - by1)
+            if (bx1 - 35.0) <= px <= (bx2 + 35.0) and (by2 - 0.18 * player_h) <= py <= (by2 + 12.0):
+                # Floor-level impact next to player's feet -> Ground Bounce
+                return False
+
         for p in players:
             box = p.get("box")  # [x1, y1, x2, y2]
             if not box or len(box) < 4:
                 continue
 
             bx1, by1, bx2, by2 = box
-            player_h = by2 - by1
+            player_h = max(20.0, by2 - by1)
 
-            # Player foot is near by2; waist/chest is in upper 70% of box
-            # If the ball is inside the player's upper box and above the feet by > 25% of height
+            # Torso/chest hitting zone (excludes top 8% head edge to prevent foreground overlap)
             in_x = (bx1 - 25.0) <= px <= (bx2 + 25.0)
-            in_y_torso = by1 <= py <= (by2 - 0.25 * player_h)
+            in_y_torso = (by1 + 0.08 * player_h) <= py <= (by2 - 0.25 * player_h)
 
             if in_x and in_y_torso:
                 # Ball contact happened at torso/shoulder height of player -> Paddle Volley

@@ -1,9 +1,9 @@
 """
 minimap.py - 2D Orthographic Top-Down Bird's-Eye USAP Court Minimap.
 Zero referee or scoring rules: strictly physical spatial rendering of court geometry,
-player positions, ball trajectories, and bounce landing ripple rings.
+player positions, 3D-reconstructed ball trajectories, and bounce landing ripple rings.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Any
 import cv2
 import numpy as np
@@ -50,29 +50,32 @@ class CourtMinimap:
         self,
         court_scale: float = 10.0,
         padding: int = 20,
-        trail_len: int = 12,
+        padding_x: Optional[int] = None,
+        padding_y: Optional[int] = None,
+        trail_len: int = 18,
         bounce_duration: int = 30,
-        ema_alpha: float = 0.60,
     ):
         """
         Args:
             court_scale: Canvas pixels per court foot (10.0 -> 200x440 px court).
-            padding: Apron margin in pixels around the court boundary.
+            padding: Default apron margin in pixels around the court boundary.
+            padding_x: Optional override horizontal apron margin (wider for OOB shots).
+            padding_y: Optional override vertical apron margin (deeper for baseline play).
             trail_len: Maximum historical ball trail length rendered.
             bounce_duration: Lifetime of bounce ripple animation in frames.
-            ema_alpha: Gentle 3-frame equivalent EMA smoothing weight (1.0 = unsmoothed).
         """
         self.court_scale = court_scale
         self.padding = padding
+        self.padding_x = int(padding_x if padding_x is not None else padding)
+        self.padding_y = int(padding_y if padding_y is not None else padding)
         self.trail_len = trail_len
         self.bounce_duration = bounce_duration
-        self.ema_alpha = ema_alpha
 
         self.court_w_px = int(round(CourtGeometry.WIDTH_FT * self.court_scale))
         self.court_h_px = int(round(CourtGeometry.LENGTH_FT * self.court_scale))
 
-        self.canvas_w = self.court_w_px + 2 * self.padding
-        self.canvas_h = self.court_h_px + 2 * self.padding
+        self.canvas_w = self.court_w_px + 2 * self.padding_x
+        self.canvas_h = self.court_h_px + 2 * self.padding_y
 
         # Pre-render static court floor base
         self._static_base = self._draw_static_court()
@@ -80,26 +83,22 @@ class CourtMinimap:
         # Dynamic state
         self.ball_trail: List[Tuple[float, float]] = []
         self.active_bounces: List[MinimapBounceMarker] = []
-        self._ema_ball_ft: Optional[Tuple[float, float]] = None
-        self._missed_ball_frames: int = 0
 
     def reset(self):
-        """Reset dynamic trails, EMA smoother, and bounce markers."""
+        """Reset dynamic trails and bounce markers."""
         self.ball_trail.clear()
         self.active_bounces.clear()
-        self._ema_ball_ft = None
-        self._missed_ball_frames = 0
 
     def court_to_canvas(self, x_ft: float, y_ft: float) -> Tuple[int, int]:
         """Convert metric court coordinates (feet) to minimap canvas pixel coordinates."""
-        cx = int(round(self.padding + x_ft * self.court_scale))
-        cy = int(round(self.padding + y_ft * self.court_scale))
+        cx = int(round(self.padding_x + x_ft * self.court_scale))
+        cy = int(round(self.padding_y + y_ft * self.court_scale))
         return cx, cy
 
     def canvas_to_court(self, cx: int, cy: int) -> Tuple[float, float]:
         """Convert minimap canvas pixel coordinates to metric court coordinates (feet)."""
-        x_ft = (cx - self.padding) / self.court_scale
-        y_ft = (cy - self.padding) / self.court_scale
+        x_ft = (cx - self.padding_x) / self.court_scale
+        y_ft = (cy - self.padding_y) / self.court_scale
         return float(x_ft), float(y_ft)
 
     def is_in_court_bounds(self, x_ft: float, y_ft: float) -> bool:
@@ -151,7 +150,7 @@ class CourtMinimap:
         cv2.circle(canvas, net_l, max(2, int(line_thick * 1.5)), COLOR_NET_POST, -1)
         cv2.circle(canvas, net_r, max(2, int(line_thick * 1.5)), COLOR_NET_POST, -1)
 
-        # Subtle court border border shadow
+        # Subtle court border shadow
         cv2.rectangle(canvas, (0, 0), (self.canvas_w - 1, self.canvas_h - 1), (12, 14, 18), 1)
 
         return canvas
@@ -178,7 +177,7 @@ class CourtMinimap:
         Render a full dynamic minimap frame containing:
         - Static USAP court
         - Dynamic bounce ripples
-        - Ball trajectory trail & current ball dot
+        - 3D-reconstructed ball trajectory trail & current ball dot
         - Player badges (P1-P4) with ID labels
         """
         canvas = self._static_base.copy()
@@ -188,18 +187,17 @@ class CourtMinimap:
         for b in self.active_bounces:
             if b.remaining_frames > 0:
                 bx, by = self.court_to_canvas(b.court_xy_ft[0], b.court_xy_ft[1])
-                # Expand radius as it ages
                 progress = 1.0 - (b.remaining_frames / b.max_frames)
-                radius = int(round(4 + progress * 16))
+                radius = int(round(4 + progress * 15))
                 color = COLOR_BOUNCE_IN if b.is_in_bounds else COLOR_BOUNCE_OUT
 
-                # Draw concentric ripple rings
-                alpha = max(0.1, 1.0 - progress)
+                # Draw concentric ripple rings (clamped inside canvas safely)
+                alpha = max(0.15, 1.0 - progress)
                 ring_color = tuple(int(c * alpha) for c in color)
-                cv2.circle(canvas, (bx, by), radius, ring_color, 2)
-                cv2.circle(canvas, (bx, by), max(2, radius // 2), ring_color, 1)
-                # Center impact marker
-                cv2.circle(canvas, (bx, by), 2, (255, 255, 255), -1)
+                if 0 <= bx < self.canvas_w and 0 <= by < self.canvas_h:
+                    cv2.circle(canvas, (bx, by), radius, ring_color, 2, cv2.LINE_AA)
+                    cv2.circle(canvas, (bx, by), max(2, radius // 2), ring_color, 1, cv2.LINE_AA)
+                    cv2.circle(canvas, (bx, by), 2, (255, 255, 255), -1, cv2.LINE_AA)
 
                 b.remaining_frames -= 1
                 if b.remaining_frames > 0:
@@ -207,54 +205,31 @@ class CourtMinimap:
 
         self.active_bounces = surviving_bounces
 
-        # 2. Update and render Ball Trajectory Trail (Pure 1:1 H(u,v) + 3-frame EMA)
-        raw_cft = ball.get("court_ft") if ball is not None else None
+        # 2. Extract best court coordinates for ball (prefer 3D-reconstructed minimap_court_ft)
+        ball_cft = None
+        if ball is not None:
+            ball_cft = ball.get("minimap_court_ft") or ball.get("court_ft")
 
-        if raw_cft is not None:
-            self._missed_ball_frames = 0
-            rx, ry = float(raw_cft[0]), float(raw_cft[1])
-            if self._ema_ball_ft is not None:
-                dist = float(np.hypot(rx - self._ema_ball_ft[0], ry - self._ema_ball_ft[1]))
-                if dist > 14.0:
-                    # Clean track reset on large discontinuity
-                    self.ball_trail.clear()
-                    sx, sy = rx, ry
-                else:
-                    sx = self.ema_alpha * rx + (1.0 - self.ema_alpha) * self._ema_ball_ft[0]
-                    sy = self.ema_alpha * ry + (1.0 - self.ema_alpha) * self._ema_ball_ft[1]
-            else:
-                sx, sy = rx, ry
-
-            self._ema_ball_ft = (sx, sy)
-            self.ball_trail.append((sx, sy))
+        if ball_cft is not None:
+            self.ball_trail.append((float(ball_cft[0]), float(ball_cft[1])))
             if len(self.ball_trail) > self.trail_len:
                 self.ball_trail.pop(0)
-        else:
-            self._missed_ball_frames += 1
-            if self._missed_ball_frames > 4:
-                self._ema_ball_ft = None
-                self.ball_trail.clear()
 
+        # 3. Render smooth tapered Ball Trajectory Ribbon
         if len(self.ball_trail) >= 2:
             trail_pts = [self.court_to_canvas(x, y) for x, y in self.ball_trail]
-            n_segs = len(trail_pts) - 1
-            for i in range(1, len(trail_pts)):
-                progress = i / float(max(1, n_segs))
-                fade = 0.25 + 0.75 * progress
-                col = tuple(int(c * fade) for c in COLOR_BALL)
-                thickness = max(1, int(round(1 + progress * 2)))
-                pt1 = (max(3, min(self.canvas_w - 4, trail_pts[i - 1][0])), max(3, min(self.canvas_h - 4, trail_pts[i - 1][1])))
-                pt2 = (max(3, min(self.canvas_w - 4, trail_pts[i][0])), max(3, min(self.canvas_h - 4, trail_pts[i][1])))
+            n_pts = len(trail_pts)
+            for i in range(1, n_pts):
+                frac = i / max(1, n_pts - 1)
+                thickness = max(1, int(round(1 + frac * 2.5)))
+                pt1, pt2 = trail_pts[i - 1], trail_pts[i]
+                # Blend ribbon brightness from subtle dark slate-volt at tail to bright volt at head
+                col = (
+                    int(COLOR_BALL[0] * (0.25 + 0.75 * frac)),
+                    int(COLOR_BALL[1] * (0.25 + 0.75 * frac)),
+                    int(COLOR_BALL[2] * (0.25 + 0.75 * frac)),
+                )
                 cv2.line(canvas, pt1, pt2, col, thickness, cv2.LINE_AA)
-
-        # 3. Render Current Ball Position
-        if self._ema_ball_ft is not None:
-            bx, by = self.court_to_canvas(self._ema_ball_ft[0], self._ema_ball_ft[1])
-            bx_c = max(5, min(self.canvas_w - 6, bx))
-            by_c = max(5, min(self.canvas_h - 6, by))
-            cv2.circle(canvas, (bx_c, by_c), 6, (15, 20, 25), -1, cv2.LINE_AA)
-            cv2.circle(canvas, (bx_c, by_c), 5, COLOR_BALL, -1, cv2.LINE_AA)
-            cv2.circle(canvas, (bx_c, by_c), 2, (255, 255, 255), -1, cv2.LINE_AA)
 
         # 4. Render Player Badges
         if players:
@@ -263,9 +238,8 @@ class CourtMinimap:
                 if not cft:
                     continue
                 px, py = self.court_to_canvas(cft[0], cft[1])
-                # Bounds safety check
-                if not (-20 <= px < self.canvas_w + 20 and -20 <= py < self.canvas_h + 20):
-                    continue
+                px_draw = int(np.clip(px, 8, self.canvas_w - 8))
+                py_draw = int(np.clip(py, 14, self.canvas_h - 8))
 
                 pid = p.get("id")
                 if pid is None:
@@ -290,21 +264,29 @@ class CourtMinimap:
                 p_color = PLAYER_COLORS[slot % len(PLAYER_COLORS)]
                 p_name = f"P{pid}"
 
-                # Player dot with dark halo
-                cv2.circle(canvas, (px, py), 7, (15, 15, 15), -1, cv2.LINE_AA)
-                cv2.circle(canvas, (px, py), 6, p_color, -1, cv2.LINE_AA)
+                cv2.circle(canvas, (px_draw, py_draw), 7, (15, 15, 15), -1, cv2.LINE_AA)
+                cv2.circle(canvas, (px_draw, py_draw), 5, p_color, -1, cv2.LINE_AA)
 
-                # Player ID text label
                 cv2.putText(
                     canvas,
                     p_name,
-                    (px - 6, py - 9),
+                    (px_draw - 6, py_draw - 9),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.32,
                     (255, 255, 255),
                     1,
                     cv2.LINE_AA,
                 )
+
+        # 5. Render Current Ball Position on top of court & players (clamped slightly inside border if extreme)
+        if ball_cft is not None:
+            bx, by = self.court_to_canvas(ball_cft[0], ball_cft[1])
+            bx_draw = int(np.clip(bx, 6, self.canvas_w - 6))
+            by_draw = int(np.clip(by, 6, self.canvas_h - 6))
+            # Dark halo + bright volt outer ring + crisp white center
+            cv2.circle(canvas, (bx_draw, by_draw), 7, (15, 20, 25), -1, cv2.LINE_AA)
+            cv2.circle(canvas, (bx_draw, by_draw), 5, COLOR_BALL, -1, cv2.LINE_AA)
+            cv2.circle(canvas, (bx_draw, by_draw), 2, (255, 255, 255), -1, cv2.LINE_AA)
 
         return canvas
 
