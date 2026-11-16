@@ -24,6 +24,9 @@ scratch/
 
 # Video and large media outputs
 outputs/*.mp4
+output/*.mp4
 outputs/*.avi
+output/*.avi
 outputs/match1_sample_*.jpg
 outputs/roi_check.png
+data/*.json

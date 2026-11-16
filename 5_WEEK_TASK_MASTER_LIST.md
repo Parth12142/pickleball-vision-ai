@@ -11,7 +11,7 @@ This document contains the complete master breakdown of all **39 tasks across 5 
 - **Detector**: Ultralytics **YOLO26** (`yolo26n` / `yolo26s`) with native NMS-free end-to-end inference and dual-label assignment.
 - **Compute**: Google Colab NVIDIA A100 GPU (40GB/80GB VRAM) for native $1312\times 1312$ high-resolution ball fine-tuning.
 - **Total Working Days**: 23 Days (Mon–Fri only) from **03 Nov 2026** to **10 Dec 2026**.
-- **Total Tasks**: **39 Tasks** across 4 Phases.
+- **Total Tasks**: **39 Tasks** across 4 Phases. **27 / 39 Tasks (69.2%) Complete** (Weeks 1, 2, and 3 100% Verified).
 
 ```mermaid
 flowchart LR
@@ -66,13 +66,13 @@ flowchart LR
 **Schedule**: Days 11–13 (24 Nov – 26 Nov 2026) | **Phase 2: Physical Geometry & Bounces (Perception Only)**  
 **Target Milestone**: Accurate top-down minimap with ball trajectory and bounce landing spots (no rules yet).
 
-| Task ID | Workstream | Task Description | Deliverable / Target File | Days & Dates | Depends On | Focus & Target |
+| Task ID | Workstream | Task Description | Deliverable / Target File | Days & Dates | Depends On | Current Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`W3-01`** | **Geometry** | Real-time top-down bird's-eye court minimap | Minimap module | Days 11–12 (Nov 24–25) | `W2-07` | Orthographic 2D top-down USAP court projection |
-| **`W3-02`** | **Kinematics** | Vertical trajectory derivative filter for bounce detection | Bounce detector | Days 11–12 (Nov 24–25) | `W2-07` | Inflexion filter on vertical acceleration $(d^2y/dt^2)$ |
-| **`W3-03`** | **Kinematics** | Sub-pixel impact localization of ball bounces | Bounce landing coordinates $(X, Y)$ | Days 12–13 (Nov 25–26) | `W3-02` | Sub-pixel parabola apex/nadir court ground intersection |
-| **`W3-04`** | **Geometry** | Overlay ball trajectory and bounce landing spots on minimap | Minimap with trajectory HUD | Day 13 (Nov 26) | `W3-01`, `W3-03` | Real-time visual tracking of ball contact spots |
-| **`W3-05`** | **QA** | Validate minimap and bounce accuracy on match clips | Validation results | Day 13 (Nov 26) | `W3-04` | Milestone: Accurate minimap + bounce landing spots |
+| **`W3-01`** | **Geometry** | Real-time top-down bird's-eye court minimap | [`pbbase/court/minimap.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/court/minimap.py) | Days 11–12 (Nov 24–25) | `W2-07` | ✅ **Done** (USAP 20x44 ft 2D orthographic canvas, P1–P4 badges, ball trail & video blending) |
+| **`W3-02`** | **Kinematics** | Vertical trajectory derivative filter for bounce detection | [`pbbase/tracking/bounce_detector.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tracking/bounce_detector.py) | Days 11–12 (Nov 24–25) | `W2-07` | ✅ **Done** (Inflection filter on $d^2y/dt^2$ & velocity sign reversal, torso volley filter) |
+| **`W3-03`** | **Kinematics** | Sub-pixel impact localization of ball bounces | [`pbbase/tracking/bounce_detector.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tracking/bounce_detector.py) | Days 12–13 (Nov 25–26) | `W3-02` | ✅ **Done** (5-pt quadratic nadir fitting $t^* = -b/(2a)$, sub-pixel $(u^*, v^*)$ & $(X^*, Y^*)_{\text{ft}}$) |
+| **`W3-04`** | **Geometry** | Overlay ball trajectory and bounce landing spots on minimap | [`pbbase/pipeline.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/pipeline.py), [`pbbase/court/minimap.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/court/minimap.py) | Day 13 (Nov 26) | `W3-01`, `W3-03` | ✅ **Done** (Minimap HUD compositor with ripple decay, ball trail & camera overlay) |
+| **`W3-05`** | **QA** | Validate minimap and bounce accuracy on match clips | [`scripts/validate_week3.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/scripts/validate_week3.py), [`reports/WEEK3_BOUNCE_MINIMAP_REPORT.md`](file:///home/pce118/Desktop/pickleball-vision-ai-main/reports/WEEK3_BOUNCE_MINIMAP_REPORT.md) | Day 13 (Nov 26) | `W3-04` | ✅ **Done** (7 bounces audited on `match1.mp4`, 30/30 unit tests passing, full report) |
 
 ---
 

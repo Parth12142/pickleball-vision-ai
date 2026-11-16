@@ -4,6 +4,8 @@ Streams video frames through:
   1. Court Geometry Calibration
   2. Multi-Player Detection & Canonical Tracking
   3. Micro-Ball Detection & Kinematic Trajectory
+  4. Kinematic Bounce Detection & Sub-Pixel Localization (Week 3)
+  5. 2D Orthographic Court Minimap & Broadcast HUD Composition (Week 3)
 Emits clean, structured perception telemetry JSON and diagnostic preview video.
 """
 import json
@@ -17,9 +19,11 @@ import cv2
 import numpy as np
 
 from pbbase.court.homography import CourtCalibrator
+from pbbase.court.minimap import CourtMinimap
 from pbbase.models.detector import PlayerDetector, BallDetector
 from pbbase.tracking.player_tracker import CanonicalPlayerTracker
 from pbbase.tracking.ball_trajectory import BallTrajectoryTracker, get_speed_color
+from pbbase.tracking.bounce_detector import BallBounceDetector, BounceEvent
 from pbbase.data.schema import SCHEMA_VERSION, SCHEMA_PRODUCER
 
 
@@ -44,6 +48,8 @@ class BasePerceptionPipeline:
         ball_max_coast: int = 3,
         ball_max_jump_px: float = 85.0,
         court_corners: Optional[List[Tuple[float, float]]] = None,
+        render_minimap: bool = True,
+        minimap_position: str = "bottom-right",
     ):
         print(f"[BasePerceptionPipeline] Loading Player Model: {player_weights}")
         self.player_detector = PlayerDetector(player_weights, conf_thresh=player_conf)
@@ -62,6 +68,10 @@ class BasePerceptionPipeline:
             max_jump_px=ball_max_jump_px,
             max_coast_frames=ball_max_coast,
         )
+        self.bounce_detector = BallBounceDetector()
+        self.court_minimap = CourtMinimap()
+        self.render_minimap = render_minimap
+        self.minimap_position = minimap_position
 
     def process_video(
         self,
@@ -70,12 +80,23 @@ class BasePerceptionPipeline:
         out_json: Optional[str] = None,
         out_preview: Optional[str] = None,
         court_corners: Optional[List[Tuple[float, float]]] = None,
+        render_minimap: Optional[bool] = None,
+        minimap_position: Optional[str] = None,
     ) -> Dict[str, Any]:
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Input video not found: {video_path}")
 
         if court_corners and len(court_corners) == 4:
             self.court_calibrator.calibrate(court_corners)
+
+        do_render_minimap = render_minimap if render_minimap is not None else self.render_minimap
+        m_pos = minimap_position if minimap_position is not None else self.minimap_position
+
+        # Reset stateful trackers for new video stream
+        self.player_tracker.reset()
+        self.ball_tracker.reset()
+        self.bounce_detector.reset()
+        self.court_minimap.reset()
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -104,13 +125,14 @@ class BasePerceptionPipeline:
         t0 = time.time()
         telemetry_stream: List[Dict[str, Any]] = []
         frame_idx = 0
-        ball_pts_history: List[Tuple[float, float, float]] = []  # (cx, cy, speed_px)
+        ball_pts_history: List[Optional[Tuple[float, float, float]]] = []  # (cx, cy, speed_px)
         frames_with_ball = 0
         player_counts = []
 
         # Feature timing accumulators (seconds)
         t_player_total = 0.0
         t_ball_total = 0.0
+        t_bounce_total = 0.0
         t_court_total = 0.0
         t_render_total = 0.0
 
@@ -147,6 +169,19 @@ class BasePerceptionPipeline:
                 ball_pts_history.append(None)
             t_ball_total += (time.time() - t_b_start)
 
+            # 4. Kinematic Bounce Detection & Sub-Pixel Nadir Fitting (Week 3)
+            t_bnc_start = time.time()
+            bounce_event = self.bounce_detector.update(
+                ball_result,
+                frame_idx,
+                timestamp_s,
+                self.court_calibrator,
+                players=active_players,
+            )
+            if bounce_event is not None and bounce_event.is_ground_bounce:
+                self.court_minimap.add_bounce(bounce_event.court_xy_ft, frame_idx)
+            t_bounce_total += (time.time() - t_bnc_start)
+
             # Telemetry record for this frame
             frame_record = {
                 "frame_idx": frame_idx,
@@ -154,13 +189,23 @@ class BasePerceptionPipeline:
                 "court_calibrated": self.court_calibrator.result.calibrated,
                 "players": active_players,
                 "ball": ball_result,
+                "bounce": bounce_event.to_dict() if bounce_event is not None else None,
             }
             telemetry_stream.append(frame_record)
 
-            # 4. Render diagnostic overlay if preview requested
+            # 5. Render diagnostic overlay & minimap HUD if preview requested
             if writer:
                 t_r_start = time.time()
-                annotated = self._render_frame(frame, frame_record, ball_pts_history, frame_idx, frames_to_read, fps)
+                annotated = self._render_frame(
+                    frame,
+                    frame_record,
+                    ball_pts_history,
+                    frame_idx,
+                    frames_to_read,
+                    fps,
+                    render_minimap=do_render_minimap,
+                    minimap_position=m_pos,
+                )
                 writer.write(annotated)
                 t_render_total += (time.time() - t_r_start)
 
@@ -190,14 +235,18 @@ class BasePerceptionPipeline:
             "corners_px": corners_list,
         }
 
+        all_bounces = [b.to_dict() for b in self.bounce_detector.detected_bounces]
+
         bench_schema = {
             "ball_detection_rate_pct": round((frames_with_ball / max(1, frame_idx)) * 100, 1),
             "frames_with_ball": frames_with_ball,
             "mean_players_per_frame": round(float(np.mean(player_counts)) if player_counts else 0.0, 2),
             "multiscale_inference": self.ball_detector.multiscale,
+            "total_bounces_detected": len(all_bounces),
             "stage_latencies_ms": {
                 "player_ms": round((t_player_total / max(1, frame_idx)) * 1000, 1),
                 "ball_ms": round((t_ball_total / max(1, frame_idx)) * 1000, 1),
+                "bounce_ms": round((t_bounce_total / max(1, frame_idx)) * 1000, 2),
                 "court_ms": round((t_court_total / max(1, frame_idx)) * 1000, 2),
                 "render_ms": round((t_render_total / max(1, frame_idx)) * 1000, 1),
             },
@@ -215,6 +264,8 @@ class BasePerceptionPipeline:
             "processing_fps": round(frame_idx / max(0.001, elapsed_total), 2),
             "court": court_schema,
             "benchmark_summary": bench_schema,
+            "bounces": all_bounces,
+            "total_bounces_detected": len(all_bounces),
             # Top-level backward compatibility keys for reports & CLI runners
             "court_calibrated": self.court_calibrator.result.calibrated,
             "court_reprojection_rmse_ft": round(self.court_calibrator.result.reprojection_rmse_ft, 4),
@@ -224,6 +275,7 @@ class BasePerceptionPipeline:
             "ball_detection_rate_pct": bench_schema["ball_detection_rate_pct"],
             "player_ms": bench_schema["stage_latencies_ms"]["player_ms"],
             "ball_ms": bench_schema["stage_latencies_ms"]["ball_ms"],
+            "bounce_ms": bench_schema["stage_latencies_ms"]["bounce_ms"],
             "court_ms": bench_schema["stage_latencies_ms"]["court_ms"],
             "render_ms": bench_schema["stage_latencies_ms"]["render_ms"],
             "telemetry_stream": telemetry_stream,
@@ -245,6 +297,8 @@ class BasePerceptionPipeline:
         frame_idx: int,
         total_frames: int,
         fps: float,
+        render_minimap: bool = True,
+        minimap_position: str = "bottom-right",
     ) -> np.ndarray:
         vis = frame.copy()
         h, w = vis.shape[:2]
@@ -326,16 +380,43 @@ class BasePerceptionPipeline:
                 cv2.putText(vis, f"{ball['speed_mph']:.1f} MPH", (bx + 12, by - 4),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 255, 220), 1, cv2.LINE_AA)
 
-        # 4. Clean Telemetry HUD
-        cv2.rectangle(vis, (16, 16), (380, 80), (15, 23, 42), -1)
-        cv2.rectangle(vis, (16, 16), (380, 80), (0, 255, 220), 1)
+        # 4. Bounce Ripple Indicator on Camera Frame (Week 3)
+        bounce = record.get("bounce")
+        if bounce is not None and bounce.get("pixel"):
+            b_px, b_py = int(bounce["pixel"][0]), int(bounce["pixel"][1])
+            b_col = (80, 220, 80) if bounce.get("is_ground_bounce", True) else (60, 60, 230)
+            cv2.circle(vis, (b_px, b_py), 16, b_col, 2, cv2.LINE_AA)
+            cv2.circle(vis, (b_px, b_py), 8, (255, 255, 255), 1, cv2.LINE_AA)
+            c_xy = bounce.get("court_ft")
+            if c_xy:
+                b_lbl = f"BOUNCE ({c_xy[0]:.1f}, {c_xy[1]:.1f})ft"
+                cv2.putText(vis, b_lbl, (b_px - 40, b_py - 22), cv2.FONT_HERSHEY_SIMPLEX, 0.42, b_col, 1, cv2.LINE_AA)
+
+        # 5. Top-Down Court Minimap HUD Composition (Week 3)
+        if render_minimap and self.court_calibrator.result.calibrated:
+            minimap_canvas = self.court_minimap.render(
+                players=record.get("players"),
+                ball=record.get("ball"),
+                frame_idx=frame_idx,
+            )
+            vis = self.court_minimap.compose_onto_frame(
+                vis,
+                minimap_canvas,
+                position=minimap_position,
+                alpha=0.88,
+            )
+
+        # 6. Clean Telemetry Header HUD
+        cv2.rectangle(vis, (16, 16), (395, 84), (15, 23, 42), -1)
+        cv2.rectangle(vis, (16, 16), (395, 84), (0, 255, 220), 1)
         cv2.putText(vis, "PICKLEBALL BASE VISION MODEL", (26, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 220), 1, cv2.LINE_AA)
         ball_status = "COAST" if (ball and ball.get("interpolated")) else ("LOCKED" if ball else "SEARCH")
-        status_line = f"F: {frame_idx + 1}/{total_frames} | Players: {len(record['players'])}/4 | Ball: {ball_status}"
-        cv2.putText(vis, status_line, (26, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (250, 250, 250), 1, cv2.LINE_AA)
+        total_bncs = len(self.bounce_detector.detected_bounces)
+        status_line = f"F: {frame_idx + 1}/{total_frames} | Players: {len(record['players'])}/4 | Ball: {ball_status} | Bounces: {total_bncs}"
+        cv2.putText(vis, status_line, (26, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (250, 250, 250), 1, cv2.LINE_AA)
         sec = frame_idx / fps
         cv2.putText(vis, f"Time: {int(sec//60):02d}:{int(sec%60):02d}.{int((sec%1)*100):02d} | Zero Rules (Pure Perception)",
-                    (26, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (160, 160, 160), 1, cv2.LINE_AA)
+                    (26, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (160, 160, 160), 1, cv2.LINE_AA)
 
         return vis
 
