@@ -1,6 +1,6 @@
-# 📚 Pickleball Vision AI — Engineering & Architecture Documentation
+# 📚 PickleBallVisualizer — Engineering & Architecture Documentation
 
-Welcome to the central documentation hub for **Pickleball Vision AI**. This repository houses all technical specifications, architectural designs, dataset preparation pipelines, model training workflows, and execution logs organized week-by-week according to the [5-Week Master Implementation Plan](file:///home/pce118/Desktop/pickleball-vision-ai-main/5_WEEK_TASK_MASTER_LIST.md).
+Welcome to the central documentation hub for **PickleBallVisualizer**. This repository houses all technical specifications, architectural designs, dataset preparation pipelines, model training workflows, and execution logs organized week-by-week according to the [5-Week Master Implementation Plan](file:///home/pce118/Desktop/pickleball-vision-ai-main/5_WEEK_TASK_MASTER_LIST.md).
 
 ---
 

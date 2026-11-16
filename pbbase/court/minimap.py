@@ -305,21 +305,40 @@ class CourtMinimap:
         fh, fw = frame.shape[:2]
         mh, mw = minimap_canvas.shape[:2]
 
-        if position == "bottom-right":
-            x1 = fw - mw - margin
-            y1 = fh - mh - margin
-        elif position == "bottom-left":
-            x1 = margin
-            y1 = fh - mh - margin
-        elif position == "top-right":
-            x1 = fw - mw - margin
-            y1 = margin
-        elif position == "top-left":
-            x1 = margin
-            y1 = margin
+        # Auto-fit minimap cleanly on narrow/cropped (fw < 900) and portrait (fh > fw) clips
+        eff_margin = min(margin, max(6, min(fw, fh) // 36))
+        if fh > fw:
+            max_h_ratio = 0.28
+        elif fw < 900:
+            max_h_ratio = 0.34 if fh >= 540 else 0.58
+        elif fh < 540:
+            max_h_ratio = 0.58
         else:
-            x1 = fw - mw - margin
-            y1 = fh - mh - margin
+            max_h_ratio = 0.88
+        max_h = max(40, min(fh - 2 * eff_margin, int(round(fh * max_h_ratio))))
+        max_w = max(40, int(round(fw * 0.24)) if (fh > fw or fw < 900) else fw - 2 * eff_margin)
+        if mh > max_h or mw > max_w:
+            fit_scale = min(max_h / max(1, mh), max_w / max(1, mw))
+            new_w = max(40, int(round(mw * fit_scale)))
+            new_h = max(40, int(round(mh * fit_scale)))
+            minimap_canvas = cv2.resize(minimap_canvas, (new_w, new_h), interpolation=cv2.INTER_AREA)
+            mh, mw = minimap_canvas.shape[:2]
+
+        if position == "bottom-right":
+            x1 = fw - mw - eff_margin
+            y1 = fh - mh - eff_margin
+        elif position == "bottom-left":
+            x1 = eff_margin
+            y1 = fh - mh - eff_margin
+        elif position == "top-right":
+            x1 = fw - mw - eff_margin
+            y1 = eff_margin
+        elif position == "top-left":
+            x1 = eff_margin
+            y1 = eff_margin
+        else:
+            x1 = fw - mw - eff_margin
+            y1 = fh - mh - eff_margin
 
         x2, y2 = x1 + mw, y1 + mh
 

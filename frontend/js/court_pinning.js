@@ -188,7 +188,8 @@ export class CourtPinningWorkbench {
       inputX?.addEventListener("change", () => {
         const val = parseFloat(inputX.value);
         if (!isNaN(val)) {
-          this.corners[idx].x = Math.max(0, Math.min(this.nativeWidth, val));
+          this.corners[idx].x = Math.max(-500, Math.min(this.nativeWidth + 500, val));
+          this.resizeCanvas();
           this.redraw();
         }
       });
@@ -196,7 +197,8 @@ export class CourtPinningWorkbench {
       inputY?.addEventListener("change", () => {
         const val = parseFloat(inputY.value);
         if (!isNaN(val)) {
-          this.corners[idx].y = Math.max(0, Math.min(this.nativeHeight, val));
+          this.corners[idx].y = Math.max(-200, Math.min(this.nativeHeight + 200, val));
+          this.resizeCanvas();
           this.redraw();
         }
       });
@@ -207,9 +209,9 @@ export class CourtPinningWorkbench {
           const axis = btn.dataset.axis;
           const amt = parseFloat(btn.dataset.amount || 0);
           if (axis === "x") {
-            this.corners[idx].x = Math.max(0, Math.min(this.nativeWidth, this.corners[idx].x + amt));
+            this.corners[idx].x = Math.max(-500, Math.min(this.nativeWidth + 500, this.corners[idx].x + amt));
           } else if (axis === "y") {
-            this.corners[idx].y = Math.max(0, Math.min(this.nativeHeight, this.corners[idx].y + amt));
+            this.corners[idx].y = Math.max(-200, Math.min(this.nativeHeight + 200, this.corners[idx].y + amt));
           }
           this.updateCoordinateInputs();
           this.redraw();
@@ -276,9 +278,9 @@ export class CourtPinningWorkbench {
     const { canvasX, canvasY, nativeX, nativeY } = this.getPointerCanvasPos(e);
 
     if (this.draggedPinIndex !== null) {
-      // Clamp to image bounds
-      const clampedX = Math.max(0, Math.min(this.nativeWidth, Math.round(nativeX)));
-      const clampedY = Math.max(0, Math.min(this.nativeHeight, Math.round(nativeY)));
+      // Allow dragging slightly past edges for wide-angle baseline corners
+      const clampedX = Math.max(-500, Math.min(this.nativeWidth + 500, Math.round(nativeX)));
+      const clampedY = Math.max(-200, Math.min(this.nativeHeight + 200, Math.round(nativeY)));
 
       this.corners[this.draggedPinIndex].x = clampedX;
       this.corners[this.draggedPinIndex].y = clampedY;
@@ -322,8 +324,14 @@ export class CourtPinningWorkbench {
     const maxWidth = parent.clientWidth - 8;
     const maxHeight = 560;
 
-    // Fit native aspect ratio inside available space
-    const aspect = this.nativeWidth / this.nativeHeight;
+    // Expand horizontal viewport gently only when corners sit outside [0, nativeWidth]
+    const minX = Math.min(...this.corners.map((c) => c.x));
+    const maxX = Math.max(...this.corners.map((c) => c.x));
+    const padLeft = minX < 0 ? Math.abs(minX) + 56 : 0;
+    const padRight = maxX > this.nativeWidth ? (maxX - this.nativeWidth) + 56 : 0;
+    const totalW = this.nativeWidth + padLeft + padRight;
+
+    const aspect = totalW / this.nativeHeight;
     let targetW = maxWidth;
     let targetH = maxWidth / aspect;
 
@@ -335,8 +343,8 @@ export class CourtPinningWorkbench {
     this.canvas.width = Math.round(targetW);
     this.canvas.height = Math.round(targetH);
 
-    this.scale = targetW / this.nativeWidth;
-    this.offsetX = 0;
+    this.scale = targetW / totalW;
+    this.offsetX = padLeft * this.scale;
     this.offsetY = 0;
   }
 
@@ -347,9 +355,17 @@ export class CourtPinningWorkbench {
     const ch = this.canvas.height;
 
     ctx.clearRect(0, 0, cw, ch);
+    ctx.fillStyle = "#080C12";
+    ctx.fillRect(0, 0, cw, ch);
 
-    // 1. Draw Frame 0 Image
-    ctx.drawImage(this.frameImage, 0, 0, cw, ch);
+    // 1. Draw Frame 0 Image (centered cleanly when side margins exist)
+    ctx.drawImage(
+      this.frameImage,
+      this.offsetX,
+      this.offsetY,
+      this.nativeWidth * this.scale,
+      this.nativeHeight * this.scale
+    );
 
     // 2. Compute screen coordinates of the 4 outer corners
     const pts = this.corners.map((c) => ({
@@ -430,72 +446,61 @@ export class CourtPinningWorkbench {
     });
   }
 
+  _solveHomography(pts) {
+    // Solve 8x8 linear system mapping USAP feet (0..20 x 0..44) -> screen pixels
+    const src = [[0, 0], [20, 0], [20, 44], [0, 44]];
+    const A = [];
+    for (let i = 0; i < 4; i++) {
+      const [u, v] = src[i];
+      const { x, y } = pts[i];
+      A.push([u, v, 1, 0, 0, 0, -u * x, -v * x, x]);
+      A.push([0, 0, 0, u, v, 1, -u * y, -v * y, y]);
+    }
+    for (let col = 0; col < 8; col++) {
+      let piv = col;
+      for (let r = col + 1; r < 8; r++) {
+        if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;
+      }
+      if (Math.abs(A[piv][col]) < 1e-9) return null;
+      [A[col], A[piv]] = [A[piv], A[col]];
+      const div = A[col][col];
+      for (let k = col; k < 9; k++) A[col][k] /= div;
+      for (let r = 0; r < 8; r++) {
+        if (r === col) continue;
+        const factor = A[r][col];
+        for (let k = col; k < 9; k++) A[r][k] -= factor * A[col][k];
+      }
+    }
+    return [A[0][8], A[1][8], A[2][8], A[3][8], A[4][8], A[5][8], A[6][8], A[7][8], 1.0];
+  }
+
   drawCourtLines(ctx, pts) {
-    // Projective perspective linear interpolation:
-    // P0: Far-Left, P1: Far-Right, P2: Near-Right, P3: Near-Left
-    const p0 = pts[0], p1 = pts[1], p2 = pts[2], p3 = pts[3];
+    const H = this._solveHomography(pts);
+    const proj = (u, v) => {
+      if (!H) return pts[0];
+      const d = H[6] * u + H[7] * v + H[8];
+      return {
+        x: (H[0] * u + H[1] * v + H[2]) / (d || 1),
+        y: (H[3] * u + H[4] * v + H[5]) / (d || 1),
+      };
+    };
 
-    // Helper for linear edge interpolation
-    const lerpPoint = (a, b, t) => ({
-      x: a.x + (b.x - a.x) * t,
-      y: a.y + (b.y - a.y) * t,
-    });
+    const drawSeg = (a, b, color, width) => {
+      const pA = proj(a[0], a[1]);
+      const pB = proj(b[0], b[1]);
+      ctx.beginPath();
+      ctx.moveTo(pA.x, pA.y);
+      ctx.lineTo(pB.x, pB.y);
+      ctx.lineWidth = width;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    };
 
-    // 1. Center Net Line at 22/44 ft (50%)
-    const netLeft = lerpPoint(p0, p3, 0.50);
-    const netRight = lerpPoint(p1, p2, 0.50);
-
-    ctx.beginPath();
-    ctx.moveTo(netLeft.x, netLeft.y);
-    ctx.lineTo(netRight.x, netRight.y);
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = "#FF4D00"; // Accent Orange Net Line
-    ctx.stroke();
-
-    // 2. Far NVZ Kitchen Line (15/44 ft = ~34.1%)
-    const nvz1Left = lerpPoint(p0, p3, 15.0 / 44.0);
-    const nvz1Right = lerpPoint(p1, p2, 15.0 / 44.0);
-
-    ctx.beginPath();
-    ctx.moveTo(nvz1Left.x, nvz1Left.y);
-    ctx.lineTo(nvz1Right.x, nvz1Right.y);
-    ctx.lineWidth = 2.0;
-    ctx.strokeStyle = "#DFFF00"; // Accent Lime
-    ctx.stroke();
-
-    // 3. Near NVZ Kitchen Line (29/44 ft = ~65.9%)
-    const nvz2Left = lerpPoint(p0, p3, 29.0 / 44.0);
-    const nvz2Right = lerpPoint(p1, p2, 29.0 / 44.0);
-
-    ctx.beginPath();
-    ctx.moveTo(nvz2Left.x, nvz2Left.y);
-    ctx.lineTo(nvz2Right.x, nvz2Right.y);
-    ctx.lineWidth = 2.0;
-    ctx.strokeStyle = "#DFFF00";
-    ctx.stroke();
-
-    // 4. Center Service Lines (from baselines to NVZ lines)
-    // Far service line (center x between far-left and far-right)
-    const farCenter = lerpPoint(p0, p1, 0.5);
-    const nvz1Center = lerpPoint(nvz1Left, nvz1Right, 0.5);
-
-    ctx.beginPath();
-    ctx.moveTo(farCenter.x, farCenter.y);
-    ctx.lineTo(nvz1Center.x, nvz1Center.y);
-    ctx.lineWidth = 1.8;
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.stroke();
-
-    // Near service line (from near baseline to near NVZ line)
-    const nearCenter = lerpPoint(p3, p2, 0.5);
-    const nvz2Center = lerpPoint(nvz2Left, nvz2Right, 0.5);
-
-    ctx.beginPath();
-    ctx.moveTo(nearCenter.x, nearCenter.y);
-    ctx.lineTo(nvz2Center.x, nvz2Center.y);
-    ctx.lineWidth = 1.8;
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.stroke();
+    drawSeg([0, 22], [20, 22], "#FF4D00", 2.5); // Center Net Line (22 ft)
+    drawSeg([0, 15], [20, 15], "#DFFF00", 2.0); // Far Kitchen Line (15 ft)
+    drawSeg([0, 29], [20, 29], "#DFFF00", 2.0); // Near Kitchen Line (29 ft)
+    drawSeg([10, 0], [10, 15], "#FFFFFF", 1.8); // Far Centerline
+    drawSeg([10, 29], [10, 44], "#FFFFFF", 1.8); // Near Centerline
   }
 
   updateCoordinateInputs() {
@@ -535,7 +540,7 @@ export class CourtPinningWorkbench {
     const h = this.nativeHeight;
 
     if (h > w) {
-      // Portrait 9:16 phone clip (e.g. MicrosoftTeams-video.mp4)
+      // Portrait 9:16 phone clip (e.g. cut.mp4)
       this.corners[0].x = Math.round(w * 0.3403);
       this.corners[0].y = Math.round(h * 0.40625);
       this.corners[1].x = Math.round(w * 0.6597);
@@ -612,14 +617,15 @@ export class CourtPinningWorkbench {
     if (hudStatus) hudStatus.textContent = `Initiating Perception Pipeline for ${this.activeClip}...`;
     if (hudBar) hudBar.style.width = "15%";
 
+    const clipMeta = this.availableClips.find((c) => c.name === this.activeClip);
     try {
       const res = await fetch("/api/run-pipeline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clip: this.activeClip || "match1.mp4",
-          frames: 289,
-          multiscale: false,
+          frames: clipMeta?.total_frames || 300,
+          multiscale: true,
         }),
       });
 

@@ -1,5 +1,5 @@
 -- ============================================================================
--- PICKLEBALL VISION AI — POSTGRESQL DATABASE SCHEMA
+-- PICKLEBALLVISUALIZER — POSTGRESQL DATABASE SCHEMA
 -- Run with: psql -U postgres -d pickleball_ai -f frontend/schema.sql
 -- Or set DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/pickleball_ai"
 -- ============================================================================

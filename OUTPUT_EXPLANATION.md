@@ -1,4 +1,4 @@
-# 🏓 Pickleball Vision AI — Output Guide & Schema Specification
+# 🏓 PickleBallVisualizer — Output Guide & Schema Specification
 
 This document explains exactly how the perception pipeline processes video, what each visual element in the diagnostic preview MP4 represents, and how the structured JSON telemetry is formatted.
 

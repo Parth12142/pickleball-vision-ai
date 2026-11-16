@@ -59,7 +59,7 @@ class BasePerceptionPipeline:
         ball_max_coast: int = 3,
         ball_max_jump_px: float = 95.0,
         court_corners: Optional[List[Tuple[float, float]]] = None,
-        render_minimap: bool = True,
+        render_minimap: bool = False,
         minimap_position: str = "bottom-right",
     ):
         resolved_ball_weights = ball_weights or _default_ball_weights()
@@ -74,6 +74,7 @@ class BasePerceptionPipeline:
             imgsz=resolved_ball_imgsz,
             multiscale=multiscale,
             patch_slices=ball_patch_slices,
+            patch_imgsz=min(1280, max(640, resolved_ball_imgsz)),
         )
 
         self.court_calibrator = CourtCalibrator(corners_px=court_corners)
@@ -354,23 +355,26 @@ class BasePerceptionPipeline:
         total_frames: int,
         fps: float,
         cumulative_bounces: Optional[int] = None,
-        render_minimap: bool = True,
+        render_minimap: bool = False,
         minimap_position: str = "bottom-right",
     ) -> np.ndarray:
         vis = frame.copy()
         h, w = vis.shape[:2]
+        is_compact = w < 960
+        is_hi_res = max(w, h) >= 1800
+        line_thick = 4 if is_hi_res else 2
 
         # 1. Court Polygon Overlay
         corners = self.court_calibrator.result.corners_px
         if len(corners) == 4:
             pts = np.array(corners, dtype=np.int32).reshape((-1, 1, 2))
-            cv2.polylines(vis, [pts], isClosed=True, color=(0, 255, 220), thickness=2, lineType=cv2.LINE_AA)
+            cv2.polylines(vis, [pts], isClosed=True, color=(0, 255, 220), thickness=line_thick, lineType=cv2.LINE_AA)
 
             # Center Net Line
             p_net_l = self.court_calibrator.court_to_pixel(0.0, 22.0)
             p_net_r = self.court_calibrator.court_to_pixel(20.0, 22.0)
             if p_net_l and p_net_r:
-                cv2.line(vis, (int(p_net_l[0]), int(p_net_l[1])), (int(p_net_r[0]), int(p_net_r[1])), (255, 255, 255), 2, cv2.LINE_AA)
+                cv2.line(vis, (int(p_net_l[0]), int(p_net_l[1])), (int(p_net_r[0]), int(p_net_r[1])), (255, 255, 255), line_thick, cv2.LINE_AA)
 
         # 2. Player Halos & Badges
         for p in record["players"]:
@@ -383,21 +387,25 @@ class BasePerceptionPipeline:
 
             # Ground AR Halo
             axes = (int(bw * 0.65), max(5, int(bw * 0.18)))
-            cv2.ellipse(vis, (cx, min(h - 1, y2)), axes, 0, 0, 360, col, 2, lineType=cv2.LINE_AA)
+            cv2.ellipse(vis, (cx, min(h - 1, y2)), axes, 0, 0, 360, col, line_thick, lineType=cv2.LINE_AA)
 
             # Player Floating Pill
             lbl = f"P{pid}"
             if p.get("court_ft"):
-                lbl += f" ({p['court_ft'][0]:.1f}, {p['court_ft'][1]:.1f})ft"
+                lbl += f" ({p['court_ft'][0]:.1f},{p['court_ft'][1]:.1f})ft"
             if p.get("speed_mph", 0.0) > 1.0:
                 lbl += f" {p['speed_mph']:.1f}mph"
 
-            pill_w = len(lbl) * 8 + 16
-            bx1 = max(4, cx - pill_w // 2)
-            by1 = max(4, y1 - 22)
-            cv2.rectangle(vis, (bx1, by1), (bx1 + pill_w, by1 + 18), (15, 23, 42), -1)
-            cv2.rectangle(vis, (bx1, by1), (bx1 + pill_w, by1 + 18), col, 1, cv2.LINE_AA)
-            cv2.putText(vis, lbl, (bx1 + 6, by1 + 13), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (240, 240, 240), 1, cv2.LINE_AA)
+            p_font = 0.30 if is_compact else (0.72 if is_hi_res else 0.38)
+            char_w = 6 if is_compact else (14 if is_hi_res else 8)
+            pill_h = 14 if is_compact else (34 if is_hi_res else 18)
+            pill_w = len(lbl) * char_w + (20 if is_hi_res else 12)
+            bx1 = max(4, min(w - pill_w - 4, cx - pill_w // 2))
+            by1 = max(4, y1 - (pill_h + 6 if is_hi_res else pill_h + 3))
+            cv2.rectangle(vis, (bx1, by1), (bx1 + pill_w, by1 + pill_h), (15, 23, 42), -1)
+            cv2.rectangle(vis, (bx1, by1), (bx1 + pill_w, by1 + pill_h), col, 2 if is_hi_res else 1, cv2.LINE_AA)
+            cv2.putText(vis, lbl, (bx1 + (9 if is_hi_res else 5), by1 + pill_h - (8 if is_hi_res else 4)),
+                        cv2.FONT_HERSHEY_SIMPLEX, p_font, (240, 240, 240), 2 if is_hi_res else 1, cv2.LINE_AA)
 
         # 3. Ball Trajectory Ribbon & Reticle
         ball = record["ball"]
@@ -425,32 +433,36 @@ class BasePerceptionPipeline:
             spd_px = ball.get("speed_px_per_frame", 0.0)
             ret_col = get_speed_color(spd_px)
             is_interpolated = ball.get("interpolated", False)
+            rad = 14 if is_hi_res else 8
             if is_interpolated:
-                cv2.circle(vis, (bx, by), 8, (120, 200, 255), 1, cv2.LINE_AA)
-                cv2.circle(vis, (bx, by), 2, (120, 200, 255), -1, cv2.LINE_AA)
-                cv2.putText(vis, "3D-EST", (bx + 10, by + 12), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (120, 200, 255), 1, cv2.LINE_AA)
+                cv2.circle(vis, (bx, by), rad, (120, 200, 255), 2 if is_hi_res else 1, cv2.LINE_AA)
+                cv2.circle(vis, (bx, by), 4 if is_hi_res else 2, (120, 200, 255), -1, cv2.LINE_AA)
+                cv2.putText(vis, "3D-EST", (bx + (18 if is_hi_res else 10), by + (20 if is_hi_res else 12)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.65 if is_hi_res else 0.35, (120, 200, 255), 2 if is_hi_res else 1, cv2.LINE_AA)
             else:
-                cv2.circle(vis, (bx, by), 8, ret_col, 2, cv2.LINE_AA)
-                cv2.circle(vis, (bx, by), 2, (255, 255, 255), -1, cv2.LINE_AA)
+                cv2.circle(vis, (bx, by), rad, ret_col, 3 if is_hi_res else 2, cv2.LINE_AA)
+                cv2.circle(vis, (bx, by), 4 if is_hi_res else 2, (255, 255, 255), -1, cv2.LINE_AA)
 
             if ball.get("speed_mph", 0.0) > 1.0:
-                cv2.putText(vis, f"{ball['speed_mph']:.1f} MPH", (bx + 12, by - 4),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 255, 220), 1, cv2.LINE_AA)
+                cv2.putText(vis, f"{ball['speed_mph']:.1f} MPH", (bx + (20 if is_hi_res else 12), by - (8 if is_hi_res else 4)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.78 if is_hi_res else 0.42, (0, 255, 220), 2 if is_hi_res else 1, cv2.LINE_AA)
 
         # 4. Bounce Ripple Indicator on Camera Frame (Week 3)
         bounce = record.get("bounce")
         if bounce is not None and bounce.get("pixel"):
             b_px, b_py = int(bounce["pixel"][0]), int(bounce["pixel"][1])
             b_col = (80, 220, 80) if bounce.get("is_ground_bounce", True) else (60, 60, 230)
-            cv2.circle(vis, (b_px, b_py), 16, b_col, 2, cv2.LINE_AA)
-            cv2.circle(vis, (b_px, b_py), 8, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.circle(vis, (b_px, b_py), 28 if is_hi_res else 16, b_col, 3 if is_hi_res else 2, cv2.LINE_AA)
+            cv2.circle(vis, (b_px, b_py), 14 if is_hi_res else 8, (255, 255, 255), 2 if is_hi_res else 1, cv2.LINE_AA)
             c_xy = bounce.get("court_ft")
             if c_xy:
                 b_lbl = f"BOUNCE ({c_xy[0]:.1f}, {c_xy[1]:.1f})ft"
-                cv2.putText(vis, b_lbl, (b_px - 40, b_py - 22), cv2.FONT_HERSHEY_SIMPLEX, 0.42, b_col, 1, cv2.LINE_AA)
+                cv2.putText(vis, b_lbl, (b_px - (70 if is_hi_res else 40), b_py - (36 if is_hi_res else 22)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.75 if is_hi_res else 0.42, b_col, 2 if is_hi_res else 1, cv2.LINE_AA)
 
         # 5. Top-Down Court Minimap HUD Composition (Week 3)
         if render_minimap and self.court_calibrator.result.calibrated:
+            eff_pos = "top-right" if ((h > w or w < 900) and minimap_position == "bottom-right") else minimap_position
             minimap_canvas = self.court_minimap.render(
                 players=record.get("players"),
                 ball=record.get("ball"),
@@ -459,49 +471,71 @@ class BasePerceptionPipeline:
             vis = self.court_minimap.compose_onto_frame(
                 vis,
                 minimap_canvas,
-                position=minimap_position,
+                position=eff_pos,
                 alpha=0.88,
             )
 
-        # 6. Clean Telemetry Header HUD
-        cv2.rectangle(vis, (16, 16), (410, 84), (15, 23, 42), -1)
-        cv2.rectangle(vis, (16, 16), (410, 84), (0, 255, 220), 1)
-        cv2.putText(vis, "PICKLEBALL BASE VISION MODEL (3D MINIMAP)", (26, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.43, (0, 255, 220), 1, cv2.LINE_AA)
+        # 6. Clean Telemetry Header HUD (scales compactly for <= 720px clips)
         ball_status = "3D-EST" if (ball and ball.get("interpolated")) else ("LOCKED" if ball else "SEARCH")
         total_bncs = cumulative_bounces if cumulative_bounces is not None else len(self.bounce_detector.detected_bounces)
         status_line = f"F: {frame_idx + 1}/{total_frames} | Players: {len(record['players'])}/4 | Ball: {ball_status} | Bounces: {total_bncs}"
-        cv2.putText(vis, status_line, (26, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (250, 250, 250), 1, cv2.LINE_AA)
         sec = frame_idx / fps
-        cv2.putText(vis, f"Time: {int(sec//60):02d}:{int(sec%60):02d}.{int((sec%1)*100):02d} | Zero Rules (Pure Perception)",
-                    (26, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (160, 160, 160), 1, cv2.LINE_AA)
+
+        hud_title = "PICKVIZ (3D MINIMAP)" if render_minimap else "PICKVIZ (3D PERCEPTION)"
+        if is_compact:
+            cv2.rectangle(vis, (8, 8), (308, 52), (15, 23, 42), -1)
+            cv2.rectangle(vis, (8, 8), (308, 52), (0, 255, 220), 1)
+            cv2.putText(vis, hud_title, (14, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.34, (0, 255, 220), 1, cv2.LINE_AA)
+            cv2.putText(vis, status_line, (14, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.29, (250, 250, 250), 1, cv2.LINE_AA)
+            cv2.putText(vis, f"Time: {int(sec//60):02d}:{int(sec%60):02d}.{int((sec%1)*100):02d} | Zero Rules Core",
+                        (14, 48), cv2.FONT_HERSHEY_SIMPLEX, 0.27, (160, 160, 160), 1, cv2.LINE_AA)
+        elif is_hi_res:
+            cv2.rectangle(vis, (24, 24), (820, 160), (15, 23, 42), -1)
+            cv2.rectangle(vis, (24, 24), (820, 160), (0, 255, 220), 2)
+            cv2.putText(vis, hud_title, (44, 64), cv2.FONT_HERSHEY_SIMPLEX, 0.85, (0, 255, 220), 2, cv2.LINE_AA)
+            cv2.putText(vis, status_line, (44, 102), cv2.FONT_HERSHEY_SIMPLEX, 0.70, (250, 250, 250), 2, cv2.LINE_AA)
+            cv2.putText(vis, f"Time: {int(sec//60):02d}:{int(sec%60):02d}.{int((sec%1)*100):02d} | Zero Rules (Pure Perception)",
+                        (44, 138), cv2.FONT_HERSHEY_SIMPLEX, 0.64, (160, 160, 160), 2, cv2.LINE_AA)
+        else:
+            cv2.rectangle(vis, (16, 16), (410, 84), (15, 23, 42), -1)
+            cv2.rectangle(vis, (16, 16), (410, 84), (0, 255, 220), 1)
+            cv2.putText(vis, hud_title, (26, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.43, (0, 255, 220), 1, cv2.LINE_AA)
+            cv2.putText(vis, status_line, (26, 54), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (250, 250, 250), 1, cv2.LINE_AA)
+            cv2.putText(vis, f"Time: {int(sec//60):02d}:{int(sec%60):02d}.{int((sec%1)*100):02d} | Zero Rules (Pure Perception)",
+                        (26, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (160, 160, 160), 1, cv2.LINE_AA)
 
         return vis
 
     def _encode_h264(self, raw_path: str, target_path: str):
-        ffmpeg_bin = shutil.which("ffmpeg")
-        if not ffmpeg_bin:
-            try:
-                import imageio_ffmpeg
-                ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-            except Exception:
-                pass
+        encode_h264(raw_path, target_path)
 
-        if ffmpeg_bin:
-            cmd = [
-                ffmpeg_bin, "-y", "-v", "error", "-i", raw_path,
-                "-c:v", "libx264", "-crf", "18", "-preset", "fast",
-                "-pix_fmt", "yuv420p", "-movflags", "+faststart",
-                target_path,
-            ]
-            try:
-                subprocess.run(cmd, check=True)
-                if os.path.exists(raw_path):
-                    os.remove(raw_path)
-                return
-            except Exception as e:
-                print(f"[warning] FFmpeg encode failed ({e}). Retaining raw video.")
 
-        if os.path.exists(raw_path):
-            if os.path.exists(target_path):
-                os.remove(target_path)
-            os.rename(raw_path, target_path)
+def encode_h264(raw_path: str, target_path: str):
+    """Transcode a raw OpenCV MP4 file into H.264/yuv420p web-playable MP4."""
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if not ffmpeg_bin:
+        try:
+            import imageio_ffmpeg
+            ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            pass
+
+    if ffmpeg_bin:
+        cmd = [
+            ffmpeg_bin, "-y", "-v", "error", "-i", raw_path,
+            "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+            "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+            target_path,
+        ]
+        try:
+            subprocess.run(cmd, check=True)
+            if os.path.exists(raw_path):
+                os.remove(raw_path)
+            return
+        except Exception as e:
+            print(f"[warning] FFmpeg encode failed ({e}). Retaining raw video.")
+
+    if os.path.exists(raw_path):
+        if os.path.exists(target_path):
+            os.remove(target_path)
+        os.rename(raw_path, target_path)

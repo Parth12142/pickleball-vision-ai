@@ -32,6 +32,7 @@ render:
   preview: true
   hud: true
   ball_ribbon: true
+  minimap: false
 
 paths:
   out_dir: "outputs"

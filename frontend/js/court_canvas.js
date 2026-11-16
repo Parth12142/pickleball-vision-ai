@@ -63,13 +63,15 @@ export class WorkbenchCourtRenderer {
   render(telemetry) {
     if (!this.width || !this.height) this.resize();
     const ctx = this.ctx;
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
     ctx.clearRect(0, 0, this.width, this.height);
 
-    ctx.fillStyle = "#0B1929";
+    // Theme-aware outer court apron: Midnight Navy (Night Arena) vs USAP Championship Green (Day Court)
+    ctx.fillStyle = isDark ? "#0B1929" : "#2D6A52";
     ctx.fillRect(0, 0, this.width, this.height);
 
     const b = this.getCourtBounds();
-    this.drawUSAPCourt(ctx, b);
+    this.drawUSAPCourt(ctx, b, isDark);
 
     if (!telemetry) return;
 
@@ -77,37 +79,37 @@ export class WorkbenchCourtRenderer {
       this.drawCoverageHeatmap(ctx, b, telemetry.players);
     }
     if (this.lens === "kitchen") {
-      this.drawKitchenWatchdog(ctx, b, telemetry.players);
+      this.drawKitchenWatchdog(ctx, b, telemetry.players, isDark);
     }
     if (this.lens === "var" && telemetry.activeBounce) {
       this.drawBounceVAR(ctx, b, telemetry.activeBounce);
     }
 
     this.drawPlayers(ctx, b, telemetry.players);
-    this.drawBallAndTrail(ctx, b, telemetry.ball);
-    this.drawHUD(ctx, telemetry);
+    this.drawBallAndTrail(ctx, b, telemetry.ball, isDark);
+    this.drawHUD(ctx, telemetry, isDark);
   }
 
-  drawUSAPCourt(ctx, b) {
+  drawUSAPCourt(ctx, b, isDark = true) {
     const { x, y, w, h } = b;
     const nvzFrac = 7 / 44;
     const netY = y + h * 0.5;
     const nvzTop = netY - h * nvzFrac;
     const nvzBot = netY + h * nvzFrac;
 
-    ctx.fillStyle = "#1B568A";
+    ctx.fillStyle = isDark ? "#1B568A" : "#1F629E";
     ctx.fillRect(x, y, w, h);
 
-    ctx.fillStyle = "#0F3556";
+    ctx.fillStyle = isDark ? "#0F3556" : "#164A7A";
     ctx.fillRect(x, nvzTop, w, nvzBot - nvzTop);
 
     if (this.lens === "kitchen") {
-      ctx.fillStyle = "rgba(223, 255, 0, 0.14)";
+      ctx.fillStyle = isDark ? "rgba(82, 196, 160, 0.16)" : "rgba(255, 255, 255, 0.16)";
       ctx.fillRect(x, nvzTop, w, nvzBot - nvzTop);
     }
 
-    ctx.strokeStyle = "#F8FAFC";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = isDark ? "#F8FAFC" : "#FFFFFF";
+    ctx.lineWidth = isDark ? 2 : 2.2;
     ctx.strokeRect(x, y, w, h);
 
     ctx.beginPath();
@@ -126,7 +128,7 @@ export class WorkbenchCourtRenderer {
     ctx.stroke();
 
     ctx.save();
-    ctx.strokeStyle = "#DFFF00";
+    ctx.strokeStyle = isDark ? "#7DD3C0" : "#F8FAFC";
     ctx.lineWidth = 2.5;
     ctx.setLineDash([5, 4]);
     ctx.beginPath();
@@ -135,7 +137,7 @@ export class WorkbenchCourtRenderer {
     ctx.stroke();
     ctx.restore();
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.28)";
+    ctx.fillStyle = isDark ? "rgba(255, 255, 255, 0.32)" : "rgba(255, 255, 255, 0.52)";
     ctx.font = "600 9px 'JetBrains Mono', monospace";
     ctx.textAlign = "center";
     ctx.fillText("7 FT KITCHEN (NVZ)", midX, nvzTop + (netY - nvzTop) * 0.55);
@@ -164,7 +166,7 @@ export class WorkbenchCourtRenderer {
     }
   }
 
-  drawKitchenWatchdog(ctx, b, players) {
+  drawKitchenWatchdog(ctx, b, players, isDark = true) {
     const nvzFrac = 7 / 44;
     const netY = b.y + b.h * 0.5;
     const nvzTop = netY - b.h * nvzFrac;
@@ -176,7 +178,7 @@ export class WorkbenchCourtRenderer {
       const py = b.y + p.y * b.h;
       const targetLineY = p.team === "A" ? nvzBot : nvzTop;
 
-      ctx.strokeStyle = "rgba(223, 255, 0, 0.7)";
+      ctx.strokeStyle = isDark ? "rgba(141, 224, 196, 0.72)" : "rgba(255, 255, 255, 0.85)";
       ctx.lineWidth = 1.25;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
@@ -187,9 +189,9 @@ export class WorkbenchCourtRenderer {
       const distFt = Math.abs(p.y - (p.team === "A" ? 0.5 + nvzFrac : 0.5 - nvzFrac)) * 44;
       const distMm = Math.round(distFt * 304.8);
       ctx.setLineDash([]);
-      ctx.fillStyle = "#0D1219";
+      ctx.fillStyle = isDark ? "#0D1219" : "#FFFFFF";
       ctx.fillRect(px - 28, (py + targetLineY) / 2 - 8, 56, 15);
-      ctx.fillStyle = "#DFFF00";
+      ctx.fillStyle = isDark ? "#8DE0C4" : "#0F4C81";
       ctx.font = "700 9px 'JetBrains Mono', monospace";
       ctx.textAlign = "center";
       ctx.fillText(`+${distMm}mm`, px, (py + targetLineY) / 2 + 3);
@@ -263,7 +265,7 @@ export class WorkbenchCourtRenderer {
     ctx.textBaseline = "alphabetic";
   }
 
-  drawBallAndTrail(ctx, b, ball) {
+  drawBallAndTrail(ctx, b, ball, isDark = true) {
     if (!ball) return;
     const bx = b.x + ball.x * b.w;
     const by = b.y + ball.y * b.h;
@@ -273,22 +275,24 @@ export class WorkbenchCourtRenderer {
       this.trail.shift();
     }
 
-    // 1. Draw glowing projectile trail
+    // 1. Draw smooth projectile trail
     if (this.trail.length > 1) {
       for (let i = 1; i < this.trail.length; i++) {
         const p0 = this.trail[i - 1];
         const p1 = this.trail[i];
         const progress = i / this.trail.length;
-        const alpha = progress * 0.9;
+        const alpha = progress * 0.72;
 
-        ctx.strokeStyle = `rgba(204, 255, 0, ${alpha})`;
-        ctx.lineWidth = 1.5 + progress * 3.5;
+        ctx.strokeStyle = isDark
+          ? `rgba(141, 224, 196, ${alpha})`
+          : `rgba(255, 255, 255, ${alpha * 0.85})`;
+        ctx.lineWidth = 1.5 + progress * 3.0;
         ctx.beginPath();
         ctx.moveTo(p0.x, p0.y);
         ctx.lineTo(p1.x, p1.y);
         ctx.stroke();
 
-        // Motion blur glow
+        // Motion blur highlight
         if (i === this.trail.length - 1) {
           ctx.strokeStyle = `rgba(255, 255, 255, 0.7)`;
           ctx.lineWidth = 1.2;
@@ -300,27 +304,29 @@ export class WorkbenchCourtRenderer {
       }
     }
 
-    // 2. Animated contact shockwave ripple (every few frames or based on speed)
+    // 2. Subtle contact wave ripple
     const t = performance.now() / 1000;
-    const waveRadius = 10 + (Math.sin(t * 8) * 0.5 + 0.5) * 12;
-    const waveAlpha = Math.max(0, 0.7 - (waveRadius / 22) * 0.6);
-    ctx.strokeStyle = `rgba(204, 255, 0, ${waveAlpha})`;
+    const waveRadius = 10 + (Math.sin(t * 5) * 0.5 + 0.5) * 9;
+    const waveAlpha = Math.max(0, 0.52 - (waveRadius / 19) * 0.45);
+    ctx.strokeStyle = isDark
+      ? `rgba(141, 224, 196, ${waveAlpha})`
+      : `rgba(255, 255, 255, ${waveAlpha * 0.85})`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(bx, by, waveRadius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 3. Pro Optic Yellow Pickleball Body
+    // 3. Pickleball Body
     ctx.beginPath();
     ctx.arc(bx, by, 6.5, 0, Math.PI * 2);
-    ctx.fillStyle = "#CCFF00";
+    ctx.fillStyle = "#D4E137";
     ctx.fill();
     ctx.strokeStyle = "#0A111A";
     ctx.lineWidth = 1.8;
     ctx.stroke();
 
     // 4. Perforated ball dots
-    ctx.fillStyle = "#99CC00";
+    ctx.fillStyle = "#7D8B12";
     const dotOffsets = [[-2, -2], [2, -2], [0, 2], [-3, 1], [3, 1]];
     dotOffsets.forEach(([dx, dy]) => {
       ctx.beginPath();
@@ -337,28 +343,34 @@ export class WorkbenchCourtRenderer {
       const tagX = bx + 10;
       const tagY = by - 8;
 
-      ctx.fillStyle = "rgba(10, 17, 26, 0.88)";
+      ctx.fillStyle = isDark ? "rgba(10, 17, 26, 0.9)" : "rgba(255, 255, 255, 0.95)";
       ctx.beginPath();
       ctx.roundRect(tagX, tagY - 9, tw + 8, 14, 4);
       ctx.fill();
-      ctx.strokeStyle = "#CCFF00";
+      ctx.strokeStyle = isDark ? "#52C4A0" : "#0F4C81";
       ctx.lineWidth = 1.0;
       ctx.stroke();
 
-      ctx.fillStyle = "#CCFF00";
+      ctx.fillStyle = isDark ? "#8DE0C4" : "#0B2545";
       ctx.fillText(spdText, tagX + 4, tagY + 1.5);
       ctx.restore();
     }
   }
 
-  drawHUD(ctx, telemetry) {
+  drawHUD(ctx, telemetry, isDark = true) {
     ctx.save();
-    ctx.fillStyle = "rgba(13, 18, 25, 0.85)";
+    ctx.fillStyle = isDark ? "rgba(13, 18, 25, 0.86)" : "rgba(255, 255, 255, 0.94)";
     ctx.beginPath();
     ctx.roundRect(12, 12, 168, 24, 6);
     ctx.fill();
 
-    ctx.fillStyle = "#DFFF00";
+    if (!isDark) {
+      ctx.strokeStyle = "rgba(15, 76, 129, 0.22)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = isDark ? "#8DE0C4" : "#0F4C81";
     ctx.font = "700 10px 'JetBrains Mono', monospace";
     ctx.textAlign = "left";
     ctx.fillText(
@@ -378,18 +390,18 @@ function drawPerforatedBall(ctx, x, y, r, rotAngle) {
   ctx.translate(x, y);
   ctx.rotate(rotAngle);
 
-  const glow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 2.1);
-  glow.addColorStop(0, "rgba(212, 247, 0, 0.48)");
-  glow.addColorStop(1, "rgba(212, 247, 0, 0)");
+  const glow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.9);
+  glow.addColorStop(0, "rgba(212, 228, 55, 0.22)");
+  glow.addColorStop(1, "rgba(212, 228, 55, 0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, 0, r * 2.1, 0, Math.PI * 2);
+  ctx.arc(0, 0, r * 1.9, 0, Math.PI * 2);
   ctx.fill();
 
   const sphereGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
-  sphereGrad.addColorStop(0, "#F5FF78");
-  sphereGrad.addColorStop(0.65, "#DFFF00");
-  sphereGrad.addColorStop(1, "#9FB800");
+  sphereGrad.addColorStop(0, "#EBF57A");
+  sphereGrad.addColorStop(0.65, "#CBE032");
+  sphereGrad.addColorStop(1, "#94A814");
   ctx.fillStyle = sphereGrad;
   ctx.strokeStyle = "rgba(14, 17, 22, 0.5)";
   ctx.lineWidth = 1.5;
@@ -427,8 +439,9 @@ export class PickleballBgAnimator {
     this.ctx = canvas.getContext("2d");
     this.ripples = [];
     this.balls = [
-      { phase: 0.0, speed: 0.0052, radius: 16, angle: 0, trail: [], lastBounceSide: -1 },
-      { phase: 0.52, speed: 0.0040, radius: 12, angle: 1.4, trail: [], lastBounceSide: -1 }
+      { phase: 0.0, speed: 0.0042, radius: 15, angle: 0, trail: [], lastBounceSide: -1, spanX: 0.45, baseY: 0.62, sweepY: 0.24, arcH: 125 },
+      { phase: 0.36, speed: 0.0034, radius: 12, angle: 1.4, trail: [], lastBounceSide: -1, spanX: 0.38, baseY: 0.36, sweepY: -0.20, arcH: 96 },
+      { phase: 0.72, speed: 0.0038, radius: 10, angle: 2.6, trail: [], lastBounceSide: -1, spanX: 0.29, baseY: 0.50, sweepY: 0.14, arcH: 76 }
     ];
 
     window.addEventListener("resize", () => this.resize());
@@ -439,45 +452,64 @@ export class PickleballBgAnimator {
   resize() {
     if (!this.canvas) return;
     const dpr = window.devicePixelRatio || 1;
-    this.width = window.innerWidth;
+    this.width = document.documentElement.clientWidth || window.innerWidth;
     this.height = window.innerHeight;
     this.canvas.width = this.width * dpr;
     this.canvas.height = this.height * dpr;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  drawPerspectiveCourt(ctx, w, h, t) {
+  drawPerspectiveCourt(ctx, w, h, t, isDark) {
     ctx.save();
-    const cx = w * 0.52;
-    const cy = h * 0.54;
-    const topW = Math.min(w * 0.62, 820);
-    const botW = Math.min(w * 0.92, 1280);
-    const courtH = Math.min(h * 0.72, 620);
+    // Full-window championship apron wash (subtle coastal green in Day Court, deep slate-blue in Night Arena)
+    const apronGrad = ctx.createLinearGradient(0, 0, 0, h);
+    if (isDark) {
+      apronGrad.addColorStop(0, "rgba(11, 25, 41, 0.28)");
+      apronGrad.addColorStop(1, "rgba(7, 11, 18, 0.12)");
+    } else {
+      apronGrad.addColorStop(0, "rgba(45, 106, 82, 0.04)");
+      apronGrad.addColorStop(0.55, "rgba(45, 106, 82, 0.09)");
+      apronGrad.addColorStop(1, "rgba(31, 98, 158, 0.12)");
+    }
+    ctx.fillStyle = apronGrad;
+    ctx.fillRect(0, 0, w, h);
 
-    const topY = cy - courtH * 0.48;
-    const botY = cy + courtH * 0.52;
+    // Edge-to-edge perspective court occupying ~90% of viewport height & spilling cleanly to full width
+    const cx = w * 0.5;
+    const topY = h * 0.07;
+    const botY = h * 0.96;
+    const courtH = botY - topY;
+    const topW = w * 0.68;
+    const botW = w * 1.06;
     const netY = (topY + botY) * 0.5;
     const nvzOffset = courtH * 0.16;
     const lerpW = (yFrac) => topW + (botW - topW) * yFrac;
 
-    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    ctx.strokeStyle = isDark ? "rgba(56, 189, 248, 0.16)" : "rgba(27, 86, 138, 0.12)";
-    ctx.lineWidth = 1.6;
-
+    // Inner championship blue surface polygon
+    const courtGrad = ctx.createLinearGradient(0, topY, 0, botY);
+    if (isDark) {
+      courtGrad.addColorStop(0, "rgba(27, 86, 138, 0.11)");
+      courtGrad.addColorStop(1, "rgba(27, 86, 138, 0.20)");
+    } else {
+      courtGrad.addColorStop(0, "rgba(31, 98, 158, 0.07)");
+      courtGrad.addColorStop(1, "rgba(31, 98, 158, 0.14)");
+    }
+    ctx.fillStyle = courtGrad;
     ctx.beginPath();
     ctx.moveTo(cx - topW / 2, topY);
     ctx.lineTo(cx + topW / 2, topY);
     ctx.lineTo(cx + botW / 2, botY);
     ctx.lineTo(cx - botW / 2, botY);
     ctx.closePath();
-    ctx.stroke();
+    ctx.fill();
 
+    // Non-Volley Zone (14-ft Kitchen) shading
     const nvzTopFrac = (netY - nvzOffset - topY) / courtH;
     const nvzBotFrac = (netY + nvzOffset - topY) / courtH;
     const wTopNVZ = lerpW(nvzTopFrac);
     const wBotNVZ = lerpW(nvzBotFrac);
 
-    ctx.fillStyle = isDark ? "rgba(56, 189, 248, 0.05)" : "rgba(27, 86, 138, 0.04)";
+    ctx.fillStyle = isDark ? "rgba(82, 196, 160, 0.07)" : "rgba(20, 118, 96, 0.10)";
     ctx.beginPath();
     ctx.moveTo(cx - wTopNVZ / 2, netY - nvzOffset);
     ctx.lineTo(cx + wTopNVZ / 2, netY - nvzOffset);
@@ -485,23 +517,42 @@ export class PickleballBgAnimator {
     ctx.lineTo(cx - wBotNVZ / 2, netY + nvzOffset);
     ctx.closePath();
     ctx.fill();
-    ctx.stroke();
 
+    // Crisp architectural court lines across entire window
+    ctx.strokeStyle = isDark ? "rgba(125, 211, 252, 0.20)" : "rgba(255, 255, 255, 0.78)";
+    ctx.lineWidth = isDark ? 1.8 : 2.6;
     ctx.beginPath();
+    ctx.moveTo(cx - topW / 2, topY);
+    ctx.lineTo(cx + topW / 2, topY);
+    ctx.lineTo(cx + botW / 2, botY);
+    ctx.lineTo(cx - botW / 2, botY);
+    ctx.closePath();
+    ctx.moveTo(cx - wTopNVZ / 2, netY - nvzOffset);
+    ctx.lineTo(cx + wTopNVZ / 2, netY - nvzOffset);
+    ctx.moveTo(cx - wBotNVZ / 2, netY + nvzOffset);
+    ctx.lineTo(cx + wBotNVZ / 2, netY + nvzOffset);
     ctx.moveTo(cx, topY);
     ctx.lineTo(cx, netY - nvzOffset);
     ctx.moveTo(cx, netY + nvzOffset);
     ctx.lineTo(cx, botY);
     ctx.stroke();
 
+    // Secondary crisp slate contour on daylight chalk lines so lines remain defined
+    if (!isDark) {
+      ctx.strokeStyle = "rgba(15, 76, 129, 0.22)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Center Net spanning full width cleanly
     const wNet = lerpW(0.5);
-    ctx.strokeStyle = isDark ? "rgba(204, 255, 0, 0.28)" : "rgba(255, 77, 0, 0.24)";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([8, 6]);
-    ctx.lineDashOffset = -t * 18;
+    ctx.strokeStyle = isDark ? "rgba(82, 196, 160, 0.34)" : "rgba(15, 76, 129, 0.34)";
+    ctx.lineWidth = 2.4;
+    ctx.setLineDash([10, 7]);
+    ctx.lineDashOffset = -t * 14;
     ctx.beginPath();
-    ctx.moveTo(cx - wNet / 2 - 18, netY);
-    ctx.lineTo(cx + wNet / 2 + 18, netY);
+    ctx.moveTo(cx - wNet / 2 - 48, netY);
+    ctx.lineTo(cx + wNet / 2 + 48, netY);
     ctx.stroke();
     ctx.restore();
   }
@@ -512,23 +563,26 @@ export class PickleballBgAnimator {
       const ctx = this.ctx;
       const w = this.width;
       const h = this.height;
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
 
       ctx.clearRect(0, 0, w, h);
-      this.drawPerspectiveCourt(ctx, w, h, t);
+      this.drawPerspectiveCourt(ctx, w, h, t, isDark);
 
       for (let i = this.ripples.length - 1; i >= 0; i--) {
         const rp = this.ripples[i];
-        rp.radius += 1.4;
-        rp.alpha -= 0.014;
+        rp.radius += 1.3;
+        rp.alpha -= 0.012;
         if (rp.alpha <= 0) {
           this.ripples.splice(i, 1);
           continue;
         }
         ctx.save();
-        ctx.strokeStyle = `rgba(255, 77, 0, ${rp.alpha})`;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = isDark
+          ? `rgba(82, 196, 160, ${rp.alpha * 0.85})`
+          : `rgba(15, 118, 110, ${rp.alpha * 0.72})`;
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
-        ctx.ellipse(rp.x, rp.y, rp.radius * 1.4, rp.radius * 0.65, 0, 0, Math.PI * 2);
+        ctx.ellipse(rp.x, rp.y, rp.radius * 1.5, rp.radius * 0.65, 0, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
@@ -536,19 +590,30 @@ export class PickleballBgAnimator {
       for (let idx = 0; idx < this.balls.length; idx++) {
         const b = this.balls[idx];
         b.phase = (b.phase + b.speed) % 1;
-        b.angle += 0.06;
+        b.angle += 0.055;
 
         const pingPong = Math.sin(b.phase * Math.PI * 2);
         const arcBounce = Math.abs(Math.cos(b.phase * Math.PI * 4));
-        const bx = w * 0.5 + pingPong * (w * (idx === 0 ? 0.34 : 0.25));
-        const baseGroundY = h * (idx === 0 ? 0.62 : 0.38) + Math.cos(b.phase * Math.PI * 2) * (h * 0.14);
-        const by = baseGroundY - arcBounce * 115;
+        const bx = w * 0.5 + pingPong * (w * b.spanX);
+        const baseGroundY = h * b.baseY + Math.cos(b.phase * Math.PI * 2) * (h * b.sweepY);
+        const by = baseGroundY - arcBounce * b.arcH;
 
         const bounceBucket = Math.floor(b.phase * 4);
         if (arcBounce < 0.08 && b.lastBounceSide !== bounceBucket) {
           b.lastBounceSide = bounceBucket;
-          this.ripples.push({ x: bx, y: baseGroundY, radius: 6, alpha: 0.65 });
+          this.ripples.push({ x: bx, y: baseGroundY, radius: 7, alpha: 0.55 });
         }
+
+        // Subtle sunlit ground shadow beneath each arcing pickleball
+        ctx.save();
+        const shadowScale = 1 - arcBounce * 0.35;
+        ctx.fillStyle = isDark
+          ? `rgba(0, 0, 0, ${0.28 * (1 - arcBounce * 0.5)})`
+          : `rgba(15, 42, 74, ${0.14 * (1 - arcBounce * 0.45)})`;
+        ctx.beginPath();
+        ctx.ellipse(bx, baseGroundY + 4, b.radius * 1.15 * shadowScale, b.radius * 0.45 * shadowScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
         b.trail.push({ x: bx, y: by });
         if (b.trail.length > 26) b.trail.shift();
@@ -558,8 +623,10 @@ export class PickleballBgAnimator {
             const p0 = b.trail[i - 1];
             const p1 = b.trail[i];
             const frac = i / b.trail.length;
-            ctx.strokeStyle = `rgba(255, 77, 0, ${frac * 0.32})`;
-            ctx.lineWidth = 1 + frac * 3.2;
+            ctx.strokeStyle = isDark
+              ? `rgba(82, 196, 160, ${frac * 0.34})`
+              : `rgba(15, 76, 129, ${frac * 0.24})`;
+            ctx.lineWidth = 1 + frac * 2.8;
             ctx.beginPath();
             ctx.moveTo(p0.x, p0.y);
             ctx.lineTo(p1.x, p1.y);

@@ -26,6 +26,34 @@
     "rmse_ft": 0.0,
     "source": "human_pinned_calibrated"
   },
+  "cut.mp4": {
+    "resolution": [
+      1440,
+      2560
+    ],
+    "aspect_ratio": "9:16_portrait",
+    "corners_px": [
+      [
+        441.0,
+        1195.0
+      ],
+      [
+        917.8,
+        1195.0
+      ],
+      [
+        1710.8,
+        2136.0
+      ],
+      [
+        -315.6,
+        2136.0
+      ]
+    ],
+    "rmse_ft": 0.0,
+    "source": "human_pinned_calibrated",
+    "notes": "2x HD portrait rally clip (1440x2560 @ 59.93fps, 295 frames)"
+  },
   "match1.mp4": {
     "resolution": [
       1302,
@@ -79,6 +107,34 @@
     ],
     "rmse_ft": 0.0,
     "source": "human_pinned_calibrated"
+  },
+  "match_mlp.mp4": {
+    "resolution": [
+      1280,
+      720
+    ],
+    "aspect_ratio": "16:9_landscape",
+    "corners_px": [
+      [
+        490.2,
+        116.5
+      ],
+      [
+        785.1,
+        120.7
+      ],
+      [
+        1144.3,
+        578.8
+      ],
+      [
+        113.0,
+        581.0
+      ]
+    ],
+    "rmse_ft": 0.0,
+    "source": "human_pinned_calibrated",
+    "notes": "Clean 10.0s HD broadcast rally (720p30) - Brooklyn vs LA Mad Drops MLP"
   },
   "rally_sample.mp4": {
     "resolution": [

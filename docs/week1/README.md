@@ -22,7 +22,7 @@
 
 ## 1. Executive Summary & Core Guardrail
 
-Week 1 laid the foundational perception engine for Pickleball Vision AI. The mission was to build a clean, modular computer vision pipeline capable of detecting players, balls, and court boundaries without any hardcoded game rules or scoring assumptions.
+Week 1 laid the foundational perception engine for PickleBallVisualizer. The mission was to build a clean, modular computer vision pipeline capable of detecting players, balls, and court boundaries without any hardcoded game rules or scoring assumptions.
 
 ### 🛡️ The Zero-Rules Guardrail
 In Phase 1 (Weeks 1–2), the codebase is strictly decoupled from referee logic:

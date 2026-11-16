@@ -1,4 +1,4 @@
-# 🏓 Pickleball Base Vision AI — Core Perception Engine
+# 🏓 PickleBallVisualizer — Core Perception Engine
 
 A fresh, pure computer vision base perception system for pickleball. It accurately detects and tracks **players**, the **ball**, and **court planar geometry** with **ZERO hard-coded scoring rules, referee decisions, or scoreboard logic**.
 

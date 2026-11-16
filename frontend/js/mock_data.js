@@ -1,47 +1,48 @@
 /**
  * mock_data.js — Real Pipeline Execution Telemetry & Tournament Match Datasets
- * Contains ONLY MicrosoftTeams-video.mp4 and match1.mp4 (rally_sample removed)
+ * Contains match1.mp4, match_mlp.mp4 (Clean 720p MLP), and cut.mp4 (1440x2560 @ 60fps)
  */
 
 export const CLIPS_DATA = {
-  "MicrosoftTeams-video": {
-    id: "MicrosoftTeams-video",
-    shortName: "MicrosoftTeams-video.mp4",
-    label: "MicrosoftTeams-video.mp4 (720×1280 @ 60fps)",
-    videoUrl: "/outputs/MicrosoftTeams-video_players-ball.mp4",
-    resolution: "720×1280",
-    frames: 470,
-    fps: 60.0,
-    clipSeconds: 7.84,
-    scoreCall: "4 - 2 - 1",
-    servingPlayer: "P1 (Right/Even Court)",
+  "cut": {
+    id: "cut",
+    shortName: "cut.mp4",
+    isPortrait: true,
+    badgeTitle: "CUT CLIP (4.9S HD 60FPS)",
+    resSummary: "1440×2560 @ 60 FPS",
+    label: "cut.mp4 • 4.92s Upscaled HD Rally (1440×2560 @ 59.93fps)",
+    videoUrl: "/outputs/cut_base_preview.mp4",
+    resolution: "1440×2560",
+    frames: 295,
+    fps: 59.93,
+    clipSeconds: 4.92,
+    scoreCall: "Club Doubles (2x HD • 60fps)",
+    servingPlayer: "4-Player 2D Court Sync",
     timing: {
-      read_s: 0.55,
-      players_s: 14.06,
-      players_fps: 33.4,
-      ball_s: 55.33,
-      ball_fps: 8.5,
-      render_s: 7.78,
-      total_s: 78.79,
-      realtime_factor: 10.05
+      read_s: 0.28,
+      players_s: 14.01,
+      players_fps: 21.1,
+      ball_s: 98.65,
+      ball_fps: 3.0,
+      render_s: 7.88,
+      total_s: 130.44,
+      realtime_factor: 26.51
     },
     quality: {
-      playersTracked: "4 / 4 Locked",
-      ballDetectionRate: "138 frames tracked",
-      nvzStatus: "SAFE (+185 mm)",
-      lineCallVerdict: "IN (+42 mm Baseline)"
+      playersTracked: "4.0 / 4 Locked",
+      ballDetectionRate: "245 / 295 frames (83.1%)",
+      nvzStatus: "KITCHEN (NVZ) ACTIVE (14-ft)",
+      lineCallVerdict: "2 Events • RMSE 0.0000 ft"
     },
     playerStats: [
-      { id: "P1", team: "Near Team A", distM: "18.4 m", avgSpeed: "9.8 km/h", maxSpeed: "18.2 km/h", kitchenPct: "62%", baselinePct: "16%" },
-      { id: "P2", team: "Near Team A", distM: "16.9 m", avgSpeed: "9.1 km/h", maxSpeed: "16.5 km/h", kitchenPct: "66%", baselinePct: "14%" },
-      { id: "P3", team: "Far Team B", distM: "20.1 m", avgSpeed: "10.6 km/h", maxSpeed: "19.4 km/h", kitchenPct: "54%", baselinePct: "24%" },
-      { id: "P4", team: "Far Team B", distM: "17.5 m", avgSpeed: "9.4 km/h", maxSpeed: "17.1 km/h", kitchenPct: "58%", baselinePct: "20%" }
+      { id: "P1", team: "Near Team A", distM: "6.8 m", avgSpeed: "4.5 km/h", maxSpeed: "35.4 km/h", kitchenPct: "9%", baselinePct: "65%" },
+      { id: "P4", team: "Near Team A", distM: "4.7 m", avgSpeed: "3.4 km/h", maxSpeed: "16.9 km/h", kitchenPct: "0%", baselinePct: "100%" },
+      { id: "P2", team: "Far Team B", distM: "6.5 m", avgSpeed: "4.7 km/h", maxSpeed: "32.7 km/h", kitchenPct: "0%", baselinePct: "0%" },
+      { id: "P3", team: "Far Team B", distM: "7.1 m", avgSpeed: "5.2 km/h", maxSpeed: "24.6 km/h", kitchenPct: "0%", baselinePct: "48%" }
     ],
     bounces: [
-      { frame: 58, x: 0.34, y: 0.24, verdict: "IN", marginMm: 84.5, line: "Left Sideline", speedMph: 34.2 },
-      { frame: 132, x: 0.68, y: 0.78, verdict: "IN", marginMm: 42.0, line: "Baseline Near", speedMph: 38.6 },
-      { frame: 224, x: 0.48, y: 0.39, verdict: "IN", marginMm: 18.4, line: "NVZ Kitchen Far", speedMph: 21.4 },
-      { frame: 315, x: 0.88, y: 0.64, verdict: "IN", marginMm: 12.1, line: "Right Sideline", speedMph: 44.8 }
+      { frame: 97, x: 0.17, y: 0.92, verdict: "IN", marginMm: 140.0, line: "Near Backcourt", speedMph: 15.9 },
+      { frame: 164, x: 0.81, y: 0.36, verdict: "IN", marginMm: 115.0, line: "NVZ Kitchen Far", speedMph: 19.9 }
     ]
   },
 
@@ -83,6 +84,50 @@ export const CLIPS_DATA = {
       { frame: 115, x: 0.64, y: 0.71, verdict: "IN", marginMm: 29.5, line: "Right Sideline", speedMph: 41.2 },
       { frame: 188, x: 0.42, y: 0.61, verdict: "IN", marginMm: 9.8, line: "NVZ Kitchen Near", speedMph: 19.5 },
       { frame: 254, x: 0.94, y: 0.18, verdict: "OUT", marginMm: -16.4, line: "Baseline Far", speedMph: 47.9 }
+    ]
+  },
+
+  "match_mlp": {
+    id: "match_mlp",
+    shortName: "match_mlp.mp4",
+    isPortrait: false,
+    badgeTitle: "MATCH 2 • CLEAN MLP 720P (10.0S)",
+    resSummary: "1280×720 @ 30 FPS",
+    label: "match_mlp.mp4 • 10.00s Clean MLP Rally (1280×720 @ 30fps)",
+    videoUrl: "/outputs/match_mlp_base_preview.mp4",
+    resolution: "1280×720",
+    frames: 300,
+    fps: 30.0,
+    clipSeconds: 10.00,
+    scoreCall: "0 - 0 (MLP St. Petersburg)",
+    servingPlayer: "4-Player Pro Doubles Tracking",
+    timing: {
+      read_s: 0.24,
+      players_s: 10.50,
+      players_fps: 28.6,
+      ball_s: 57.60,
+      ball_fps: 5.2,
+      render_s: 2.19,
+      total_s: 72.99,
+      realtime_factor: 7.30
+    },
+    quality: {
+      playersTracked: "4.0 / 4 Locked",
+      ballDetectionRate: "300 / 300 frames (100.0%)",
+      nvzStatus: "KITCHEN (NVZ) ACTIVE (14-ft)",
+      lineCallVerdict: "4 Events • RMSE 0.0000 ft"
+    },
+    playerStats: [
+      { id: "P1", team: "Near Team A", distM: "9.4 m", avgSpeed: "3.4 km/h", maxSpeed: "22.4 km/h", kitchenPct: "0%", baselinePct: "64%" },
+      { id: "P2", team: "Near Team A", distM: "12.6 m", avgSpeed: "4.5 km/h", maxSpeed: "22.4 km/h", kitchenPct: "0%", baselinePct: "58%" },
+      { id: "P3", team: "Far Team B", distM: "27.0 m", avgSpeed: "8.9 km/h", maxSpeed: "35.4 km/h", kitchenPct: "32%", baselinePct: "0%" },
+      { id: "P4", team: "Far Team B", distM: "25.4 m", avgSpeed: "8.5 km/h", maxSpeed: "35.4 km/h", kitchenPct: "10%", baselinePct: "10%" }
+    ],
+    bounces: [
+      { frame: 83, x: 0.31, y: 0.99, verdict: "IN", marginMm: 101.0, line: "Baseline Near", speedMph: 7.0 },
+      { frame: 143, x: 0.23, y: 0.89, verdict: "IN", marginMm: 137.0, line: "Left Backcourt", speedMph: 20.1 },
+      { frame: 177, x: 0.26, y: 0.34, verdict: "IN", marginMm: 156.0, line: "NVZ Kitchen Far", speedMph: 25.8 },
+      { frame: 233, x: 0.82, y: 0.52, verdict: "IN", marginMm: 109.0, line: "Net Zone Right", speedMph: 26.3 }
     ]
   },
 
@@ -132,7 +177,7 @@ export const CLIPS_DATA = {
  * Generates deterministic 2D court kinematics for frame `f` out of `totalFrames`
  */
 export function getFrameTelemetry(clipKey, frameIndex) {
-  const clip = CLIPS_DATA[clipKey] || CLIPS_DATA["MicrosoftTeams-video"];
+  const clip = CLIPS_DATA[clipKey] || CLIPS_DATA["match1"];
   const total = clip.frames;
   const t = frameIndex / Math.max(1, total);
 

@@ -1,4 +1,4 @@
-# 🏓 Pickleball Base Vision AI — Master Accuracy & Week 2 Stabilization Report (`W2-07`)
+# 🏓 PickleBallVisualizer — Master Accuracy & Week 2 Stabilization Report (`W2-07`)
 
 > **Generated**: `2026-11-06 11:01:17` | **Milestone**: `W2-07: Fully Stabilized Base Perception Engine`
 

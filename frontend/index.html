@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pickleball Vision AI — Match Tracking, Subscriptions &amp; Officiating</title>
+  <title>Pickviz — Match Tracking, Subscriptions &amp; Officiating</title>
+  <link rel="icon" type="image/svg+xml" href="/LOGO/pickleballvisualizer-icon.svg" />
+  <link rel="apple-touch-icon" href="/LOGO/pickleballvisualizer-icon.svg" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -20,10 +22,19 @@
          ==================================================================== -->
     <div class="navbar-sticky-wrap">
       <header class="pill-navbar">
-        <button class="nav-brand" data-page="home">
-          <span class="brand-paddle-icon"></span>
-          <span>PICKLEBALL PRO VISION</span>
-          <span class="pro-league-tag">USAP 2026</span>
+        <button class="nav-brand" data-page="home" aria-label="Pickviz Home">
+          <span class="brand-logo-badge">
+            <img
+              class="brand-logo-img brand-logo-dark"
+              src="/LOGO/pickleballvisualizer-logo-dark.svg"
+              alt="Pickviz — Court Vision USAP 2026"
+            />
+            <img
+              class="brand-logo-img brand-logo-light"
+              src="/LOGO/pickleballvisualizer-logo.svg"
+              alt="Pickviz — Court Vision USAP 2026"
+            />
+          </span>
         </button>
 
         <nav class="nav-center-links" aria-label="Main Menu">
@@ -116,7 +127,7 @@
 
               <div class="hero-cta-row">
                 <button id="hero-watch-btn" class="btn-sports-primary">
-                  <span>Watch 9s Rally Demo</span>
+                  <span id="hero-watch-label">Watch 9s Rally Demo</span>
                   <span class="btn-arrow-icon">▶</span>
                 </button>
                 <button class="btn-sports-outline" data-page="subscriptions">
@@ -187,12 +198,24 @@
               <h2 class="dark-giant-word">COURT <span>VISION</span></h2>
             </div>
 
+            <div class="clip-switcher-bar" role="tablist" aria-label="Match Clip Selector">
+              <button type="button" class="clip-tab-btn active" data-clip="match1">
+                🎬 Match 1 (9.6s Pro Rally)
+              </button>
+              <button type="button" class="clip-tab-btn" data-clip="match_mlp">
+                🏓 Match 2 (10.0s Clean MLP HD)
+              </button>
+              <button type="button" class="clip-tab-btn" data-clip="cut">
+                📱 Cut Clip (4.9s HD 60fps)
+              </button>
+            </div>
+
             <div class="tournament-match-control-bar">
               <div class="match-badge-tag">
                 <span class="live-sports-beacon"></span>
-                <strong>MATCH 1 (9-SEC RALLY)</strong>
+                <strong id="match-badge-title">MATCH 1 (9-SEC RALLY)</strong>
                 <span class="tag-sep">•</span>
-                <span>1302×740 @ 30 FPS</span>
+                <span id="match-badge-res">1302×740 @ 30 FPS</span>
                 <span class="tag-sep">•</span>
                 <span class="tag-usap">USAP REGULATION</span>
               </div>
@@ -202,7 +225,7 @@
                   <span class="theater-icon">📺</span>
                   <span id="theater-btn-text">Theater Mode</span>
                 </button>
-                <button id="btn-toggle-pin-court" class="sports-btn-calib" title="Fine-tune 4 court corners on 9-second rally">
+                <button id="btn-toggle-pin-court" class="sports-btn-calib" title="Fine-tune 4 court corners on active rally clip">
                   <span>🎯 Pin &amp; Retrack Court</span>
                 </button>
               </div>
@@ -217,9 +240,9 @@
               <div class="workbench-header-left">
                 <span class="workbench-icon">🎯</span>
                 <div>
-                  <h3 class="workbench-title">9-Second Pro Rally Court Calibration &amp; Re-Tracking</h3>
+                  <h3 class="workbench-title">Interactive Court Calibration &amp; Re-Tracking</h3>
                   <p class="workbench-subtitle">
-                    Drag the 4 corner pins on the 1302×740 broadcast frame. Click "Retrack Court" to process the full 9s rally (289 frames).
+                    Drag the 4 corner pins on Frame 0. Click "Retrack Court" to run full perception + minimap rendering on the selected clip.
                   </p>
                 </div>
                 <span id="calib-status-badge" class="calib-badge success">✅ Calibrated • RMSE: 0.0000 ft</span>
@@ -228,10 +251,12 @@
               <div class="workbench-header-right">
                 <div class="single-clip-lock-badge">
                   <span>Target Clip:</span>
-                  <strong>match1.mp4 (9s Rally)</strong>
+                  <strong id="calib-target-clip-label">match1.mp4 (9.6s Rally)</strong>
                 </div>
-                <select id="calib-clip-select" class="workbench-select" style="display: none;">
-                  <option value="match1.mp4" selected>match1.mp4 (1302x740 • 9s Rally)</option>
+                <select id="calib-clip-select" class="workbench-select">
+                  <option value="match1.mp4" selected>match1.mp4 (1302x740 • 9.6s Rally)</option>
+                  <option value="match_mlp.mp4">match_mlp.mp4 (1280x720 • 10.0s Clean MLP)</option>
+                  <option value="cut.mp4">cut.mp4 (1440x2560 • 4.9s Portrait)</option>
                 </select>
                 <button id="btn-close-pin-court" class="btn-workbench-close" title="Close calibration tool">✕</button>
               </div>
@@ -387,7 +412,7 @@
                     💾 Save Court Geometry
                   </button>
                   <button type="button" id="btn-calib-run-pipeline" class="btn-sports-retrack" title="Run perception pipeline with these corners">
-                    ⚡ Retrack Court &amp; Run AI (Full 9s Rally)
+                    ⚡ Retrack Court &amp; Run AI (Active Clip)
                   </button>
                 </div>
 
@@ -533,7 +558,7 @@
           <div class="sub-header-center">
             <div class="live-anim-tag">
               <span class="pulse-ball"></span>
-              <span>PICKLEBALL AI BUSINESS PLANS • CHOOSE YOUR PADDLE TIER</span>
+              <span>PICKVIZ BUSINESS PLANS • CHOOSE YOUR PADDLE TIER</span>
             </div>
 
             <h1 class="sub-title-xl">
@@ -755,7 +780,7 @@
               </div>
 
               <div class="auth-visual-overlay-bottom">
-                <h3>PICKLEBALL VISION AI ACCOUNT</h3>
+                <h3>PICKVIZ ACCOUNT</h3>
                 <p>
                   Watch our live Carbon-Paddle Kitchen Volley telemetry above while you sign in. Your account and chosen <strong>Paddle</strong>, <strong>Paddle Pro</strong>, or <strong>Paddle Premium</strong> subscription are synced directly with our PostgreSQL / SQLAlchemy database.
                 </p>
@@ -778,7 +803,7 @@
 
               <!-- SIGN UP FORM -->
               <form id="signup-form">
-                <h2 class="auth-form-title">JOIN PICKLEBALL AI</h2>
+                <h2 class="auth-form-title">JOIN PICKVIZ</h2>
                 <p class="auth-form-sub">Create your player or club account and select your starting Paddle tier.</p>
 
                 <div class="form-field">
@@ -887,8 +912,17 @@
     </section>
 
     <footer class="simple-footer">
-      <span><strong>PICKLEBALL VISION AI</strong> — Plans: Paddle (Free) • Paddle Pro • Paddle Premium</span>
-      <span>Active Clip: match1.mp4 (9-Second USAP Tournament Rally)</span>
+      <span class="footer-brand">
+        <img
+          class="footer-brand-icon"
+          src="/LOGO/pickleballvisualizer-icon.svg"
+          alt="Pickviz Icon"
+          width="28"
+          height="28"
+        />
+        <span><strong>Pickviz</strong> — Plans: Paddle (Free) • Paddle Pro • Paddle Premium</span>
+      </span>
+      <span id="footer-active-clip">Active Clip: match1.mp4 (9.63s) • Clean MLP 720p (10.0s) • Cut Clip (4.92s)</span>
     </footer>
 
     <!-- ====================================================================

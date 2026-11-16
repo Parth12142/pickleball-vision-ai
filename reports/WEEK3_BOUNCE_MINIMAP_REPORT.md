@@ -166,4 +166,4 @@ OK
 | **Phase 2** | Court Minimap & Parabolic Bounce Kinematics | Week 3 | **5 / 5** | ✅ **100% Complete** |
 | **Phase 3** | Autonomous Rules Engine & USAP 0-0-2 Scoring | Week 4 | 0 / 6 | ⏳ Ready to Start |
 | **Phase 4** | Complete System Polish, Packaging & Production | Week 5 | 0 / 6 | 📅 Scheduled |
-| **TOTAL** | **Pickleball Vision AI System** | **5 Weeks** | **27 / 39 (69.2%)** | 🚀 **On Schedule** |
+| **TOTAL** | **PickleBallVisualizer System** | **5 Weeks** | **27 / 39 (69.2%)** | 🚀 **On Schedule** |

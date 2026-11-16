@@ -1,6 +1,6 @@
 /**
  * Foundational Tailwind CSS Configuration Block
- * Enforces the "Antigravity" Sports Design System for Pickleball Vision AI
+ * Enforces the "Antigravity" Sports Design System for PickleBallVisualizer
  */
 module.exports = {
   darkMode: ["class", '[data-theme="dark"]'],

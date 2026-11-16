@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-serve.py — Pickleball Vision AI Web & Database Server (PostgreSQL + SQLAlchemy)
+serve.py — Pickviz Web & Database Server (PostgreSQL + SQLAlchemy)
 Serves `frontend/` at http://localhost:3000, mounts `/outputs/` & `/results/`,
 and provides REST API endpoints for Sign Up, Login, and Subscription Management:
   - POST /api/auth/signup
@@ -293,12 +293,15 @@ def run_pipeline_worker(clip_name: str, max_frames: int = 60, multiscale: bool =
         if not os.path.exists(ball_weights):
             ball_weights = os.path.join(ROOT_DIR, "weights/ball_colab_dukcv.pt")
 
+        meta = get_clip_metadata(clip_path)
+        adaptive_imgsz = 640 if (meta and meta["width"] <= 800) else 1312
         pipeline = BasePerceptionPipeline(
             player_weights=player_weights,
             ball_weights=ball_weights,
-            ball_imgsz=1312,
+            ball_imgsz=adaptive_imgsz,
             multiscale=multiscale,
             ball_max_coast=3,
+            render_minimap=False,
         )
 
         with PIPELINE_LOCK:
@@ -355,6 +358,7 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
             parsed.startswith("/outputs/")
             or parsed.startswith("/results/")
             or parsed.startswith("/clips/")
+            or parsed.startswith("/LOGO/")
         ):
             rel = parsed.lstrip("/")
             return os.path.join(ROOT_DIR, rel)
@@ -488,14 +492,14 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
             return self.send_json(200, {"ok": True, "clips": clips_list})
 
         if parsed == "/api/frame0":
-            clip_name = query_params.get("clip", ["MicrosoftTeams-video.mp4"])[0]
+            clip_name = query_params.get("clip", ["match1.mp4"])[0]
             cache_path = extract_frame0_path(clip_name)
             if not cache_path or not os.path.exists(cache_path):
                 return self.send_json(404, {"ok": False, "error": f"Could not extract frame0 for clip {clip_name}"})
             return self.send_file_with_range(cache_path)
 
         if parsed == "/api/court-calibration":
-            clip_name = query_params.get("clip", ["MicrosoftTeams-video.mp4"])[0]
+            clip_name = query_params.get("clip", ["match1.mp4"])[0]
             base = os.path.basename(clip_name)
             clip_path = os.path.join(ROOT_DIR, "clips", base)
             meta = get_clip_metadata(clip_path)
@@ -605,7 +609,7 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
                 token = create_token(new_user.id, new_user.email)
                 return self.send_json(201, {
                     "ok": True,
-                    "message": f"Welcome to Pickleball Vision AI, {new_user.full_name}!",
+                    "message": f"Welcome to Pickviz, {new_user.full_name}!",
                     "token": token,
                     "user": new_user.to_dict(),
                 })
@@ -663,7 +667,7 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
                 })
 
         if parsed == "/api/court-calibration":
-            clip_name = data.get("clip", "MicrosoftTeams-video.mp4")
+            clip_name = data.get("clip", "match1.mp4")
             base = os.path.basename(clip_name)
             corners_raw = data.get("corners_px", [])
             if not isinstance(corners_raw, list) or len(corners_raw) != 4:
@@ -708,7 +712,7 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
             })
 
         if parsed == "/api/run-pipeline":
-            clip_name = data.get("clip", "MicrosoftTeams-video.mp4")
+            clip_name = data.get("clip", "match1.mp4")
             base = os.path.basename(clip_name)
             clip_path = os.path.join(ROOT_DIR, "clips", base)
             if not os.path.exists(clip_path):
@@ -746,7 +750,7 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     with ReusableTCPServer(("", PORT), TournamentUIRequestHandler) as httpd:
         print("=" * 72)
-        print(" 🏓 PICKLEBALL VISION AI // SAAS & TOURNAMENT UI SERVER")
+        print(" 🏓 PICKVIZ // SAAS & TOURNAMENT UI SERVER")
         print("=" * 72)
         print(f" 🌐 Local Web App : http://localhost:{PORT}")
         print(f" 🗄️ Database      : {DB_BACKEND_NAME} ({DB_HOST_INFO})")

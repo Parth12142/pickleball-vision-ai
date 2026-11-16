@@ -144,7 +144,7 @@ def update_run_accuracy_report(summary: dict, report_path: str = DEFAULT_REPORT_
 
     table_body = "\n".join(rows)
 
-    md_content = f"""# 🏓 Pickleball Vision AI — Run Accuracy & Performance Report
+    md_content = f"""# 🏓 PickleBallVisualizer — Run Accuracy & Performance Report
 
 > **Last Updated**: `{now_str}`  
 > **Total Pipeline Runs Recorded**: `{len(history)}`  
@@ -205,6 +205,7 @@ def parse_args():
     parser.add_argument("--max-frames", "--frames", "-n", dest="max_frames", type=int, default=None, help="Maximum frames to process")
     parser.add_argument("--out-dir", "--output", "-o", dest="out_dir", default=None, help="Output directory")
     parser.add_argument("--no-preview", action="store_true", help="Disable generating diagnostic preview video")
+    parser.add_argument("--minimap", action="store_true", help="Overlay 2D minimap inside rendered preview video")
     return parser.parse_args()
 
 
@@ -232,6 +233,7 @@ def main():
 
     cfg_players = cfg_models.get("players") if isinstance(cfg_models.get("players"), dict) else {}
     cfg_ball = cfg_models.get("ball") if isinstance(cfg_models.get("ball"), dict) else {}
+    cfg_render = cfg.get("render") if isinstance(cfg.get("render"), dict) else {}
 
     # 2. Resolve paths with fallback to PROJECT_ROOT
     clip_path = resolve_path(args.clip or cfg.get("clip"), DEFAULT_CLIP)
@@ -304,12 +306,14 @@ def main():
     print(f"  • Timing Log (CSV)   : {timing_csv}")
     print("=" * 80)
 
+    render_minimap = args.minimap or bool(cfg_render.get("minimap", False))
     pipeline = BasePerceptionPipeline(
         player_weights=player_weights,
         ball_weights=ball_weights,
         ball_imgsz=ball_imgsz,
         multiscale=multiscale,
         ball_max_coast=ball_max_coast,
+        render_minimap=render_minimap,
     )
 
     summary = pipeline.process_video(

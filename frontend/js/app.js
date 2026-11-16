@@ -1,5 +1,5 @@
 /**
- * app.js — Pickleball Vision AI Full-Page SaaS & Multi-View Controller
+ * app.js — Pickviz Full-Page SaaS & Multi-View Controller
  * - Live 60 FPS Pickleball Background Animation (PickleballBgAnimator)
  * - Dedicated Sign Up / Login Paddle-vs-Paddle Volley Animation (AuthPaddleDuelAnimator)
  * - 3-Tier Business Subscription Page (Paddle Free, Paddle Pro, Paddle Premium)
@@ -18,7 +18,7 @@ const UPCOMING_PAGES = {
   "ai-coach": {
     badge: "COMING SOON • HOW IT WORKS · AI PICKLEBALL COACH",
     title: "ANALYSE YOUR OWN TRAINING. RAISE YOUR PERFORMANCE.",
-    desc: "Film one stroke on your phone. Pickleball AI measures your technique using 17-keypoint skeletal biomechanics and tells you exactly what to work on.",
+    desc: "Film one stroke on your phone. Pickviz measures your technique using 17-keypoint skeletal biomechanics and tells you exactly what to work on.",
     specs: [
       { tag: "STEP 1 • PHONE VIDEO", title: "Film One Stroke on Your Phone", text: "Record a single Forehand Dink, Third-Shot Drive, Volley, or Serve from your phone camera." },
       { tag: "STEP 2 • 17-KEYPOINT AI", title: "Measures Your Technique", text: "Pretrained YOLO11-Pose tracks your knee bend, elbow angle, contact point in front of hip, and stance width." },
@@ -142,7 +142,7 @@ class PickleballWebsiteApp {
         console.log(`[App] Court calibrated for ${clipName}:`, corners);
       },
       onPipelineCompleted: (result) => {
-        console.log(`[App] Pipeline run completed for 9s rally:`, result);
+        console.log(`[App] Pipeline run completed:`, result);
         if (this.demoVideoEl && result.preview_url) {
           const freshUrl = `${result.preview_url}?t=${Date.now()}`;
           this.demoVideoEl.src = freshUrl;
@@ -154,15 +154,17 @@ class PickleballWebsiteApp {
           this.heroVideoEl.load();
           this.heroVideoEl.play().catch(() => {});
         }
-        this.setText("demo-score-call", `USAP Score: 8 - 6 - 2 (Verified RMSE: ${result.court_rmse_ft} ft)`);
+        const clipStem = result.clip ? result.clip.replace(/\.[^.]+$/, "") : this.activeClipKey;
+        const activeMeta = CLIPS_DATA[clipStem] || CLIPS_DATA[this.activeClipKey];
+        const scoreStr = activeMeta ? activeMeta.scoreCall : "8 - 6 - 2";
+        this.setText("demo-score-call", `USAP Score: ${scoreStr} (Verified RMSE: ${result.court_rmse_ft} ft)`);
         this.setText("demo-ball-tracked", `${result.ball_detect_pct}% frames tracked (${result.frames_processed}f)`);
-        this.loadRealTelemetry("match1");
+        this.loadRealTelemetry(clipStem);
       }
     });
 
     this.bindEvents();
     this.loadClip(this.activeClipKey);
-    this.loadRealTelemetry("match1");
     this.checkDbAndSession();
     this.startLoop();
   }
@@ -248,6 +250,16 @@ class PickleballWebsiteApp {
       });
     });
 
+    // 4b. Clip Switcher Tabs (Match 1 vs Match 2)
+    document.querySelectorAll(".clip-tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const clipKey = btn.dataset.clip;
+        if (clipKey) {
+          this.loadClip(clipKey);
+        }
+      });
+    });
+
     // 5. Subscription Billing Cycle Toggle (Monthly vs Annual Save 20%)
     document.querySelectorAll(".cycle-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -325,7 +337,7 @@ class PickleballWebsiteApp {
 
     // Set tactical HUD status and title
     const meta = TRANSITION_METADATA[pageKey] || {
-      tag: "PICKLEBALL AI",
+      tag: "PICKVIZ",
       title: "SWITCHING COURT VIEW"
     };
     const tagEl = document.getElementById("pb-loader-target-tag");
@@ -624,9 +636,14 @@ class PickleballWebsiteApp {
     if (!clip) return;
     this.activeClipKey = clipKey;
 
+    document.querySelectorAll(".clip-tab-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.clip === clipKey);
+    });
+
     const clipFilenameMap = {
-      "MicrosoftTeams-video": "MicrosoftTeams-video.mp4",
+      "cut": "cut.mp4",
       "match1": "match1.mp4",
+      "match_mlp": "match_mlp.mp4",
       "base_preview": "match1.mp4",
       "rally_sample": "rally_sample.mp4",
       "match": "match.mp4",
@@ -642,7 +659,11 @@ class PickleballWebsiteApp {
       this.courtRenderer.clearTrail();
     }
 
+    this.realTelemetry = null;
+    this.loadRealTelemetry(clipKey);
+
     if (this.heroVideoEl) {
+      this.heroVideoEl.classList.toggle("is-portrait", Boolean(clip.isPortrait));
       this.heroVideoEl.src = clip.videoUrl;
       this.heroVideoEl.load();
       this.heroVideoEl.play().catch(() => {});
@@ -653,7 +674,15 @@ class PickleballWebsiteApp {
       this.demoVideoEl.play().catch(() => {});
     }
 
-    this.setText("hero-clip-badge", `LIVE OUTPUT • ${clip.shortName}`);
+    const badgeTitle = clip.badgeTitle || `${clip.shortName.toUpperCase()} (${clip.clipSeconds.toFixed(1)}S RALLY)`;
+    const resStr = clip.resSummary || `${clip.resolution} @ ${Math.round(clip.fps)} FPS`;
+    this.setText("match-badge-title", badgeTitle);
+    this.setText("match-badge-res", resStr);
+    this.setText("calib-target-clip-label", `${clip.shortName} (${clip.clipSeconds.toFixed(1)}s Rally)`);
+    this.setText("hero-watch-label", `Watch ${clip.clipSeconds.toFixed(1)}s Rally Demo`);
+    this.setText("footer-active-clip", `Active Clip: ${clip.shortName} (${clip.clipSeconds.toFixed(2)}s Tournament Rally)`);
+
+    this.setText("hero-clip-badge", `LIVE OUTPUT • ${clip.shortName} (${clip.clipSeconds.toFixed(2)}s Rally)`);
     this.setText("mini-score-val", clip.scoreCall);
     this.setText("mini-players-val", clip.quality.playersTracked);
     this.setText("mini-nvz-val", clip.quality.nvzStatus);
@@ -760,17 +789,20 @@ class PickleballWebsiteApp {
             if (realFrame.ball && realFrame.ball.court_ft) {
               const bft = realFrame.ball.court_ft;
               const spd = realFrame.ball.speed_px_per_frame || 12.0;
+              const liveMph = (realFrame.ball.speed_mph && realFrame.ball.speed_mph > 0)
+                ? Number(realFrame.ball.speed_mph).toFixed(1)
+                : (spd * 1.95).toFixed(1);
               mappedBall = {
                 x: Math.max(0.02, Math.min(0.98, bft[0] / 20.0)),
                 y: Math.max(0.02, Math.min(0.98, bft[1] / 44.0)),
                 speedPx: spd,
-                speedMph: (spd * 1.95).toFixed(1),
+                speedMph: liveMph,
               };
             }
 
             telemetry = {
               frameIndex: frameIdx,
-              players: mappedPlayers.length === 4 ? mappedPlayers : getFrameTelemetry(this.activeClipKey, frameIdx).players,
+              players: mappedPlayers.length > 0 ? mappedPlayers : getFrameTelemetry(this.activeClipKey, frameIdx).players,
               ball: mappedBall || getFrameTelemetry(this.activeClipKey, frameIdx).ball,
               activeBounce: null,
             };
