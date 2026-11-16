@@ -27,6 +27,8 @@ outputs/*.mp4
 output/*.mp4
 outputs/*.avi
 output/*.avi
+outputs/*.jpg
+outputs/keyframes/
 outputs/match1_sample_*.jpg
 outputs/roi_check.png
 data/*.json
