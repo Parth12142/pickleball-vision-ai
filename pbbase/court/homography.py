@@ -75,10 +75,6 @@ class CourtCalibrator:
     """
     def __init__(self, corners_px: Optional[List[Tuple[float, float]]] = None):
         self.result = CourtCalibrationResult()
-        self._pose_ready: bool = False
-        self._K_inv: Optional[np.ndarray] = None
-        self._R_T: Optional[np.ndarray] = None
-        self._cam_pos: Optional[np.ndarray] = None
         if corners_px and len(corners_px) == 4:
             self.calibrate(corners_px)
 
@@ -114,67 +110,7 @@ class CourtCalibrator:
         self.result.corners_px = corners_px
         self.result.calibrated = True
         self.result.reprojection_rmse_ft = rmse
-        self._pose_ready = False
         return True
-
-    def solve_3d_pose(self, image_width: int, image_height: int, focal_scale: float = 1.15) -> bool:
-        """
-        Recovers 3D camera extrinsics (R, t, cam_pos) using cv2.solvePnP from the 4 court corners.
-        Enables height-compensated ray-plane intersection for airborne ball tracking.
-        """
-        if not self.result.calibrated or len(self.result.corners_px) != 4:
-            return False
-
-        f = float(focal_scale * max(image_width, image_height))
-        K = np.array(
-            [[f, 0.0, image_width / 2.0], [0.0, f, image_height / 2.0], [0.0, 0.0, 1.0]],
-            dtype=np.float64,
-        )
-        obj_pts = np.array(
-            [
-                [0.0, 0.0, 0.0],
-                [CourtGeometry.WIDTH_FT, 0.0, 0.0],
-                [CourtGeometry.WIDTH_FT, CourtGeometry.LENGTH_FT, 0.0],
-                [0.0, CourtGeometry.LENGTH_FT, 0.0],
-            ],
-            dtype=np.float64,
-        )
-        img_pts = np.array(self.result.corners_px, dtype=np.float64)
-
-        ok, rvec, tvec = cv2.solvePnP(obj_pts, img_pts, K, np.zeros(4), flags=cv2.SOLVEPNP_ITERATIVE)
-        if not ok:
-            return False
-
-        R, _ = cv2.Rodrigues(rvec)
-        cam_pos = (-R.T @ tvec).flatten()
-        self._K_inv = np.linalg.inv(K)
-        self._R_T = R.T
-        self._cam_pos = cam_pos
-        self._pose_ready = True
-        return True
-
-    def pixel_to_court_at_height_ft(self, px: float, py: float, height_ft: float = 0.0) -> Optional[Tuple[float, float]]:
-        """
-        Projects camera pixel (px, py) onto a horizontal plane at `height_ft` above the court.
-        When height_ft <= 0.01 or 3D pose is unavailable, falls back to standard ground homography.
-        """
-        if height_ft <= 0.01 or not self._pose_ready or self._K_inv is None or self._R_T is None or self._cam_pos is None:
-            return self.pixel_to_court_ft(px, py)
-
-        # In our right-handed court frame (X=right, Y=toward camera), +height above court is -Z
-        z_target = -float(height_ft)
-        ray_cam = self._K_inv @ np.array([float(px), float(py), 1.0], dtype=np.float64)
-        ray_world = self._R_T @ ray_cam
-
-        if abs(ray_world[2]) < 1e-6:
-            return self.pixel_to_court_ft(px, py)
-
-        s = (z_target - self._cam_pos[2]) / ray_world[2]
-        if s <= 0.0:
-            return self.pixel_to_court_ft(px, py)
-
-        pt = self._cam_pos + s * ray_world
-        return float(pt[0]), float(pt[1])
 
     def pixel_to_court_ft(self, px: float, py: float) -> Optional[Tuple[float, float]]:
         """Project camera image pixel (x, y) to court plane (X_ft, Y_ft)."""

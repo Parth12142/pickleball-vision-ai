@@ -48,10 +48,16 @@ class BallTrajectoryTracker:
         self.gap_buffer.clear()
         self.raw_history.clear()
 
-    def _apply_retroactive_parabolic_fit(self, end_pt: Dict[str, Any]):
+    def _apply_retroactive_parabolic_fit(
+        self,
+        end_pt: Dict[str, Any],
+        court_calibrator: Optional[CourtCalibrator] = None,
+    ):
         """
         Retroactively refines coasted points in gap_buffer by fitting a ballistic
         parabolic polynomial between last_observed_pos and newly observed end_pt.
+        Also recomputes metric court_ft via homography H so no stale coasted
+        coordinates remain in telemetry or on the minimap.
         """
         if not self.gap_buffer or self.last_observed_pos is None:
             self.gap_buffer.clear()
@@ -91,6 +97,9 @@ class BallTrajectoryTracker:
                 round(float(xk + 6.0), 1),
                 round(float(yk + 6.0), 1),
             ]
+            if court_calibrator is not None:
+                cft = court_calibrator.pixel_to_court_ft(xk, yk)
+                pt["court_ft"] = (round(cft[0], 2), round(cft[1], 2)) if cft else None
             pt["retro_parabolic_refined"] = True
 
         self.gap_buffer.clear()
@@ -186,7 +195,7 @@ class BallTrajectoryTracker:
 
             # If recovering from brief gap, apply retroactive parabolic fit
             if self.consecutive_lost > 0:
-                self._apply_retroactive_parabolic_fit(point_data)
+                self._apply_retroactive_parabolic_fit(point_data, court_calibrator=court_calibrator)
 
             # Update momentum with exponential moving average
             self.velocity = [0.75 * vx + 0.25 * self.velocity[0], 0.75 * vy + 0.25 * self.velocity[1]]

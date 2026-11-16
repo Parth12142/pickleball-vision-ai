@@ -50,8 +50,9 @@ class CourtMinimap:
         self,
         court_scale: float = 10.0,
         padding: int = 20,
-        trail_len: int = 16,
+        trail_len: int = 12,
         bounce_duration: int = 30,
+        ema_alpha: float = 0.60,
     ):
         """
         Args:
@@ -59,11 +60,13 @@ class CourtMinimap:
             padding: Apron margin in pixels around the court boundary.
             trail_len: Maximum historical ball trail length rendered.
             bounce_duration: Lifetime of bounce ripple animation in frames.
+            ema_alpha: Gentle 3-frame equivalent EMA smoothing weight (1.0 = unsmoothed).
         """
         self.court_scale = court_scale
         self.padding = padding
         self.trail_len = trail_len
         self.bounce_duration = bounce_duration
+        self.ema_alpha = ema_alpha
 
         self.court_w_px = int(round(CourtGeometry.WIDTH_FT * self.court_scale))
         self.court_h_px = int(round(CourtGeometry.LENGTH_FT * self.court_scale))
@@ -77,11 +80,15 @@ class CourtMinimap:
         # Dynamic state
         self.ball_trail: List[Tuple[float, float]] = []
         self.active_bounces: List[MinimapBounceMarker] = []
+        self._ema_ball_ft: Optional[Tuple[float, float]] = None
+        self._missed_ball_frames: int = 0
 
     def reset(self):
-        """Reset dynamic trails and bounce markers."""
+        """Reset dynamic trails, EMA smoother, and bounce markers."""
         self.ball_trail.clear()
         self.active_bounces.clear()
+        self._ema_ball_ft = None
+        self._missed_ball_frames = 0
 
     def court_to_canvas(self, x_ft: float, y_ft: float) -> Tuple[int, int]:
         """Convert metric court coordinates (feet) to minimap canvas pixel coordinates."""
@@ -200,29 +207,52 @@ class CourtMinimap:
 
         self.active_bounces = surviving_bounces
 
-        # 2. Update and render Ball Trajectory Trail
-        ball_cft = None
-        if ball is not None:
-            ball_cft = ball.get("minimap_court_ft") or ball.get("court_ft")
+        # 2. Update and render Ball Trajectory Trail (Pure 1:1 H(u,v) + 3-frame EMA)
+        raw_cft = ball.get("court_ft") if ball is not None else None
 
-        if ball_cft is not None:
-            self.ball_trail.append((float(ball_cft[0]), float(ball_cft[1])))
+        if raw_cft is not None:
+            self._missed_ball_frames = 0
+            rx, ry = float(raw_cft[0]), float(raw_cft[1])
+            if self._ema_ball_ft is not None:
+                dist = float(np.hypot(rx - self._ema_ball_ft[0], ry - self._ema_ball_ft[1]))
+                if dist > 14.0:
+                    # Clean track reset on large discontinuity
+                    self.ball_trail.clear()
+                    sx, sy = rx, ry
+                else:
+                    sx = self.ema_alpha * rx + (1.0 - self.ema_alpha) * self._ema_ball_ft[0]
+                    sy = self.ema_alpha * ry + (1.0 - self.ema_alpha) * self._ema_ball_ft[1]
+            else:
+                sx, sy = rx, ry
+
+            self._ema_ball_ft = (sx, sy)
+            self.ball_trail.append((sx, sy))
             if len(self.ball_trail) > self.trail_len:
                 self.ball_trail.pop(0)
+        else:
+            self._missed_ball_frames += 1
+            if self._missed_ball_frames > 4:
+                self._ema_ball_ft = None
+                self.ball_trail.clear()
 
         if len(self.ball_trail) >= 2:
             trail_pts = [self.court_to_canvas(x, y) for x, y in self.ball_trail]
+            n_segs = len(trail_pts) - 1
             for i in range(1, len(trail_pts)):
-                alpha = (i + 1) / len(trail_pts)
-                thickness = max(1, int(round(1 + alpha * 2)))
-                pt1, pt2 = trail_pts[i - 1], trail_pts[i]
-                cv2.line(canvas, pt1, pt2, COLOR_BALL, thickness, cv2.LINE_AA)
+                progress = i / float(max(1, n_segs))
+                fade = 0.25 + 0.75 * progress
+                col = tuple(int(c * fade) for c in COLOR_BALL)
+                thickness = max(1, int(round(1 + progress * 2)))
+                pt1 = (max(3, min(self.canvas_w - 4, trail_pts[i - 1][0])), max(3, min(self.canvas_h - 4, trail_pts[i - 1][1])))
+                pt2 = (max(3, min(self.canvas_w - 4, trail_pts[i][0])), max(3, min(self.canvas_h - 4, trail_pts[i][1])))
+                cv2.line(canvas, pt1, pt2, col, thickness, cv2.LINE_AA)
 
         # 3. Render Current Ball Position
-        if ball_cft is not None:
-            bx, by = self.court_to_canvas(ball_cft[0], ball_cft[1])
+        if self._ema_ball_ft is not None:
+            bx, by = self.court_to_canvas(self._ema_ball_ft[0], self._ema_ball_ft[1])
             bx_c = max(5, min(self.canvas_w - 6, bx))
             by_c = max(5, min(self.canvas_h - 6, by))
+            cv2.circle(canvas, (bx_c, by_c), 6, (15, 20, 25), -1, cv2.LINE_AA)
             cv2.circle(canvas, (bx_c, by_c), 5, COLOR_BALL, -1, cv2.LINE_AA)
             cv2.circle(canvas, (bx_c, by_c), 2, (255, 255, 255), -1, cv2.LINE_AA)
 

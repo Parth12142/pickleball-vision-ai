@@ -14,7 +14,7 @@ import numpy as np
 from pbbase.court.homography import CourtCalibrator, CourtGeometry
 from pbbase.court.minimap import CourtMinimap, MinimapBounceMarker
 from pbbase.tracking.bounce_detector import BallBounceDetector, BounceEvent
-from pbbase.tracking.ball_3d_tracker import Ball3DReconstructor
+from pbbase.tracking.ball_trajectory import BallTrajectoryTracker
 from pbbase.data.schema import validate_telemetry_schema, SCHEMA_VERSION, SCHEMA_PRODUCER
 
 
@@ -267,45 +267,49 @@ class TestWeek3MinimapAndBounce(unittest.TestCase):
         is_valid, errors = validate_telemetry_schema(valid_doc)
         self.assertTrue(is_valid, f"Schema validation errors: {errors}")
 
-    def test_solve_3d_pose_and_height_projection(self):
-        """Verify 3D solvePnP pose recovery and height-compensated ray intersection."""
+    def test_retroactive_parabolic_updates_court_ft(self):
+        """Verify retroactive gap refinement recomputes court_ft via homography H (zero stale spikes)."""
         cal = CourtCalibrator([(425.0, 177.0), (855.0, 177.0), (1080.0, 610.0), (204.0, 602.0)])
-        ok = cal.solve_3d_pose(1302, 740)
-        self.assertTrue(ok)
-        self.assertTrue(cal._pose_ready)
+        tracker = BallTrajectoryTracker(max_jump_px=120.0, max_coast_frames=3, gravity_px=15.0)
 
-        # Airborne ball over the net at (487.8, 167.7) px:
-        # At Z=0, it projects off the court (Y < 0). At Z=5.5 ft, it projects near the net (Y ~ 23 ft).
-        x0, y0 = cal.pixel_to_court_at_height_ft(487.8, 167.7, height_ft=0.0)
-        x5, y5 = cal.pixel_to_court_at_height_ft(487.8, 167.7, height_ft=5.5)
-        self.assertLess(y0, 0.0)
-        self.assertGreater(y5, 15.0)
-        self.assertLess(y5, 30.0)
+        # Frame 0 & 1 establish velocity moving down (+y)
+        tracker.process_candidates([{"box": [600, 200, 610, 210], "conf": 0.8, "center_px": (605.0, 205.0)}], 0, 0.0, cal)
+        tracker.process_candidates([{"box": [610, 230, 620, 240], "conf": 0.8, "center_px": (615.0, 235.0)}], 1, 0.033, cal)
 
-    def test_ball_3d_reconstructor_smooth_arc(self):
-        """Verify Ball3DReconstructor eliminates Z=0 parallax loops and fills short gaps."""
-        cal = CourtCalibrator([(425.0, 177.0), (855.0, 177.0), (1080.0, 610.0), (204.0, 602.0)])
-        cal.solve_3d_pose(1302, 740)
+        # Frame 2 coasts with huge synthetic gravity (gravity_px=15 -> would drift far downward)
+        p2 = tracker.process_candidates([], 2, 0.066, cal)
+        self.assertIsNotNone(p2)
+        stale_court_ft = p2["court_ft"]
 
-        stream = [
-            {"frame_idx": 0, "timestamp_s": 0.0, "players": [{"id": 1, "box": [660, 350, 720, 500], "court_ft": (14.0, 42.0)}], "ball": {"pixel": (685.4, 370.3), "court_ft": (11.4, 28.4)}},
-            {"frame_idx": 1, "timestamp_s": 0.2, "players": [], "ball": {"pixel": (600.0, 250.0), "court_ft": (8.5, 12.0)}},
-            {"frame_idx": 2, "timestamp_s": 0.4, "players": [], "ball": None},  # Dropout gap
-            {"frame_idx": 3, "timestamp_s": 0.6, "players": [], "ball": {"pixel": (487.8, 167.7), "court_ft": (2.1, -1.6)}},
-            {"frame_idx": 4, "timestamp_s": 0.87, "players": [], "ball": {"pixel": (452.6, 220.2), "court_ft": (2.1, 8.2)}},
-        ]
-        bounces = [{"frame_idx": 4, "timestamp_s": 0.87, "pixel": [452.6, 220.2], "court_ft": [2.1, 8.2], "is_ground_bounce": True}]
+        # Frame 3 recovers actually UPWARD near (625, 220) -> triggers retroactive fit
+        tracker.process_candidates([{"box": [620, 215, 630, 225], "conf": 0.85, "center_px": (625.0, 220.0)}], 3, 0.099, cal)
 
-        reconstructor = Ball3DReconstructor()
-        out = reconstructor.reconstruct(stream, cal, bounces=bounces, image_size=(1302, 740))
+        # Verify p2["court_ft"] was updated to match p2["pixel"] through H
+        expected = cal.pixel_to_court_ft(p2["pixel"][0], p2["pixel"][1])
+        self.assertAlmostEqual(p2["court_ft"][0], expected[0], places=1)
+        self.assertAlmostEqual(p2["court_ft"][1], expected[1], places=1)
+        self.assertNotEqual(p2["court_ft"], stale_court_ft)
 
-        # Gap frame 2 should now be populated
-        self.assertIsNotNone(out[2]["ball"])
-        self.assertIn("minimap_court_ft", out[2]["ball"])
+    def test_minimap_ema_and_fading_trail(self):
+        """Verify 3-frame EMA smoothing, 12-frame trail length limit, and discontinuity reset."""
+        minimap = CourtMinimap(court_scale=10.0, padding=20, trail_len=12, ema_alpha=0.6)
 
-        # Frame 3 (mid-flight) should NO LONGER have Y = -1.6 (behind baseline); it should be in-court (~15-25 ft)
-        y3 = out[3]["ball"]["minimap_court_ft"][1]
-        self.assertGreater(y3, 10.0)
+        # Feed 15 continuous points (with minor jitter)
+        for i in range(15):
+            jitter = 0.2 if (i % 2 == 0) else -0.2
+            minimap.render(ball={"court_ft": (10.0 + jitter, float(5 + i))}, frame_idx=i)
+
+        # Trail length must be capped at 12
+        self.assertEqual(len(minimap.ball_trail), 12)
+        # EMA output smooths the 0.2 jitter
+        self.assertIsNotNone(minimap._ema_ball_ft)
+        self.assertLess(abs(minimap._ema_ball_ft[0] - 10.0), 0.2)
+
+        # Missing frames > 4 cleanly resets trail
+        for f in range(15, 21):
+            minimap.render(ball=None, frame_idx=f)
+        self.assertEqual(len(minimap.ball_trail), 0)
+        self.assertIsNone(minimap._ema_ball_ft)
 
 
 if __name__ == "__main__":

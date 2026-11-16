@@ -24,7 +24,6 @@ from pbbase.models.detector import PlayerDetector, BallDetector
 from pbbase.tracking.player_tracker import CanonicalPlayerTracker
 from pbbase.tracking.ball_trajectory import BallTrajectoryTracker, get_speed_color
 from pbbase.tracking.bounce_detector import BallBounceDetector, BounceEvent
-from pbbase.tracking.ball_3d_tracker import Ball3DReconstructor
 from pbbase.data.schema import SCHEMA_VERSION, SCHEMA_PRODUCER
 
 
@@ -40,10 +39,10 @@ class BasePerceptionPipeline:
     def __init__(
         self,
         player_weights: str = "weights/yolo26n.pt",
-        ball_weights: str = "weights/ball_colab_dukcv.pt",
+        ball_weights: str = "weights/ball_yolo26_best.pt",
         player_conf: float = 0.25,
         ball_conf: float = 0.15,
-        ball_imgsz: int = 1280,
+        ball_imgsz: int = 1312,
         multiscale: bool = False,
         ball_patch_slices: Optional[List[Tuple[float, float, float, float]]] = None,
         ball_max_coast: int = 3,
@@ -52,6 +51,9 @@ class BasePerceptionPipeline:
         render_minimap: bool = True,
         minimap_position: str = "bottom-right",
     ):
+        if not os.path.exists(ball_weights) and os.path.exists("weights/ball_colab_dukcv.pt"):
+            ball_weights = "weights/ball_colab_dukcv.pt"
+
         print(f"[BasePerceptionPipeline] Loading Player Model: {player_weights}")
         self.player_detector = PlayerDetector(player_weights, conf_thresh=player_conf)
         print(f"[BasePerceptionPipeline] Loading Ball Model  : {ball_weights} (imgsz={ball_imgsz}, multiscale={multiscale})")
@@ -70,8 +72,7 @@ class BasePerceptionPipeline:
             max_coast_frames=ball_max_coast,
         )
         self.bounce_detector = BallBounceDetector()
-        self.ball_3d_reconstructor = Ball3DReconstructor()
-        self.court_minimap = CourtMinimap(court_scale=8.5, padding=45, trail_len=20)
+        self.court_minimap = CourtMinimap(court_scale=8.5, padding=45, trail_len=12, ema_alpha=0.60)
         self.render_minimap = render_minimap
         self.minimap_position = minimap_position
 
@@ -149,8 +150,6 @@ class BasePerceptionPipeline:
             t_c_start = time.time()
             if not self.court_calibrator.result.calibrated:
                 self.court_calibrator.auto_calibrate_broadcast(frame, clip_name=os.path.basename(video_path))
-            if self.court_calibrator.result.calibrated and not self.court_calibrator._pose_ready:
-                self.court_calibrator.solve_3d_pose(w, h)
             t_court_total += (time.time() - t_c_start)
 
             # 2. Detect & Track Players
@@ -182,6 +181,8 @@ class BasePerceptionPipeline:
                 self.court_calibrator,
                 players=active_players,
             )
+            if bounce_event is not None and bounce_event.is_ground_bounce:
+                self.court_minimap.add_bounce(bounce_event.court_xy_ft, frame_idx)
             t_bounce_total += (time.time() - t_bnc_start)
 
             # Telemetry record for this frame
@@ -195,49 +196,14 @@ class BasePerceptionPipeline:
             }
             telemetry_stream.append(frame_record)
 
-            frame_idx += 1
-            if frame_idx % 30 == 0:
-                elapsed = time.time() - t0
-                print(f"  Processed {frame_idx}/{frames_to_read} frames ({frame_idx / max(0.01, elapsed):.1f} FPS)...")
-
-        cap.release()
-
-        # 5. 3D Height-Compensated Ballistic Reconstruction for Minimap
-        all_bounces_dicts = [b.to_dict() for b in self.bounce_detector.detected_bounces]
-        self.ball_3d_reconstructor.reconstruct(
-            telemetry_stream,
-            self.court_calibrator,
-            bounces=all_bounces_dicts,
-            image_size=(w, h),
-        )
-
-        # 6. Pass 2: Render diagnostic overlay & 3D-compensated Minimap HUD if preview requested
-        if writer:
-            self.court_minimap.reset()
-            cap_vis = cv2.VideoCapture(video_path)
-            vis_idx = 0
-            vis_ball_history: List[Optional[Tuple[float, float, float]]] = []
-            while cap_vis.isOpened() and vis_idx < len(telemetry_stream):
-                ok, vframe = cap_vis.read()
-                if not ok:
-                    break
-                rec = telemetry_stream[vis_idx]
-                b = rec.get("ball")
-                if b is not None and b.get("pixel") is not None:
-                    vis_ball_history.append((b["pixel"][0], b["pixel"][1], b.get("speed_px_per_frame", 0.0)))
-                else:
-                    vis_ball_history.append(None)
-
-                bnc = rec.get("bounce")
-                if bnc is not None and bnc.get("is_ground_bounce", False):
-                    self.court_minimap.add_bounce(tuple(bnc["court_ft"]), vis_idx)
-
+            # 5. Render diagnostic overlay & direct 1:1 Minimap HUD if preview requested
+            if writer:
                 t_r_start = time.time()
                 annotated = self._render_frame(
-                    vframe,
-                    rec,
-                    vis_ball_history,
-                    vis_idx,
+                    frame,
+                    frame_record,
+                    ball_pts_history,
+                    frame_idx,
                     frames_to_read,
                     fps,
                     render_minimap=do_render_minimap,
@@ -245,14 +211,19 @@ class BasePerceptionPipeline:
                 )
                 writer.write(annotated)
                 t_render_total += (time.time() - t_r_start)
-                vis_idx += 1
 
-            cap_vis.release()
+            frame_idx += 1
+            if frame_idx % 30 == 0:
+                elapsed = time.time() - t0
+                print(f"  Processed {frame_idx}/{frames_to_read} frames ({frame_idx / max(0.01, elapsed):.1f} FPS)...")
+
+        cap.release()
+        elapsed_total = time.time() - t0
+
+        if writer:
             writer.release()
             self._encode_h264(raw_preview_tmp, out_preview)
             print(f"[BasePerceptionPipeline] Saved H.264 preview to: {out_preview}")
-
-        elapsed_total = time.time() - t0
 
         corners_list = [[round(x, 1), round(y, 1)] for x, y in self.court_calibrator.result.corners_px]
         court_schema = {
