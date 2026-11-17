@@ -83,12 +83,15 @@ class Ball3DReconstructor:
         return min(valid, key=score_player)
 
     def _scrub_outliers(
-        self, telemetry_stream: List[Dict[str, Any]]
+        self,
+        telemetry_stream: List[Dict[str, Any]],
+        scale_px: float = 1.0,
     ) -> List[Optional[Tuple[float, float]]]:
         """
         Extracts ONLY genuine observed pixel centers (interpolated=False) from
-        telemetry_stream and removes isolated teleport spikes (> max_outlier_jump_px).
+        telemetry_stream and removes isolated teleport spikes (> max_outlier_jump_px * scale_px).
         """
+        eff_max_jump = self.max_outlier_jump_px * max(0.45, scale_px)
         cleaned: List[Optional[Tuple[float, float]]] = []
         for rec in telemetry_stream:
             b = rec.get("ball")
@@ -110,7 +113,7 @@ class Ball3DReconstructor:
                 d_next = np.hypot(p_next[0] - p_curr[0], p_next[1] - p_curr[1])
                 d_bridge = np.hypot(p_next[0] - p_prev[0], p_next[1] - p_prev[1])
 
-                if d_prev > self.max_outlier_jump_px and d_next > self.max_outlier_jump_px and d_bridge < self.max_outlier_jump_px * 1.4:
+                if d_prev > eff_max_jump and d_next > eff_max_jump and d_bridge < eff_max_jump * 1.4:
                     cleaned[i] = None
 
         return cleaned
@@ -132,6 +135,10 @@ class Ball3DReconstructor:
         if not valid_frames:
             return [], bounces
 
+        scale_px = calibrator.get_court_pixel_scale() if calibrator is not None else 1.0
+        norm_px = max(0.45, scale_px)
+        eff_paddle_prox = self.paddle_prox_px * norm_px
+
         anchors: Dict[int, ShotAnchor] = {}
         updated_bounces = [dict(b) for b in bounces]
 
@@ -149,7 +156,7 @@ class Ball3DReconstructor:
             p_height = 0.0
             if not is_ground:
                 best_p = self._find_closest_player_box(px[0], px[1], players)
-                if best_p and self._dist_point_to_box(px[0], px[1], best_p["box"]) < 120.0:
+                if best_p and self._dist_point_to_box(px[0], px[1], best_p["box"]) < 120.0 * norm_px:
                     p_height = self._estimate_paddle_height_ft(px[1], best_p["box"])
                 else:
                     p_height = 2.5
@@ -186,9 +193,9 @@ class Ball3DReconstructor:
                         continue
                     vy_in = (clean_pts[k][1] - pre_pts[0][1]) / max(1, k - max(0, k - 4))
                     vy_out = (post_pts[-1][1] - clean_pts[k][1]) / max(1, min(n, k + 5) - 1 - k)
-                    if vy_in < -0.8 and vy_out > 0.3 and clean_pts[k][1] < best_min_y:
+                    if vy_in < -0.8 * norm_px and vy_out > 0.3 * norm_px and clean_pts[k][1] < best_min_y:
                         players = telemetry_stream[k].get("players", [])
-                        if any(self._dist_point_to_box(clean_pts[k][0], clean_pts[k][1], p["box"]) < self.paddle_prox_px for p in players if p.get("box")):
+                        if any(self._dist_point_to_box(clean_pts[k][0], clean_pts[k][1], p["box"]) < eff_paddle_prox for p in players if p.get("box")):
                             best_min_y = clean_pts[k][1]
                             best_f = k
 
@@ -231,7 +238,7 @@ class Ball3DReconstructor:
             players = telemetry_stream[i].get("players", [])
             near_players = [
                 p for p in players
-                if p.get("box") and self._dist_point_to_box(p_curr[0], p_curr[1], p["box"]) < 105.0
+                if p.get("box") and self._dist_point_to_box(p_curr[0], p_curr[1], p["box"]) < 105.0 * norm_px
             ]
             if not near_players:
                 continue
@@ -243,11 +250,11 @@ class Ball3DReconstructor:
                 v_out = np.array([clean_pts[post_idx][0] - p_curr[0], clean_pts[post_idx][1] - p_curr[1]]) / max(1, gap)
 
             n_in, n_out = np.linalg.norm(v_in), np.linalg.norm(v_out)
-            if n_in > 3.0 and n_out > 2.5:
+            if n_in > 3.0 * norm_px and n_out > 2.5 * norm_px:
                 cos_theta = float(np.dot(v_in, v_out) / (n_in * n_out))
                 is_gap_hit = (gap >= 3 and (v_in[1] * v_out[1] < 0 or cos_theta < 0.35))
-                is_antigravity_hit = (v_in[1] > 1.5 and v_out[1] < -1.5 and cos_theta < 0.45)
-                is_lateral_kink = (v_in[0] * v_out[0] < -1.0 and cos_theta < 0.25)
+                is_antigravity_hit = (v_in[1] > 1.5 * norm_px and v_out[1] < -1.5 * norm_px and cos_theta < 0.45)
+                is_lateral_kink = (v_in[0] * v_out[0] < -1.0 * (norm_px ** 2) and cos_theta < 0.25)
                 speed_jump = max(n_in, n_out) / max(0.5, min(n_in, n_out))
                 is_acute_impulse = (cos_theta < -0.55 and speed_jump > 1.45)
 
@@ -264,7 +271,7 @@ class Ball3DReconstructor:
                         if best_p and best_p.get("box"):
                             bx1, by1, bx2, by2 = best_p["box"]
                             pred_px = (
-                                float(np.clip(p_curr[0] + v_in[0] * (hit_frame - i), bx1 - 15.0, bx2 + 15.0)),
+                                float(np.clip(p_curr[0] + v_in[0] * (hit_frame - i), bx1 - 15.0 * norm_px, bx2 + 15.0 * norm_px)),
                                 float(np.clip(p_curr[1] + v_in[1] * (hit_frame - i), by1, by2 - 0.15 * (by2 - by1))),
                             )
                             hit_px = pred_px
@@ -299,7 +306,7 @@ class Ball3DReconstructor:
             px = clean_pts[f_start]
             players = telemetry_stream[f_start].get("players", [])
             best_p = self._find_closest_player_box(px[0], px[1], players)
-            h_start = self._estimate_paddle_height_ft(px[1], best_p["box"]) if best_p and self._dist_point_to_box(px[0], px[1], best_p["box"]) < 140.0 else 3.0
+            h_start = self._estimate_paddle_height_ft(px[1], best_p["box"]) if best_p and self._dist_point_to_box(px[0], px[1], best_p["box"]) < 140.0 * norm_px else 3.0
             cft = calibrator.pixel_to_court_at_height_ft(px[0], px[1], h_start) or calibrator.pixel_to_court_ft(px[0], px[1])
             if cft:
                 anchors[f_start] = ShotAnchor(
@@ -340,7 +347,8 @@ class Ball3DReconstructor:
     ) -> Dict[int, Tuple[float, float, float, bool]]:
         """
         Reconstructs 3D trajectory (X_ft, Y_ft, Z_ft, is_observed) between anchors a1 -> a2.
-        Enforces 1-to-1 consistency and strict C0 continuity across shared shot anchors.
+        Uses smooth Gaussian ray-to-ballistic blending and interior low-pass stabilization
+        to prevent camera-ray longitudinal sliding jitter on the 2D minimap.
         """
         k1, k2 = a1.frame_idx, a2.frame_idx
         t1, t2 = a1.timestamp_s, a2.timestamp_s
@@ -463,19 +471,32 @@ class Ball3DReconstructor:
 
             px = clean_pts[k]
             if px is not None and calibrator.result.pose_calibrated:
-                # 1-to-1 Pixel-to-Ray locking at solved flight height z_fit:
-                # Ensures the minimap projects the EXACT same ball seen in camera frame (reproj_err -> ~0 px)
+                # Smooth Gaussian ray-to-curve fusion (eliminates hard threshold jumps & ray sliding)
+                if k == k1 or k == k2:
+                    segment_out[k] = (float(x_fit), float(y_fit), z_fit, True)
+                    continue
                 ray_xy = calibrator.pixel_to_court_at_height_ft(px[0], px[1], z_fit)
                 if ray_xy is not None:
                     rx, ry = ray_xy
-                    if abs(rx - x_fit) < 5.5 and abs(ry - y_fit) < 8.0:
-                        segment_out[k] = (float(rx), float(ry), z_fit, True)
-                        continue
-                    elif abs(rx - x_fit) < 10.0 and abs(ry - y_fit) < 14.0:
-                        segment_out[k] = (float(0.65 * rx + 0.35 * x_fit), float(0.65 * ry + 0.35 * y_fit), z_fit, True)
-                        continue
+                    err_ft = float(np.hypot(rx - x_fit, (ry - y_fit) * 0.75))
+                    w_ray = float(0.42 * np.exp(-0.5 * ((err_ft / 5.0) ** 2)))
+                    bx = w_ray * rx + (1.0 - w_ray) * x_fit
+                    by = w_ray * ry + (1.0 - w_ray) * y_fit
+                    segment_out[k] = (float(bx), float(by), z_fit, True)
+                    continue
 
-            segment_out[k] = (float(x_fit), float(y_fit), z_fit, False)
+            segment_out[k] = (float(x_fit), float(y_fit), z_fit, px is not None)
+
+        # Light 3-point zero-phase interior smoothing along segment to suppress per-frame bbox jitter
+        if (k2 - k1) >= 4:
+            ks = list(range(k1, k2 + 1))
+            xs_seg = [segment_out[k][0] for k in ks]
+            ys_seg = [segment_out[k][1] for k in ks]
+            for idx_s in range(1, len(ks) - 1):
+                k_curr = ks[idx_s]
+                sx = 0.22 * xs_seg[idx_s - 1] + 0.56 * xs_seg[idx_s] + 0.22 * xs_seg[idx_s + 1]
+                sy = 0.22 * ys_seg[idx_s - 1] + 0.56 * ys_seg[idx_s] + 0.22 * ys_seg[idx_s + 1]
+                segment_out[k_curr] = (float(sx), float(sy), segment_out[k_curr][2], segment_out[k_curr][3])
 
         return segment_out
 
@@ -487,16 +508,38 @@ class Ball3DReconstructor:
     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         Post-processes the full rally telemetry_stream so camera reticle AND 2D minimap
-        remain 1-to-1 locked onto the exact same physical 3D ball across all frames.
+        remain 1-to-1 locked onto the exact same physical 3D ball across all frames,
+        without fabricating phantom balls across long untracked non-rally intervals.
         """
         if not telemetry_stream or not calibrator.result.calibrated:
             return telemetry_stream, bounces
 
-        clean_pts = self._scrub_outliers(telemetry_stream)
+        scale_px = calibrator.get_court_pixel_scale()
+        clean_pts = self._scrub_outliers(telemetry_stream, scale_px=scale_px)
         anchors, updated_bounces = self._find_shot_anchors(telemetry_stream, clean_pts, bounces, calibrator)
 
         if len(anchors) < 2:
             return telemetry_stream, updated_bounces
+
+        # Estimate stream FPS and max allowable occlusion interpolation gap (~0.45s)
+        dt_avg = (
+            (float(telemetry_stream[-1].get("timestamp_s", 1.0)) - float(telemetry_stream[0].get("timestamp_s", 0.0)))
+            / max(1, len(telemetry_stream) - 1)
+            if len(telemetry_stream) > 1
+            else (1.0 / 30.0)
+        )
+        eff_fps = float(np.clip(1.0 / max(1e-3, dt_avg), 15.0, 120.0))
+        max_interp_gap_frames = max(12, int(round(0.45 * eff_fps)))
+        obs_indices = [i for i, p in enumerate(clean_pts) if p is not None]
+
+        def _gap_span_at(k_idx: int) -> int:
+            if clean_pts[k_idx] is not None:
+                return 0
+            # Binary search in obs_indices
+            pos = int(np.searchsorted(obs_indices, k_idx))
+            if pos == 0 or pos >= len(obs_indices):
+                return 999999
+            return int(obs_indices[pos] - obs_indices[pos - 1])
 
         reconstructed: Dict[int, Tuple[float, float, float, bool]] = {}
         prev_state: Optional[Tuple[float, float, float]] = None
@@ -516,7 +559,7 @@ class Ball3DReconstructor:
             else:
                 prev_state = None
 
-        # Preserve exact ray-locked observed positions; lightly smooth only extreme spikes
+        box_half = max(3.5, round(6.0 * scale_px, 1))
         keys = sorted(reconstructed.keys())
         for k in keys:
             mx, my, mz, is_obs = reconstructed[k]
@@ -525,16 +568,20 @@ class Ball3DReconstructor:
             ball = rec.get("ball")
 
             if is_obs and ball is not None and not ball.get("interpolated", False):
-                # Observed frame: keep EXACT tracked pixel, sync minimap_court_ft to 3D ray intersection
+                # Observed frame: keep EXACT tracked pixel, sync minimap_court_ft to 3D ballistic Ground Shadow
                 ball["minimap_court_ft"] = [mx_r, my_r]
+                ball["ground_shadow_ft"] = [mx_r, my_r]
                 ball["court_ft"] = [mx_r, my_r]
                 ball["height_ft"] = mz_r
             else:
-                # Occluded / Coasted frame: synchronize BOTH camera pixel AND minimap from unified 3D curve!
+                # Do not fabricate balls across long untracked non-rally intervals (> 0.45s gap)
+                if ball is None and _gap_span_at(k) > max_interp_gap_frames:
+                    continue
+
                 px_proj = calibrator.court_3d_to_pixel(mx, my, mz)
                 px_list = [round(px_proj[0], 1), round(px_proj[1], 1)] if px_proj else (ball.get("pixel") if ball else None)
                 box_list = (
-                    [round(px_list[0] - 6.0, 1), round(px_list[1] - 6.0, 1), round(px_list[0] + 6.0, 1), round(px_list[1] + 6.0, 1)]
+                    [round(px_list[0] - box_half, 1), round(px_list[1] - box_half, 1), round(px_list[0] + box_half, 1), round(px_list[1] + box_half, 1)]
                     if px_list else [0.0, 0.0, 0.0, 0.0]
                 )
                 if ball is not None:
@@ -542,12 +589,13 @@ class Ball3DReconstructor:
                     ball["box"] = box_list
                     ball["court_ft"] = [mx_r, my_r]
                     ball["minimap_court_ft"] = [mx_r, my_r]
+                    ball["ground_shadow_ft"] = [mx_r, my_r]
                     ball["height_ft"] = mz_r
                     ball["interpolated"] = True
                 else:
                     rec["ball"] = {
                         "frame_idx": k,
-                        "timestamp_s": rec.get("timestamp_s", round(k / 30.0, 3)),
+                        "timestamp_s": rec.get("timestamp_s", round(k / eff_fps, 3)),
                         "pixel": px_list,
                         "box": box_list,
                         "conf": 0.0,
@@ -555,6 +603,7 @@ class Ball3DReconstructor:
                         "speed_px_per_frame": 0.0,
                         "court_ft": [mx_r, my_r],
                         "minimap_court_ft": [mx_r, my_r],
+                        "ground_shadow_ft": [mx_r, my_r],
                         "height_ft": mz_r,
                         "interpolated": True,
                     }

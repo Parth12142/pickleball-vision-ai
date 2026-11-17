@@ -392,10 +392,14 @@ class ScoringFSM:
 
         for p in players:
             pid = str(p.get("slot") or f"P{p.get('id', '?')}")
-            court_ft = p.get("court_ft") or [10.0, 22.0]
-            x_ft, y_ft = float(court_ft[0]), float(court_ft[1])
+            court_ft = p.get("court_ft")
             side = p.get("side")
-            is_near = (side == "near") if side in ("near", "far") else (y_ft >= _NET_Y)
+            if court_ft is not None and len(court_ft) >= 2:
+                x_ft, y_ft = float(court_ft[0]), float(court_ft[1])
+                is_near = (y_ft >= _NET_Y)
+            else:
+                x_ft, y_ft = 10.0, (30.0 if side == "near" else 14.0)
+                is_near = (side == "near")
             if is_near:
                 near_players.append((pid, x_ft, y_ft))
             else:

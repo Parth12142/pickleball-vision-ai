@@ -221,8 +221,21 @@ def get_clip_metadata(clip_path: str) -> dict:
 
     base = os.path.basename(clip_path)
     stem = os.path.splitext(base)[0]
-    has_preview = os.path.exists(os.path.join(ROOT_DIR, f"outputs/{stem}_base_preview.mp4"))
-    has_telemetry = os.path.exists(os.path.join(ROOT_DIR, f"outputs/{stem}_base_telemetry.json"))
+    preview_rel = f"outputs/{stem}_base_preview.mp4"
+    if not os.path.exists(os.path.join(ROOT_DIR, preview_rel)):
+        if os.path.exists(os.path.join(ROOT_DIR, f"outputs/{stem}.mp4")):
+            preview_rel = f"outputs/{stem}.mp4"
+        else:
+            preview_rel = None
+
+    has_telemetry = any(
+        os.path.exists(os.path.join(ROOT_DIR, p))
+        for p in (
+            f"outputs/{stem}_base_telemetry.json",
+            f"data/{stem}_telemetry.json",
+            f"data/{stem}_full_telemetry.json",
+        )
+    )
 
     saved_calib = CourtCalibrator.load_calibration_for_clip(base)
 
@@ -239,7 +252,7 @@ def get_clip_metadata(clip_path: str) -> dict:
         "total_frames": total_frames,
         "duration_s": round(duration_s, 2),
         "calibrated": saved_calib is not None,
-        "preview_url": f"/outputs/{stem}_base_preview.mp4" if has_preview else None,
+        "preview_url": f"/{preview_rel}" if preview_rel else None,
         "telemetry_url": f"/outputs/{stem}_base_telemetry.json" if has_telemetry else None,
     }
 
@@ -361,7 +374,21 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
             or parsed.startswith("/LOGO/")
         ):
             rel = parsed.lstrip("/")
-            return os.path.join(ROOT_DIR, rel)
+            target = os.path.join(ROOT_DIR, rel)
+            if not os.path.exists(target) and parsed.startswith("/outputs/"):
+                fname = os.path.basename(parsed)
+                if fname.endswith("_base_preview.mp4"):
+                    stem = fname[: -len("_base_preview.mp4")]
+                    alt = os.path.join(ROOT_DIR, "outputs", f"{stem}.mp4")
+                    if os.path.exists(alt):
+                        return alt
+                elif fname.endswith("_base_telemetry.json"):
+                    stem = fname[: -len("_base_telemetry.json")]
+                    for cand in (f"{stem}_telemetry.json", f"{stem}_full_telemetry.json"):
+                        alt = os.path.join(ROOT_DIR, "data", cand)
+                        if os.path.exists(alt):
+                            return alt
+            return target
         rel = parsed.lstrip("/")
         if not rel:
             rel = "index.html"
@@ -492,14 +519,14 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
             return self.send_json(200, {"ok": True, "clips": clips_list})
 
         if parsed == "/api/frame0":
-            clip_name = query_params.get("clip", ["match1.mp4"])[0]
+            clip_name = query_params.get("clip", ["match11.mp4"])[0]
             cache_path = extract_frame0_path(clip_name)
             if not cache_path or not os.path.exists(cache_path):
                 return self.send_json(404, {"ok": False, "error": f"Could not extract frame0 for clip {clip_name}"})
             return self.send_file_with_range(cache_path)
 
         if parsed == "/api/court-calibration":
-            clip_name = query_params.get("clip", ["match1.mp4"])[0]
+            clip_name = query_params.get("clip", ["match11.mp4"])[0]
             base = os.path.basename(clip_name)
             clip_path = os.path.join(ROOT_DIR, "clips", base)
             meta = get_clip_metadata(clip_path)
@@ -667,7 +694,7 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
                 })
 
         if parsed == "/api/court-calibration":
-            clip_name = data.get("clip", "match1.mp4")
+            clip_name = data.get("clip", "match11.mp4")
             base = os.path.basename(clip_name)
             corners_raw = data.get("corners_px", [])
             if not isinstance(corners_raw, list) or len(corners_raw) != 4:
@@ -712,7 +739,7 @@ class TournamentUIRequestHandler(http.server.SimpleHTTPRequestHandler):
             })
 
         if parsed == "/api/run-pipeline":
-            clip_name = data.get("clip", "match1.mp4")
+            clip_name = data.get("clip", "match11.mp4")
             base = os.path.basename(clip_name)
             clip_path = os.path.join(ROOT_DIR, "clips", base)
             if not os.path.exists(clip_path):

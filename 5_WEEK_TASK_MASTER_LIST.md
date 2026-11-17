@@ -11,7 +11,7 @@ This document contains the complete master breakdown of all **39 tasks across 5 
 - **Detector**: Ultralytics **YOLO26** (`yolo26n` / `yolo26s`) with native NMS-free end-to-end inference and dual-label assignment.
 - **Compute**: Google Colab NVIDIA A100 GPU (40GB/80GB VRAM) for native $1312\times 1312$ high-resolution ball fine-tuning.
 - **Total Working Days**: 23 Days (Mon–Fri only) from **03 Nov 2026** to **10 Dec 2026**.
-- **Total Tasks**: **39 Tasks** across 4 Phases. **29 / 39 Tasks (74.4%) Complete** (Weeks 1–3 100% Verified; Week 4 Day 2: `W4-01` & `W4-02` Done).
+- **Total Tasks**: **39 Tasks** across 4 Phases. **31 / 39 Tasks (79.5%) Complete** (Weeks 1–3 100% Verified; Week 4 Day 3: `W4-01`–`W4-04` Done).
 
 ```mermaid
 flowchart LR
@@ -84,8 +84,8 @@ flowchart LR
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`W4-01`** | **Rules** | USAP 0-0-2 scoring finite state machine: serving sequence | [`pbbase/rules/scoring_fsm.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/rules/scoring_fsm.py), [`pbbase/tests/test_week4_day1.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tests/test_week4_day1.py) | Days 14–15 (Nov 27–30) | `W3-05` | ✅ **Done** (`0-0-2` opening rule, Server 1/2 rotation, diagonal boxes & parity invariant) |
 | **`W4-02`** | **Rules** | Side-out tracking and score progression | [`pbbase/rules/match_tracker.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/rules/match_tracker.py), [`scripts/render_week4_day2.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/scripts/render_week4_day2.py), [`outputs/match1_week4_day2.mp4`](file:///home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_week4_day2.mp4) | Days 15–16 (Nov 30–Dec 01) | `W4-01` | ✅ **Done** (Side-out transitions, win-by-2 to 11/15/21, undo & `match1.mp4` 0-0-2→0-0-1 render) |
-| **`W4-03`** | **Rules** | Two-bounce rule enforcement | Rule module | Days 16–17 (Dec 01–02) | `W4-01`, `W3-03` | Verifies serve bounce and return bounce requirement |
-| **`W4-04`** | **Rules** | Kitchen (NVZ) foot-fault detector | NVZ fault detector | Days 16–17 (Dec 01–02) | `W3-05` | Checks player foot positions relative to NVZ line on volleys |
+| **`W4-03`** | **Rules** | Two-bounce rule enforcement | [`pbbase/rules/two_bounce.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/rules/two_bounce.py), [`outputs/match1_week4_day3.mp4`](file:///home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_week4_day3.mp4) | Days 16–17 (Dec 01–02) | `W4-01`, `W3-03` | ✅ **Done** (Serve/return bounce progression, premature volley fault detection & 3 real clips rendered) |
+| **`W4-04`** | **Rules** | Kitchen (NVZ) foot-fault detector | [`pbbase/rules/nvz_detector.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/rules/nvz_detector.py), [`pbbase/tests/test_week4_day3.py`](file:///home/pce118/Desktop/pickleball-vision-ai-main/pbbase/tests/test_week4_day3.py) | Days 16–17 (Dec 01–02) | `W3-05` | ✅ **Done** (Rule 9 direct, momentum & non-reset NVZ faults, legal entry check & floor NVZ HUD) |
 | **`W4-05`** | **Rules** | Line calling (in / out) | Line caller | Days 17–18 (Dec 02–03) | `W3-03` | Evaluates bounce landing against court boundary lines |
 | **`W4-06`** | **QA** | End-to-end scoring validation from 0-0-2 to match completion | Validation results | Day 18 (Dec 03) | `W4-02` to `W4-05` | Milestone: Fully autonomous referee system |
 
@@ -113,6 +113,6 @@ flowchart LR
 | **Week 1** | Base Perception Engine & Colab A100 Training | 15 | **15** | 0 | ✅ **100% Complete** |
 | **Week 2** | Base Model Fine-Tuning & Tracking Stabilization | 7 | **7** | 0 | ✅ **100% Complete** |
 | **Week 3** | Court Minimap & Parabolic Bounce Kinematics | 5 | **5** | 0 | ✅ **100% Complete** |
-| **Week 4** | Rules Engine & Autonomous Scoring (USAP 0-0-2) | 6 | **2** | 4 | 🟡 **In Progress (Day 15: `W4-01` & `W4-02` Done)** |
+| **Week 4** | Rules Engine & Autonomous Scoring (USAP 0-0-2) | 6 | **4** | 2 | 🟡 **In Progress (Day 16: `W4-01` to `W4-04` Done)** |
 | **Week 5** | AI Coach Biomechanics & End-to-End Broadcast | 6 | 0 | 6 | ⚪ Planned (Starts Dec 04) |
-| **TOTAL** | **Full 5-Week Roadmap** | **39** | **29** | **10** | 🚀 **74% Total Progress (Week 4 Day 2 Complete)** |
+| **TOTAL** | **Full 5-Week Roadmap** | **39** | **31** | **8** | 🚀 **79% Total Progress (Week 4 Day 3 Complete)** |

@@ -108,7 +108,7 @@ const TRANSITION_METADATA = {
 
 class PickleballWebsiteApp {
   constructor() {
-    this.activeClipKey = "match1";
+    this.activeClipKey = "match11";
     this.activePage = "home";
     this.billingCycle = "monthly";
     this.authToken = localStorage.getItem("pb_auth_token") || "";
@@ -137,7 +137,7 @@ class PickleballWebsiteApp {
 
     // 4. Interactive 4-Point Court Calibration & Pinning Workbench (Locked to 9s Rally)
     this.pinningWorkbench = new CourtPinningWorkbench({
-      defaultClip: "match1.mp4",
+      defaultClip: "match11.mp4",
       onCalibrated: (clipName, corners) => {
         console.log(`[App] Court calibrated for ${clipName}:`, corners);
       },
@@ -641,12 +641,8 @@ class PickleballWebsiteApp {
     });
 
     const clipFilenameMap = {
-      "cut": "cut.mp4",
-      "match1": "match1.mp4",
+      "match11": "match11.mp4",
       "match_mlp": "match_mlp.mp4",
-      "base_preview": "match1.mp4",
-      "rally_sample": "rally_sample.mp4",
-      "match": "match.mp4",
     };
     const clipFilename = clipFilenameMap[clipKey] || `${clipKey}.mp4`;
     if (this.pinningWorkbench && this.pinningWorkbench.activeClip !== clipFilename) {
@@ -761,7 +757,7 @@ class PickleballWebsiteApp {
   startLoop() {
     const step = () => {
       if (this.activePage === "home") {
-        const clip = CLIPS_DATA[this.activeClipKey] || CLIPS_DATA["match1"];
+        const clip = CLIPS_DATA[this.activeClipKey] || CLIPS_DATA["match11"];
         let frameIdx = 0;
 
         if (this.demoVideoEl && !isNaN(this.demoVideoEl.duration) && this.demoVideoEl.duration > 0) {

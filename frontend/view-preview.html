@@ -271,24 +271,18 @@
   <main class="main-card">
     <!-- Clip Selection Tabs -->
     <div class="tabs-bar">
-      <button class="tab-btn active" onclick="loadClip('base')">
-        ⚡ 1. Base Model Perception &amp; Kitchen (Match 1 - 9.6s)
+      <button class="tab-btn active" onclick="loadClip('match11')">
+        🎬 1. match11.mp4 Pro Rally (9.63s)
       </button>
       <button class="tab-btn" onclick="loadClip('match_mlp')">
-        🏓 2. Clean MLP 720p HD Rally (10.0s)
-      </button>
-      <button class="tab-btn" onclick="loadClip('cut')">
-        📱 3. cut.mp4 HD Rally (4.92s @ 60fps)
-      </button>
-      <button class="tab-btn" onclick="loadClip('match1')">
-        🎯 4. match1.mp4 Full Match Clip
+        🏓 2. match_mlp.mp4 Clean MLP HD (10.00s)
       </button>
     </div>
 
     <!-- Video Element -->
     <div class="video-viewport">
       <video id="player" controls autoplay loop playsinline>
-        <source id="video-source" src="/outputs/match1_base_preview.mp4" type="video/mp4" />
+        <source id="video-source" src="/outputs/match11_base_preview.mp4" type="video/mp4" />
         Your browser does not support the video tag.
       </video>
     </div>
@@ -297,7 +291,7 @@
     <div class="video-info-bar">
       <div class="file-meta">
         <div class="file-name">
-          <span id="clip-title">outputs/match1_base_preview.mp4</span>
+          <span id="clip-title">outputs/match11_base_preview.mp4</span>
           <span class="badge badge-h264">H.264 / AVC1 (yuv420p)</span>
           <span class="badge badge-kitchen">Kitchen (NVZ) Active</span>
           <span class="badge badge-stream">HTTP 206 Byte Stream</span>
@@ -343,16 +337,10 @@
 
   <script>
     const CLIPS = {
-      base: {
-        url: "/outputs/match1_base_preview.mp4",
-        title: "outputs/match1_base_preview.mp4",
+      match11: {
+        url: "/outputs/match11_base_preview.mp4",
+        title: "outputs/match11_base_preview.mp4",
         desc: "Unified Base Pickleball Model: 15-keypoint homography, 14-ft Kitchen overlay with NVZ boundary lines, 4-player tracking with foot-fault detection, and ball tracking.",
-        res: "1302 × 740 @ 30 FPS (289 frames)"
-      },
-      match1: {
-        url: "/outputs/match1_base_preview.mp4",
-        title: "outputs/match1_base_preview.mp4",
-        desc: "Full tournament analysis clip: 4 players tracked, ball trajectory with bounce identification and line-calling.",
         res: "1302 × 740 @ 30 FPS (289 frames)"
       },
       match_mlp: {
@@ -360,12 +348,6 @@
         title: "outputs/match_mlp_base_preview.mp4",
         desc: "10.00s Clean HD MLP St. Petersburg broadcast rally (720p30): full baseline-to-kitchen rally, 0.0000 ft RMSE calibration, and 2D court sync.",
         res: "1280 × 720 @ 30 FPS (300 frames)"
-      },
-      cut: {
-        url: "/outputs/cut_base_preview.mp4",
-        title: "outputs/cut_base_preview.mp4",
-        desc: "Upscaled HD rally clip (1440×2560 @ 59.93 FPS, 295 frames): calibrated court homography, 4-player tracking, and clean trajectory overlay.",
-        res: "1440 × 2560 @ 59.93 FPS (295 frames)"
       }
     };
 
@@ -380,10 +362,8 @@
       document.querySelectorAll(".tab-btn").forEach((btn, idx) => {
         btn.classList.toggle(
           "active",
-          (key === "base" && idx === 0) ||
-          (key === "match_mlp" && idx === 1) ||
-          (key === "cut" && idx === 2) ||
-          (key === "match1" && idx === 3)
+          (key === "match11" && idx === 0) ||
+          (key === "match_mlp" && idx === 1)
         );
       });
       const c = CLIPS[key];

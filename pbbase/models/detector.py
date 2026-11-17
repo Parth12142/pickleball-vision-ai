@@ -198,7 +198,12 @@ class BallDetector:
         self.ball_class_id = ball_ids[0] if ball_ids else 0
 
     def _predict_frame(self, img: np.ndarray, imgsz: int, conf_thresh: float) -> List[Dict[str, Any]]:
-        """Internal runner for single frame/patch prediction with physical dimension filtering."""
+        """Internal runner for single frame/patch prediction with resolution-adaptive physical filtering."""
+        ih, iw = img.shape[:2]
+        max_span = float(max(iw, ih))
+        max_ball_px = max(34.0, min(110.0, 0.052 * max_span))
+        min_ball_px = 1.4 if max_span < 800.0 else 2.0
+
         results = self.model.predict(
             img,
             classes=[self.ball_class_id],
@@ -212,8 +217,11 @@ class BallDetector:
             x1, y1, x2, y2 = box
             bw = x2 - x1
             bh = y2 - y1
-            # Strict physical dimension filtering: pickleball is compact (< 65px even in foreground)
-            if bw > 65 or bh > 65 or bw < 2 or bh < 2:
+            if bw > max_ball_px or bh > max_ball_px or bw < min_ball_px or bh < min_ball_px:
+                continue
+            # Reject extreme elongated artifacts (lines/net tape) while permitting fast motion blur
+            aspect = max(bw, bh) / max(0.5, min(bw, bh))
+            if aspect > 3.5:
                 continue
 
             candidates.append({
@@ -226,9 +234,13 @@ class BallDetector:
     def detect(self, frame: np.ndarray, multiscale: Optional[bool] = None) -> List[Dict[str, Any]]:
         """
         Runs ball detection with optional multi-scale / cropped-patch sliding inference.
+        Automatically activates court-corridor crop zoom on low-resolution (<= 480p) clips
+        so 2-3px micro-balls in 360p videos are resolved cleanly.
         Returns list of candidate dicts: {"box": [x1, y1, x2, y2], "conf": float, "center_px": (cx, cy)}
         """
-        use_multiscale = self.multiscale if multiscale is None else multiscale
+        h, w = frame.shape[:2]
+        auto_lowres_zoom = (multiscale is None) and (min(h, w) <= 480)
+        use_multiscale = (self.multiscale or auto_lowres_zoom) if multiscale is None else multiscale
         full_cands = self._predict_frame(frame, imgsz=self.imgsz, conf_thresh=self.conf_thresh)
 
         if not use_multiscale or not self.patch_slices:

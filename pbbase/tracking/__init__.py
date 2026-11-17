@@ -1,6 +1,6 @@
 from .player_tracker import CanonicalPlayerTracker
 from .ball_trajectory import BallTrajectoryTracker, get_speed_color
-from .bounce_detector import BallBounceDetector, BounceEvent
+from .bounce_detector import BallBounceDetector, BounceEvent, SavitzkyGolayBounceAnalyzer
 from .ball_3d_tracker import Ball3DReconstructor, ShotAnchor
 
 __all__ = [
@@ -9,6 +9,7 @@ __all__ = [
     "get_speed_color",
     "BallBounceDetector",
     "BounceEvent",
+    "SavitzkyGolayBounceAnalyzer",
     "Ball3DReconstructor",
     "ShotAnchor",
 ]

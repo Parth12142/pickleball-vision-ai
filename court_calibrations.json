@@ -116,12 +116,12 @@
     "aspect_ratio": "16:9_landscape",
     "corners_px": [
       [
-        490.2,
+        486.0,
         116.5
       ],
       [
-        785.1,
-        120.7
+        789.0,
+        120.0
       ],
       [
         1144.3,
@@ -133,8 +133,7 @@
       ]
     ],
     "rmse_ft": 0.0,
-    "source": "human_pinned_calibrated",
-    "notes": "Clean 10.0s HD broadcast rally (720p30) - Brooklyn vs LA Mad Drops MLP"
+    "source": "human_pinned_calibrated"
   },
   "rally_sample.mp4": {
     "resolution": [
@@ -191,5 +190,59 @@
     "rmse_ft": 0.0,
     "source": "broadcast_1080p_recommended",
     "notes": "Full HD 1080p broadcast match"
+  },
+  "screencast.mp4": {
+    "resolution": [
+      1280,
+      720
+    ],
+    "aspect_ratio": "16:9_landscape",
+    "corners_px": [
+      [
+        390.0,
+        264.0
+      ],
+      [
+        867.0,
+        260.0
+      ],
+      [
+        1022.0,
+        630.0
+      ],
+      [
+        234.0,
+        630.0
+      ]
+    ],
+    "rmse_ft": 0.0,
+    "source": "human_pinned_calibrated"
+  },
+  "match2.mp4": {
+    "resolution": [
+      1296,
+      738
+    ],
+    "aspect_ratio": "16:9_landscape",
+    "corners_px": [
+      [
+        423.0,
+        176.0
+      ],
+      [
+        851.0,
+        176.0
+      ],
+      [
+        1075.0,
+        608.0
+      ],
+      [
+        203.0,
+        600.0
+      ]
+    ],
+    "rmse_ft": 0.0,
+    "source": "human_pinned_calibrated"
   }
 }

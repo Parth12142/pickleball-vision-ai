@@ -13,7 +13,7 @@ export class CourtPinningWorkbench {
     this.onCalibrated = options.onCalibrated || null;
     this.onPipelineCompleted = options.onPipelineCompleted || null;
 
-    this.activeClip = options.defaultClip || "match1.mp4";
+    this.activeClip = options.defaultClip || "match11.mp4";
     this.availableClips = [];
 
     // Image & dimensions
@@ -623,7 +623,7 @@ export class CourtPinningWorkbench {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clip: this.activeClip || "match1.mp4",
+          clip: this.activeClip || "match11.mp4",
           frames: clipMeta?.total_frames || 300,
           multiscale: true,
         }),

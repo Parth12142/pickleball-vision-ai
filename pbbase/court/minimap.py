@@ -83,11 +83,38 @@ class CourtMinimap:
         # Dynamic state
         self.ball_trail: List[Tuple[float, float]] = []
         self.active_bounces: List[MinimapBounceMarker] = []
+        self.missing_ball_frames: int = 0
+
+    def configure_for_frame(self, frame_w: int, frame_h: int):
+        """
+        Dynamically scales minimap court_scale and apron padding to match the target
+        video resolution so markers, court lines, and typography render natively
+        without post-render bitmap downscaling blur.
+        """
+        if frame_h > frame_w:
+            target_h = max(180, int(round(frame_h * 0.27)))
+        elif frame_w < 900:
+            target_h = max(150, int(round(frame_h * 0.46)))
+        else:
+            target_h = max(240, min(int(round(frame_h * 0.66)), 680))
+
+        # Solve court_scale so (44 * scale + 2 * pad_y) ~= target_h
+        eff_scale = float(np.clip(target_h / 55.0, 3.2, 14.0))
+        self.court_scale = round(eff_scale, 2)
+        self.padding_x = max(14, int(round(5.8 * self.court_scale)))
+        self.padding_y = max(14, int(round(5.4 * self.court_scale)))
+
+        self.court_w_px = int(round(CourtGeometry.WIDTH_FT * self.court_scale))
+        self.court_h_px = int(round(CourtGeometry.LENGTH_FT * self.court_scale))
+        self.canvas_w = self.court_w_px + 2 * self.padding_x
+        self.canvas_h = self.court_h_px + 2 * self.padding_y
+        self._static_base = self._draw_static_court()
 
     def reset(self):
         """Reset dynamic trails and bounce markers."""
         self.ball_trail.clear()
         self.active_bounces.clear()
+        self.missing_ball_frames = 0
 
     def court_to_canvas(self, x_ft: float, y_ft: float) -> Tuple[int, int]:
         """Convert metric court coordinates (feet) to minimap canvas pixel coordinates."""
@@ -205,23 +232,36 @@ class CourtMinimap:
 
         self.active_bounces = surviving_bounces
 
+        ui_scale = float(np.clip(self.court_scale / 9.0, 0.55, 1.5))
+
         # 2. Extract best court coordinates for ball (prefer 3D-reconstructed minimap_court_ft)
         ball_cft = None
         if ball is not None:
             ball_cft = ball.get("minimap_court_ft") or ball.get("court_ft")
 
         if ball_cft is not None:
-            self.ball_trail.append((float(ball_cft[0]), float(ball_cft[1])))
+            new_pt = (float(ball_cft[0]), float(ball_cft[1]))
+            # Break trail if ball was lost for several frames or jumped across court (new rally)
+            if self.missing_ball_frames >= 4 or (
+                self.ball_trail and float(np.hypot(new_pt[0] - self.ball_trail[-1][0], new_pt[1] - self.ball_trail[-1][1])) > 14.0
+            ):
+                self.ball_trail.clear()
+            self.missing_ball_frames = 0
+            self.ball_trail.append(new_pt)
             if len(self.ball_trail) > self.trail_len:
                 self.ball_trail.pop(0)
+        else:
+            self.missing_ball_frames += 1
+            if self.missing_ball_frames >= 4:
+                self.ball_trail.clear()
 
-        # 3. Render smooth tapered Ball Trajectory Ribbon
+        # 3. Render smooth tapered Ball Trajectory Ribbon (Orthographic Ground Shadow Path)
         if len(self.ball_trail) >= 2:
             trail_pts = [self.court_to_canvas(x, y) for x, y in self.ball_trail]
             n_pts = len(trail_pts)
             for i in range(1, n_pts):
                 frac = i / max(1, n_pts - 1)
-                thickness = max(1, int(round(1 + frac * 2.5)))
+                thickness = max(1, int(round((1 + frac * 2.5) * ui_scale)))
                 pt1, pt2 = trail_pts[i - 1], trail_pts[i]
                 # Blend ribbon brightness from subtle dark slate-volt at tail to bright volt at head
                 col = (
@@ -231,15 +271,18 @@ class CourtMinimap:
                 )
                 cv2.line(canvas, pt1, pt2, col, thickness, cv2.LINE_AA)
 
-        # 4. Render Player Badges
+        # 4. Render Player Badges (proportional to court_scale)
+        p_outer_r = max(4, int(round(7 * ui_scale)))
+        p_inner_r = max(3, int(round(5 * ui_scale)))
+        p_font = max(0.24, round(0.32 * ui_scale, 2))
         if players:
             for p in players:
                 cft = p.get("court_ft")
                 if not cft:
                     continue
                 px, py = self.court_to_canvas(cft[0], cft[1])
-                px_draw = int(np.clip(px, 8, self.canvas_w - 8))
-                py_draw = int(np.clip(py, 14, self.canvas_h - 8))
+                px_draw = int(np.clip(px, p_outer_r + 1, self.canvas_w - p_outer_r - 1))
+                py_draw = int(np.clip(py, p_outer_r + 6, self.canvas_h - p_outer_r - 1))
 
                 pid = p.get("id")
                 if pid is None:
@@ -264,29 +307,47 @@ class CourtMinimap:
                 p_color = PLAYER_COLORS[slot % len(PLAYER_COLORS)]
                 p_name = f"P{pid}"
 
-                cv2.circle(canvas, (px_draw, py_draw), 7, (15, 15, 15), -1, cv2.LINE_AA)
-                cv2.circle(canvas, (px_draw, py_draw), 5, p_color, -1, cv2.LINE_AA)
+                cv2.circle(canvas, (px_draw, py_draw), p_outer_r, (15, 15, 15), -1, cv2.LINE_AA)
+                cv2.circle(canvas, (px_draw, py_draw), p_inner_r, p_color, -1, cv2.LINE_AA)
 
                 cv2.putText(
                     canvas,
                     p_name,
-                    (px_draw - 6, py_draw - 9),
+                    (px_draw - int(round(6 * ui_scale)), py_draw - p_outer_r - 2),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    0.32,
+                    p_font,
                     (255, 255, 255),
                     1,
                     cv2.LINE_AA,
                 )
 
-        # 5. Render Current Ball Position on top of court & players (clamped slightly inside border if extreme)
+        # 5. Render Current Ball Position with 2.5D Ground Shadow + Height Stem
         if ball_cft is not None:
             bx, by = self.court_to_canvas(ball_cft[0], ball_cft[1])
-            bx_draw = int(np.clip(bx, 6, self.canvas_w - 6))
-            by_draw = int(np.clip(by, 6, self.canvas_h - 6))
-            # Dark halo + bright volt outer ring + crisp white center
-            cv2.circle(canvas, (bx_draw, by_draw), 7, (15, 20, 25), -1, cv2.LINE_AA)
-            cv2.circle(canvas, (bx_draw, by_draw), 5, COLOR_BALL, -1, cv2.LINE_AA)
-            cv2.circle(canvas, (bx_draw, by_draw), 2, (255, 255, 255), -1, cv2.LINE_AA)
+            b_outer_r = max(4, int(round(7 * ui_scale)))
+            b_inner_r = max(3, int(round(5 * ui_scale)))
+            b_core_r = max(1, int(round(2 * ui_scale)))
+            bx_draw = int(np.clip(bx, b_outer_r, self.canvas_w - b_outer_r))
+            by_draw = int(np.clip(by, b_outer_r, self.canvas_h - b_outer_r))
+
+            height_ft = float(ball.get("height_ft", 0.0) or 0.0) if ball else 0.0
+            elev_px = int(round(min(9.0, max(0.0, height_ft)) * (self.court_scale * 0.22)))
+
+            if elev_px >= 2:
+                by_elev = max(b_outer_r, by_draw - elev_px)
+                # Draw orthographic ground shadow on court floor (Z=0)
+                cv2.circle(canvas, (bx_draw, by_draw), max(2, b_inner_r - 1), (18, 22, 28), -1, cv2.LINE_AA)
+                # Draw 2.5D vertical height stem connecting ground shadow to airborne ball
+                cv2.line(canvas, (bx_draw, by_draw), (bx_draw, by_elev), (150, 220, 190), 1, cv2.LINE_AA)
+                # Draw elevated airborne ball orb
+                cv2.circle(canvas, (bx_draw, by_elev), b_outer_r, (15, 20, 25), -1, cv2.LINE_AA)
+                cv2.circle(canvas, (bx_draw, by_elev), b_inner_r, COLOR_BALL, -1, cv2.LINE_AA)
+                cv2.circle(canvas, (bx_draw, by_elev), b_core_r, (255, 255, 255), -1, cv2.LINE_AA)
+            else:
+                # Floor-level ball (Z ~ 0): draw directly at ground coordinate
+                cv2.circle(canvas, (bx_draw, by_draw), b_outer_r, (15, 20, 25), -1, cv2.LINE_AA)
+                cv2.circle(canvas, (bx_draw, by_draw), b_inner_r, COLOR_BALL, -1, cv2.LINE_AA)
+                cv2.circle(canvas, (bx_draw, by_draw), b_core_r, (255, 255, 255), -1, cv2.LINE_AA)
 
         return canvas
 

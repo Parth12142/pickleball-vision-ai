@@ -124,9 +124,9 @@ class TestWeek4Day1ServingFSM(unittest.TestCase):
 
     def test_07_seed_and_validate_on_match1_real_telemetry(self):
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-        telem_path = os.path.join(repo_root, "outputs", "match1_base_telemetry.json")
+        telem_path = os.path.join(repo_root, "data", "match1_full_telemetry.json")
         if not os.path.isfile(telem_path):
-            self.skipTest("match1_base_telemetry.json not present locally")
+            self.skipTest("data/match1_full_telemetry.json not present locally")
 
         with open(telem_path, "r") as f:
             data = json.load(f)

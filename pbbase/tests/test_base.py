@@ -451,6 +451,99 @@ class TestCourtCalibrationStore(unittest.TestCase):
         self.assertAlmostEqual(px_back[0], 245.0, places=1)
         self.assertAlmostEqual(px_back[1], 520.0, places=1)
 
+    def test_resolution_scaled_calibration_for_match2(self):
+        # match2.mp4 is stored at 1296x738 in court_calibrations.json but video is 640x360
+        scaled_corners = CourtCalibrator.get_recommended_corners(640, 360, clip_name="match2.mp4")
+        self.assertEqual(len(scaled_corners), 4)
+        for x, y in scaled_corners:
+            self.assertGreaterEqual(x, 0.0)
+            self.assertLessEqual(x, 640.0)
+            self.assertGreaterEqual(y, 0.0)
+            self.assertLessEqual(y, 360.0)
+
+
+class TestCrossClipInvarianceUpgrades(unittest.TestCase):
+    def test_static_decoy_eviction_and_motion_selection(self):
+        calibrator = CourtCalibrator([(209.0, 86.0), (420.0, 86.0), (531.0, 297.0), (100.0, 293.0)], image_size=(640, 360))
+        tracker = BallTrajectoryTracker(max_jump_px=85.0, max_coast_frames=3)
+        dummy_frame = np.zeros((360, 640, 3), dtype=np.uint8)
+
+        # Stationary high-conf decoy at (300, 150), real moving ball starting at (250, 120)
+        for f_idx in range(7):
+            cands = [
+                {"box": [296, 146, 304, 154], "conf": 0.90, "center_px": (300.0, 150.0)},  # Static decoy
+                {"box": [246 + f_idx * 8, 116 + f_idx * 5, 254 + f_idx * 8, 124 + f_idx * 5], "conf": 0.65, "center_px": (250.0 + f_idx * 8, 120.0 + f_idx * 5)},
+            ]
+            res = tracker.process_candidates(cands, f_idx, f_idx / 30.0, calibrator, frame=dummy_frame)
+
+        # By frame 6, static decoy at (300, 150) must be blacklisted and tracker locked onto moving ball
+        self.assertIsNotNone(res)
+        self.assertAlmostEqual(res["pixel"][0], 250.0 + 6 * 8, delta=1.5)
+
+    def test_fps_and_resolution_invariant_bounce_detection(self):
+        from pbbase.tracking.bounce_detector import BallBounceDetector, SavitzkyGolayBounceAnalyzer
+        # 640x360 half-scale court at 60 FPS
+        calibrator = CourtCalibrator([(209.0, 86.0), (420.0, 86.0), (531.0, 297.0), (100.0, 293.0)], image_size=(640, 360))
+        detector = BallBounceDetector()
+
+        # Synthetic 60fps bounce trajectory in 360p pixel scale (nadir at frame 6)
+        ys = [160.0, 163.5, 167.2, 171.2, 175.5, 180.0, 184.8, 181.0, 176.8, 172.2, 167.5, 162.5, 157.5]
+        stream = []
+        bounces_5pt = []
+        for idx, y in enumerate(ys):
+            ts = idx / 60.0
+            ball = {"pixel": [310.0 + idx * 2.0, y], "conf": 0.85, "speed_mph": 22.0, "interpolated": False}
+            ev = detector.update(ball, idx, ts, calibrator, players=[])
+            if ev is not None:
+                bounces_5pt.append(ev)
+            stream.append({"frame_idx": idx, "timestamp_s": ts, "ball": ball, "players": [], "bounce": ev.to_dict() if ev else None})
+
+        self.assertGreaterEqual(len(bounces_5pt), 1)
+        sg = SavitzkyGolayBounceAnalyzer()
+        sg_out = sg.analyze_stream(stream, calibrator, fps=60.0)
+        self.assertGreaterEqual(len(sg_out["bounces"]), 1)
+        self.assertEqual(sg_out["bounces"][0]["frame_idx"], 6)
+
+    def test_3d_reconstructor_does_not_hallucinate_long_gaps(self):
+        from pbbase.tracking.ball_3d_tracker import Ball3DReconstructor
+        calibrator = CourtCalibrator([(425.0, 177.0), (855.0, 177.0), (1080.0, 610.0), (204.0, 602.0)], image_size=(1302, 740))
+        reconstructor = Ball3DReconstructor()
+
+        stream = []
+        for k in range(60):
+            # Observed only at frames 0..4 and 50..54 (45-frame dead gap in between)
+            if k <= 4 or k >= 50:
+                ball = {
+                    "frame_idx": k,
+                    "timestamp_s": k / 30.0,
+                    "pixel": [500.0 + k * 2.0, 300.0 + k * 1.5],
+                    "box": [494.0, 294.0, 506.0, 306.0],
+                    "conf": 0.8,
+                    "speed_mph": 15.0,
+                    "speed_px_per_frame": 2.5,
+                    "court_ft": [10.0, 20.0],
+                    "interpolated": False,
+                }
+            else:
+                ball = None
+            stream.append({"frame_idx": k, "timestamp_s": k / 30.0, "players": [], "ball": ball, "bounce": None})
+
+        out_stream, _ = reconstructor.reconstruct_stream(stream, [], calibrator)
+        # Frame 25 is in the middle of a 45-frame untracked gap -> must remain None!
+        self.assertIsNone(out_stream[25]["ball"])
+
+    def test_25d_minimap_native_scaling_and_shadow(self):
+        from pbbase.court.minimap import CourtMinimap
+        minimap = CourtMinimap()
+        minimap.configure_for_frame(640, 360)
+        self.assertLess(minimap.canvas_h, 250)
+        canvas = minimap.render(
+            players=[{"id": 1, "court_ft": [5.0, 38.0]}],
+            ball={"minimap_court_ft": [10.0, 22.0], "height_ft": 4.5},
+            frame_idx=0,
+        )
+        self.assertEqual(canvas.shape[:2], (minimap.canvas_h, minimap.canvas_w))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -50,15 +50,63 @@ class BallTrajectoryTracker:
         self.coast_near_player: bool = False
         self.gap_buffer: List[Dict[str, Any]] = []
         self.raw_history: List[Optional[Dict[str, Any]]] = []
+        # Anti-decoy state: tracks static background false positives & recent raw candidates
+        self.stationary_streak: int = 0
+        self.anchor_stationary_px: Optional[Tuple[float, float]] = None
+        self.static_hotspots: List[Dict[str, float]] = []
+        self.prev_raw_cands: List[Tuple[float, float]] = []
 
-    def reset(self):
+    def reset(self, preserve_hotspots: bool = False):
         self.last_pos = None
         self.last_observed_pos = None
         self.velocity = [0.0, 0.0]
         self.consecutive_lost = 0
         self.coast_near_player = False
+        self.stationary_streak = 0
+        self.anchor_stationary_px = None
         self.gap_buffer.clear()
         self.raw_history.clear()
+        if not preserve_hotspots:
+            self.static_hotspots.clear()
+            self.prev_raw_cands.clear()
+
+    def _is_static_hotspot(self, cx: float, cy: float, tol_px: float = 3.0) -> bool:
+        """Returns True if (cx, cy) matches a confirmed stationary background decoy."""
+        for hs in self.static_hotspots:
+            if hs["hits"] >= 4 and float(np.hypot(cx - hs["x"], cy - hs["y"])) <= tol_px:
+                return True
+        return False
+
+    def _update_static_hotspots(self, candidates: List[Dict[str, Any]], tol_px: float = 3.0):
+        """
+        Tracks candidate coordinates that fire repeatedly at the exact same pixel
+        without moving (e.g., court line corners, net tape markings, background logos).
+        """
+        matched_hs = set()
+        for c in candidates:
+            cx, cy = c["center_px"]
+            for idx, hs in enumerate(self.static_hotspots):
+                if float(np.hypot(cx - hs["x"], cy - hs["y"])) <= tol_px:
+                    hs["x"] = 0.8 * hs["x"] + 0.2 * cx
+                    hs["y"] = 0.8 * hs["y"] + 0.2 * cy
+                    hs["hits"] = min(50.0, hs["hits"] + 1.0)
+                    matched_hs.add(idx)
+                    break
+            else:
+                # Check if stationary relative to previous frame's raw candidates
+                if any(float(np.hypot(cx - px, cy - py)) <= tol_px * 0.85 for px, py in self.prev_raw_cands):
+                    self.static_hotspots.append({"x": float(cx), "y": float(cy), "hits": 2.0})
+                    matched_hs.add(len(self.static_hotspots) - 1)
+
+        # Gently decay unmatched hotspots so temporary pauses aren't permanently banned if rare
+        surviving = []
+        for idx, hs in enumerate(self.static_hotspots):
+            if idx not in matched_hs:
+                hs["hits"] -= 0.15
+            if hs["hits"] > 0.8:
+                surviving.append(hs)
+        self.static_hotspots = surviving
+        self.prev_raw_cands = [c["center_px"] for c in candidates]
 
     @staticmethod
     def _is_inside_player_box(
@@ -199,6 +247,39 @@ class BallTrajectoryTracker:
 
         self.gap_buffer.clear()
 
+    @staticmethod
+    def _is_outside_court_corridor(
+        cx: float,
+        cy: float,
+        court_calibrator: Optional[CourtCalibrator],
+        frame: Optional[np.ndarray] = None,
+    ) -> bool:
+        """
+        Reject false-positive ball detections in upper-corner spectator stands or far sideline banners
+        while preserving high overhead lobs above the central court corridor.
+        """
+        if frame is None or frame.size == 0 or court_calibrator is None or not court_calibrator.result.calibrated:
+            return False
+        corners = court_calibrator.result.corners_px
+        if len(corners) == 4:
+            scale_px = court_calibrator.get_court_pixel_scale(frame.shape[:2])
+            xs = [pt[0] for pt in corners]
+            ys = [pt[1] for pt in corners]
+            min_x, max_x = min(xs), max(xs)
+            min_y, max_y = min(ys), max(ys)
+            cw = max(80.0 * scale_px, max_x - min_x)
+            # Reject far sideline spectator stands
+            if cx < (min_x - 0.18 * cw) or cx > (max_x + 0.18 * cw):
+                return True
+            # Reject upper corner scoreboards/spectator bleachers outside far baseline width
+            far_l, far_r = min(corners[0][0], corners[1][0]), max(corners[0][0], corners[1][0])
+            far_w = max(60.0 * scale_px, far_r - far_l)
+            if cy < (min_y + 40.0 * scale_px) and (cx < far_l - 0.35 * far_w or cx > far_r + 0.35 * far_w):
+                return True
+            if cy > (max_y + 120.0 * scale_px):
+                return True
+        return False
+
     def process_candidates(
         self,
         candidates: List[Dict[str, Any]],
@@ -209,16 +290,45 @@ class BallTrajectoryTracker:
         players: Optional[List[Dict[str, Any]]] = None,
     ) -> Optional[Dict[str, Any]]:
         """
-        Associates candidates with ongoing trajectory using kinematic velocity prediction.
-        Suppresses white sneaker/apparel false detections near players, performs blurred
-        paddle-approach rescue inside tight gates, and dampens coasting near players.
+        Associates candidates with ongoing trajectory using resolution/FPS-normalized
+        kinematic velocity prediction, static-decoy blacklisting, and apparel suppression.
         """
-        # Filter out obvious white sneaker / apparel decoys inside player bounding boxes
-        clean_cands = []
+        scale_px = (
+            court_calibrator.get_court_pixel_scale(frame.shape[:2])
+            if (frame is not None and court_calibrator is not None)
+            else 1.0
+        )
+        hotspot_tol = max(2.2, 3.2 * scale_px)
+
+        # Filter out obvious white sneaker / apparel decoys, off-court stands, and static hotspots
+        pre_cands = []
         for c in (candidates or []):
             cx, cy = c["center_px"]
+            if self._is_outside_court_corridor(cx, cy, court_calibrator, frame):
+                continue
             if not self._is_achromatic_player_decoy(frame, cx, cy, players):
-                clean_cands.append(c)
+                pre_cands.append(c)
+
+        if frame is not None:
+            self._update_static_hotspots(pre_cands, tol_px=hotspot_tol)
+
+        clean_cands = [
+            c for c in pre_cands
+            if not (frame is not None and self._is_static_hotspot(c["center_px"][0], c["center_px"][1], tol_px=hotspot_tol))
+        ]
+
+        # Evict active track if it is sitting on a confirmed static hotspot or frozen for >= 3 frames
+        if frame is not None and self.last_pos is not None:
+            sx, sy = self.last_pos["pixel"]
+            on_hotspot = self._is_static_hotspot(sx, sy, tol_px=hotspot_tol * 1.5)
+            if self.stationary_streak >= 3 or on_hotspot:
+                if not on_hotspot:
+                    self.static_hotspots.append({"x": float(sx), "y": float(sy), "hits": 10.0})
+                clean_cands = [
+                    c for c in clean_cands
+                    if float(np.hypot(c["center_px"][0] - sx, c["center_px"][1] - sy)) > hotspot_tol * 1.5
+                ]
+                self.reset(preserve_hotspots=True)
 
         # Case 1: Initial track start (no active track)
         if self.last_pos is None:
@@ -230,7 +340,21 @@ class BallTrajectoryTracker:
                 self.raw_history.append(None)
                 return None
 
-            best = max(valid_cands, key=lambda c: c["conf"])
+            def _init_score(cand: Dict[str, Any]) -> float:
+                sc = float(cand.get("conf", 0.0))
+                if frame is not None and self.prev_raw_cands:
+                    cx_c, cy_c = cand["center_px"]
+                    dists = [float(np.hypot(cx_c - px, cy_c - py)) for px, py in self.prev_raw_cands]
+                    if dists:
+                        min_d = min(dists)
+                        # Bonus for plausible ball motion between frames; penalty for zero movement
+                        if (2.5 * scale_px) <= min_d <= (75.0 * scale_px):
+                            sc += 0.25
+                        elif min_d < (1.5 * scale_px):
+                            sc -= 0.20
+                return sc
+
+            best = max(valid_cands, key=_init_score)
             cx, cy = best["center_px"]
             court_ft = court_calibrator.pixel_to_court_ft(cx, cy)
             point_data = {
@@ -249,16 +373,31 @@ class BallTrajectoryTracker:
             self.velocity = [0.0, 0.0]
             self.consecutive_lost = 0
             self.coast_near_player = False
+            self.stationary_streak = 0
+            self.anchor_stationary_px = (float(cx), float(cy))
             self.gap_buffer.clear()
             self.raw_history.append(point_data)
             return point_data
 
+        # Compute resolution & FPS scaling factors for kinematic gates
+        dt_frame = timestamp_s - self.last_pos["timestamp_s"]
+        fps_ratio = float(np.clip(dt_frame * 30.0, 0.45, 2.0)) if (frame is not None and 0.001 < dt_frame < 0.25) else 1.0
+        step_scale = (scale_px * max(0.65, fps_ratio)) if frame is not None else 1.0
+        eff_gravity = self.gravity_px * scale_px * (fps_ratio ** 2) if frame is not None else self.gravity_px
+        eff_max_jump = self.max_jump_px * step_scale
+        eff_tight_gate = self.tight_gate_px * step_scale
+        eff_max_coast = (
+            max(self.max_coast_frames, int(round(self.max_coast_frames / max(0.45, fps_ratio))))
+            if frame is not None
+            else self.max_coast_frames
+        )
+
         # Case 2: Track is currently active -> Predict next position
         pred_x = self.last_pos["pixel"][0] + self.velocity[0]
-        pred_y = self.last_pos["pixel"][1] + self.velocity[1] + 0.5 * self.gravity_px
+        pred_y = self.last_pos["pixel"][1] + self.velocity[1] + 0.5 * eff_gravity
 
         # Expand gate moderately when recovering immediately after a clamped player-paddle coast
-        gate_limit = max(self.max_jump_px, 130.0) if (self.consecutive_lost > 0 and self.coast_near_player) else self.max_jump_px
+        gate_limit = max(eff_max_jump, 130.0 * step_scale) if (self.consecutive_lost > 0 and self.coast_near_player) else eff_max_jump
 
         best_cand = None
         best_cost = float("inf")
@@ -270,11 +409,11 @@ class BallTrajectoryTracker:
 
             # Confidence tiering: very low conf (0.08-0.14) accepted ONLY inside tight prediction gate
             if conf < self.min_active_conf:
-                if conf < self.min_gated_conf or dist > self.tight_gate_px:
+                if conf < self.min_gated_conf or dist > eff_tight_gate:
                     continue
 
             if dist < gate_limit:
-                cost = dist - 25.0 * conf
+                cost = dist - (25.0 * step_scale) * conf
                 if cost < best_cost:
                     best_cost = cost
                     best_cand = c
@@ -285,6 +424,16 @@ class BallTrajectoryTracker:
             vx = cx - self.last_pos["pixel"][0]
             vy = cy - self.last_pos["pixel"][1]
             px_speed = float(np.hypot(vx, vy))
+
+            # Track stationary streak to detect static decoy lock-on
+            if self.anchor_stationary_px is None:
+                self.anchor_stationary_px = (float(cx), float(cy))
+            drift_from_anchor = float(np.hypot(cx - self.anchor_stationary_px[0], cy - self.anchor_stationary_px[1]))
+            if px_speed < (1.8 * scale_px) and drift_from_anchor < (3.2 * scale_px):
+                self.stationary_streak += 1
+            else:
+                self.stationary_streak = 0
+                self.anchor_stationary_px = (float(cx), float(cy))
 
             court_ft = court_calibrator.pixel_to_court_ft(cx, cy)
             speed_mph = 0.0
@@ -321,16 +470,16 @@ class BallTrajectoryTracker:
         # Subcase 2B: Ball not detected -> Ballistic occlusion coasting
         active_speed = float(np.hypot(self.velocity[0], self.velocity[1]))
         can_coast = (
-            self.consecutive_lost < self.max_coast_frames
-            and (active_speed > 1.0 or self.consecutive_lost > 0)
+            self.consecutive_lost < eff_max_coast
+            and (active_speed > (1.0 * scale_px) or self.consecutive_lost > 0)
         )
 
         if can_coast:
             self.consecutive_lost += 1
 
             # Check if ball is entering/inside a player's hitting zone -> dampen coasting to prevent overshoot
-            in_player = self._is_inside_player_box(pred_x, pred_y, players) or self._is_inside_player_box(
-                self.last_pos["pixel"][0], self.last_pos["pixel"][1], players
+            in_player = self._is_inside_player_box(pred_x, pred_y, players, margin_x=22.0 * scale_px, margin_y=8.0 * scale_px) or self._is_inside_player_box(
+                self.last_pos["pixel"][0], self.last_pos["pixel"][1], players, margin_x=22.0 * scale_px, margin_y=8.0 * scale_px
             )
             if in_player:
                 self.coast_near_player = True
@@ -338,7 +487,7 @@ class BallTrajectoryTracker:
                 self.velocity[1] *= 0.30
             else:
                 self.velocity[0] *= (1.0 - self.drag_coeff)
-                self.velocity[1] += self.gravity_px
+                self.velocity[1] += eff_gravity
 
             cx = self.last_pos["pixel"][0] + self.velocity[0]
             cy = self.last_pos["pixel"][1] + self.velocity[1]
@@ -346,7 +495,7 @@ class BallTrajectoryTracker:
 
             court_ft = court_calibrator.pixel_to_court_ft(cx, cy)
             coasted_conf = round(max(0.05, self.last_pos.get("conf", 0.3) * 0.85), 3)
-            box_half = 6.0
+            box_half = max(3.5, 6.0 * scale_px)
             coasted_box = [cx - box_half, cy - box_half, cx + box_half, cy + box_half]
 
             point_data = {
@@ -367,8 +516,8 @@ class BallTrajectoryTracker:
             self.raw_history.append(point_data)
             return point_data
 
-        # Subcase 2C: Occlusion exceeded max_coast_frames -> clean track drop
-        self.reset()
+        # Subcase 2C: Occlusion exceeded max_coast_frames -> clean track drop (keep static hotspot memory!)
+        self.reset(preserve_hotspots=True)
         self.raw_history.append(None)
         return None
 

@@ -24,7 +24,7 @@ from pbbase.court.minimap import CourtMinimap
 from pbbase.models.detector import PlayerDetector, BallDetector
 from pbbase.tracking.player_tracker import CanonicalPlayerTracker
 from pbbase.tracking.ball_trajectory import BallTrajectoryTracker, get_speed_color
-from pbbase.tracking.bounce_detector import BallBounceDetector
+from pbbase.tracking.bounce_detector import BallBounceDetector, SavitzkyGolayBounceAnalyzer
 from pbbase.tracking.ball_3d_tracker import Ball3DReconstructor
 from pbbase.data.schema import SCHEMA_VERSION, SCHEMA_PRODUCER
 
@@ -77,6 +77,7 @@ class BasePerceptionPipeline:
             patch_imgsz=min(1280, max(640, resolved_ball_imgsz)),
         )
 
+        self._init_court_corners = court_corners
         self.court_calibrator = CourtCalibrator(corners_px=court_corners)
         self.player_tracker = CanonicalPlayerTracker(max_players=4)
         self.ball_tracker = BallTrajectoryTracker(
@@ -84,6 +85,7 @@ class BasePerceptionPipeline:
             max_coast_frames=ball_max_coast,
         )
         self.bounce_detector = BallBounceDetector()
+        self.sg_bounce_analyzer = SavitzkyGolayBounceAnalyzer()
         self.ball_3d_reconstructor = Ball3DReconstructor()
         self.court_minimap = CourtMinimap(court_scale=9.0, padding_x=54, padding_y=50, trail_len=20)
         self.render_minimap = render_minimap
@@ -110,6 +112,8 @@ class BasePerceptionPipeline:
         self.ball_tracker.reset()
         self.bounce_detector.reset()
         self.court_minimap.reset()
+        # Reset court calibration so a previous clip's corners never leak into this one
+        self.court_calibrator = CourtCalibrator()
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -123,8 +127,9 @@ class BasePerceptionPipeline:
         w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        if court_corners and len(court_corners) == 4:
-            self.court_calibrator.calibrate(court_corners, image_size=(w, h))
+        effective_corners = court_corners if (court_corners and len(court_corners) == 4) else self._init_court_corners
+        if effective_corners and len(effective_corners) == 4:
+            self.court_calibrator.calibrate(effective_corners, image_size=(w, h))
 
         frames_to_read = min(total_frames, max_frames) if max_frames else total_frames
         print(f"[BasePerceptionPipeline] Processing Pass 1 (Perception): {video_path} ({w}x{h} @ {fps:.1f} FPS, {frames_to_read} frames)")
@@ -208,17 +213,24 @@ class BasePerceptionPipeline:
         cap.release()
 
         # =====================================================================
-        # 3D BALLISTIC RECONSTRUCTION (Eliminates Aerial Parallax for Minimap)
+        # SAVITZKY-GOLAY BOUNCE REFINEMENT & 3D BALLISTIC RECONSTRUCTION
         # =====================================================================
         t_3d_start = time.time()
-        raw_bounces = [b.to_dict() for b in self.bounce_detector.detected_bounces]
+        sg_analysis = self.sg_bounce_analyzer.analyze_stream(
+            telemetry_stream, self.court_calibrator, fps=fps
+        )
+        telemetry_stream = sg_analysis.get("smoothed_stream", telemetry_stream)
+        sg_bounces = sg_analysis.get("bounces", [b.to_dict() for b in self.bounce_detector.detected_bounces])
         telemetry_stream, all_bounces = self.ball_3d_reconstructor.reconstruct_stream(
-            telemetry_stream, raw_bounces, self.court_calibrator
+            telemetry_stream, sg_bounces, self.court_calibrator
         )
         t_3d_ms = round((time.time() - t_3d_start) * 1000, 1)
 
         # Recompute ball continuity metrics & camera history after 3D gap reconstruction
         frames_with_ball = sum(1 for r in telemetry_stream if r.get("ball") is not None)
+        raw_frames_with_ball = sum(
+            1 for r in telemetry_stream if r.get("ball") is not None and not r["ball"].get("interpolated", False)
+        )
         ball_pts_history: List[Optional[Tuple[float, float, float]]] = []
         for r in telemetry_stream:
             b = r.get("ball")
@@ -237,6 +249,7 @@ class BasePerceptionPipeline:
             fourcc = cv2.VideoWriter_fourcc(*"mp4v")
             writer = cv2.VideoWriter(raw_preview_tmp, fourcc, fps, (w, h))
 
+            self.court_minimap.configure_for_frame(w, h)
             self.court_minimap.reset()
             cap_vis = cv2.VideoCapture(video_path)
             cumulative_bounces = 0
@@ -295,9 +308,11 @@ class BasePerceptionPipeline:
 
         bench_schema = {
             "ball_detection_rate_pct": round((frames_with_ball / max(1, frame_idx)) * 100, 1),
+            "raw_ball_detection_rate_pct": round((raw_frames_with_ball / max(1, frame_idx)) * 100, 1),
             "frames_with_ball": frames_with_ball,
+            "raw_frames_with_ball": raw_frames_with_ball,
             "mean_players_per_frame": round(float(np.mean(player_counts)) if player_counts else 0.0, 2),
-            "multiscale_inference": self.ball_detector.multiscale,
+            "multiscale_inference": self.ball_detector.multiscale or (min(w, h) <= 480),
             "total_bounces_detected": len(all_bounces),
             "ball_3d_reconstruction_ms": t_3d_ms,
             "stage_latencies_ms": {

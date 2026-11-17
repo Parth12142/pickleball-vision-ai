@@ -139,8 +139,9 @@ class CanonicalPlayerTracker:
                     if cx_ft < -6.0 or cx_ft > 26.0 or cy_ft < -8.0 or cy_ft > 52.0:
                         continue
             elif court_poly is not None:
+                scale_px = court_calibrator.get_court_pixel_scale((h, w)) if court_calibrator is not None else 1.0
                 dist = cv2.pointPolygonTest(court_poly, (foot_x, foot_y), measureDist=True)
-                if dist < -55.0:
+                if dist < (-55.0 * scale_px):
                     continue
 
             # Net side determination
@@ -303,25 +304,48 @@ class CanonicalPlayerTracker:
                     "history": [(int(fx), int(fy))],
                 }
 
-        # 7. Compute Metric Court Coordinates & Speed
+        # 7. Compute Metric Court Coordinates & Speed with Split-Step Damping & Court-Space EMA
         active_telemetry = []
         for sid, slot in sorted(self.slots.items()):
             if slot["lost"] <= self.max_coast_frames:
                 box = [round(v, 2) for v in slot["smooth_box"]]
                 fx = (box[0] + box[2]) / 2.0
                 fy = box[3]
-                court_ft = court_calibrator.pixel_to_court_ft(fx, fy)
+                raw_court_ft = court_calibrator.pixel_to_court_ft(fx, fy)
+                court_ft = raw_court_ft
 
                 speed_mph = 0.0
-                if court_ft and sid in self.prev_court_pos:
-                    px_prev, py_prev, t_prev = self.prev_court_pos[sid]
-                    dt = timestamp_s - t_prev
-                    if 0.001 < dt < 0.5:
-                        dist_ft = float(np.hypot(court_ft[0] - px_prev, court_ft[1] - py_prev))
-                        speed_ft_s = dist_ft / dt
-                        speed_mph = float(np.clip(speed_ft_s * 0.681818, 0.0, 22.0))
+                if raw_court_ft is not None:
+                    rx, ry = float(raw_court_ft[0]), float(raw_court_ft[1])
+                    # Enforce physical net partition boundary on ground projection
+                    if slot["side"] == "far":
+                        ry = min(21.6, ry)
+                    elif slot["side"] == "near":
+                        ry = max(22.4, ry)
+                    rx = float(np.clip(rx, -5.0, 25.0))
+                    ry = float(np.clip(ry, -7.0, 51.0))
 
-                if court_ft:
+                    if sid in self.prev_court_pos:
+                        px_prev, py_prev, t_prev = self.prev_court_pos[sid]
+                        dt = timestamp_s - t_prev
+                        step_ft = float(np.hypot(rx - px_prev, ry - py_prev))
+                        if 0.001 < dt < 0.35 and step_ft < 5.0:
+                            # Dampen sudden upward y2 bounding-box jumps (split-steps / lunges) in depth Y
+                            alpha_x = 0.65
+                            alpha_y = 0.38 if (ry < py_prev - 0.6 and abs(rx - px_prev) < 0.8) else 0.55
+                            sx = alpha_x * rx + (1.0 - alpha_x) * px_prev
+                            sy = alpha_y * ry + (1.0 - alpha_y) * py_prev
+                        else:
+                            sx, sy = rx, ry
+
+                        if 0.001 < dt < 0.5:
+                            dist_ft = float(np.hypot(sx - px_prev, sy - py_prev))
+                            speed_ft_s = dist_ft / dt
+                            speed_mph = float(np.clip(speed_ft_s * 0.681818, 0.0, 22.0))
+                        court_ft = (sx, sy)
+                    else:
+                        court_ft = (rx, ry)
+
                     self.prev_court_pos[sid] = (court_ft[0], court_ft[1], timestamp_s)
 
                 active_telemetry.append({

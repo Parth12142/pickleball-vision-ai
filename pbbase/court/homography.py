@@ -295,9 +295,39 @@ class CourtCalibrator:
             return None
         return (pos_ft[0] * CourtGeometry.FT_TO_METERS, pos_ft[1] * CourtGeometry.FT_TO_METERS)
 
+    def get_court_pixel_scale(self, frame_shape: Optional[Tuple[int, int]] = None) -> float:
+        """
+        Computes the geometric pixel scale factor of the calibrated court relative to
+        the canonical 1302x740 broadcast benchmark (near_w=876px, vert_h=429px).
+        Used to normalize pixel velocity gates, bounce acceleration, and spatial margins
+        uniformly across 360p, 720p, 1080p, and 1440x2560 clips.
+        """
+        if self.result.calibrated and len(self.result.corners_px) == 4:
+            c = self.result.corners_px
+            near_w = float(np.hypot(c[2][0] - c[3][0], c[2][1] - c[3][1]))
+            vert_h = float(abs(0.5 * (c[2][1] + c[3][1]) - 0.5 * (c[0][1] + c[1][1])))
+            if near_w > 50.0 and vert_h > 30.0:
+                scale = 0.5 * (near_w / 876.0) + 0.5 * (vert_h / 429.0)
+                return float(np.clip(scale, 0.35, 3.2))
+        if frame_shape is not None and len(frame_shape) >= 2:
+            h, w = frame_shape[:2]
+            return float(np.clip(max(w, h) / 1280.0, 0.35, 3.2))
+        if self.result.image_size is not None:
+            w, h = self.result.image_size
+            return float(np.clip(max(w, h) / 1280.0, 0.35, 3.2))
+        return 1.0
+
     @classmethod
-    def load_calibration_for_clip(cls, clip_name: str) -> Optional[List[Tuple[float, float]]]:
-        """Load stored corner coordinates for a clip from court_calibrations.json."""
+    def load_calibration_for_clip(
+        cls,
+        clip_name: str,
+        target_size: Optional[Tuple[int, int]] = None,
+    ) -> Optional[List[Tuple[float, float]]]:
+        """
+        Load stored corner coordinates for a clip from court_calibrations.json.
+        When target_size=(width, height) is provided and differs from the stored
+        calibration resolution, automatically scales corners proportionally.
+        """
         if not os.path.exists(CALIBRATION_FILE):
             return None
         try:
@@ -307,7 +337,19 @@ class CourtCalibrator:
             base = os.path.basename(clip_name)
             entry = data.get(base) or data.get(clip_name)
             if entry and "corners_px" in entry:
-                return [(float(pt[0]), float(pt[1])) for pt in entry["corners_px"]]
+                pts = [(float(pt[0]), float(pt[1])) for pt in entry["corners_px"]]
+                if target_size is not None and "resolution" in entry:
+                    cal_res = entry["resolution"]
+                    if isinstance(cal_res, (list, tuple)) and len(cal_res) == 2:
+                        cal_w, cal_h = float(cal_res[0]), float(cal_res[1])
+                        tw, th = float(target_size[0]), float(target_size[1])
+                        if cal_w > 0 and cal_h > 0 and (abs(cal_w - tw) > 1.0 or abs(cal_h - th) > 1.0):
+                            # Ensure matching orientation (both landscape or both portrait)
+                            if (tw >= th) == (cal_w >= cal_h):
+                                sx = tw / cal_w
+                                sy = th / cal_h
+                                pts = [(round(px * sx, 2), round(py * sy, 2)) for px, py in pts]
+                return pts
         except Exception:
             return None
         return None
@@ -354,12 +396,12 @@ class CourtCalibrator:
     ) -> List[Tuple[float, float]]:
         """
         Computes recommended court corners based on resolution and aspect ratio:
-        - Checks persistent calibration store first
+        - Checks persistent calibration store first (with automatic resolution scaling)
         - Portrait (h > w): calibrated smartphone camera geometry
         - Landscape (w >= h): calibrated broadcast camera geometry
         """
         if clip_name:
-            saved = cls.load_calibration_for_clip(clip_name)
+            saved = cls.load_calibration_for_clip(clip_name, target_size=(width, height))
             if saved and len(saved) == 4:
                 return saved
 
@@ -381,13 +423,76 @@ class CourtCalibrator:
                 (float(w * 0.1567), float(h * 0.8135)),   # Near-Left
             ]
 
+    @classmethod
+    def refine_corners_with_court_lines(
+        cls,
+        frame: np.ndarray,
+        init_corners: List[Tuple[float, float]],
+    ) -> List[Tuple[float, float]]:
+        """
+        Refines default court corners on uncalibrated clips by detecting high-contrast
+        white baseline/sideline segments via HoughLinesP within a local search band.
+        """
+        if frame is None or frame.size == 0 or len(init_corners) != 4:
+            return init_corners
+        try:
+            h, w = frame.shape[:2]
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            # White court lines have high luminance (V) and low saturation (S)
+            white_mask = cv2.inRange(hsv, (0, 0, 175), (180, 55, 255))
+            masked_gray = cv2.bitwise_and(gray, gray, mask=white_mask)
+            edges = cv2.Canny(masked_gray, 50, 150)
+
+            min_line_len = max(30, int(0.08 * min(w, h)))
+            lines = cv2.HoughLinesP(edges, 1.0, np.pi / 180.0, threshold=40, minLineLength=min_line_len, maxLineGap=15)
+            if lines is None or len(lines) < 4:
+                return init_corners
+
+            far_y_init = 0.5 * (init_corners[0][1] + init_corners[1][1])
+            near_y_init = 0.5 * (init_corners[2][1] + init_corners[3][1])
+            tol_y = 0.06 * h
+
+            far_ys = []
+            near_ys = []
+            for ln in lines[:, 0, :]:
+                x1, y1, x2, y2 = float(ln[0]), float(ln[1]), float(ln[2]), float(ln[3])
+                dx, dy = x2 - x1, y2 - y1
+                length = float(np.hypot(dx, dy))
+                if length < min_line_len:
+                    continue
+                angle_deg = abs(np.degrees(np.arctan2(dy, dx)))
+                # Horizontal baseline candidates (within 8 degrees of horizontal)
+                if angle_deg < 8.0 or angle_deg > 172.0:
+                    mid_y = 0.5 * (y1 + y2)
+                    if abs(mid_y - far_y_init) < tol_y:
+                        far_ys.append((mid_y, length))
+                    elif abs(mid_y - near_y_init) < tol_y:
+                        near_ys.append((mid_y, length))
+
+            refined = list(init_corners)
+            if far_ys:
+                w_far_y = sum(y * l for y, l in far_ys) / max(1e-6, sum(l for _, l in far_ys))
+                refined[0] = (refined[0][0], float(w_far_y))
+                refined[1] = (refined[1][0], float(w_far_y))
+            if near_ys:
+                w_near_y = sum(y * l for y, l in near_ys) / max(1e-6, sum(l for _, l in near_ys))
+                refined[2] = (refined[2][0], float(w_near_y))
+                refined[3] = (refined[3][0], float(w_near_y))
+            return refined
+        except Exception:
+            return init_corners
+
     def auto_calibrate_broadcast(self, frame: np.ndarray, clip_name: Optional[str] = None) -> bool:
         """
         Calibrate court perspective with 3D camera pose estimation:
-        1. Checks stored human calibration in court_calibrations.json
-        2. Applies aspect-ratio-aware defaults (portrait vs landscape)
+        1. Checks stored human calibration in court_calibrations.json (auto-scaled to frame size)
+        2. Applies aspect-ratio-aware defaults + white-line refinement for unseen clips
         3. Solves 3D camera pose for height-compensated projection
         """
         h, w = frame.shape[:2]
+        has_saved = bool(clip_name and self.load_calibration_for_clip(clip_name, target_size=(w, h)) is not None)
         corners = self.get_recommended_corners(w, h, clip_name=clip_name)
+        if not has_saved:
+            corners = self.refine_corners_with_court_lines(frame, corners)
         return self.calibrate(corners, image_size=(w, h))
