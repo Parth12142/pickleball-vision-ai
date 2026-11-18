@@ -238,7 +238,8 @@ def main():
     # 2. Resolve paths with fallback to PROJECT_ROOT
     clip_path = resolve_path(args.clip or cfg.get("clip"), DEFAULT_CLIP)
     player_weights = resolve_path(args.player_weights or cfg_players.get("weights"), os.path.join(PROJECT_ROOT, "weights/player_yolo26_best.pt"))
-    ball_weights = resolve_path(args.ball_weights or cfg_ball.get("weights"), os.path.join(PROJECT_ROOT, "weights/ball_yolo26_best.pt"))
+    default_ball = "weights/ball_yolo26_tuned.pt" if os.path.exists(os.path.join(PROJECT_ROOT, "weights/ball_yolo26_tuned.pt")) else "weights/ball_yolo26_best.pt"
+    ball_weights = resolve_path(args.ball_weights or cfg_ball.get("weights"), os.path.join(PROJECT_ROOT, default_ball))
     ball_imgsz = args.ball_imgsz or cfg_ball.get("imgsz") or 1312
     ball_max_coast = cfg_ball.get("max_coast_frames", 3) or 3
     multiscale = args.multiscale or bool(cfg_ball.get("multiscale", False))

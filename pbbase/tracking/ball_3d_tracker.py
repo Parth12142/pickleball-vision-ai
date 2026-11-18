@@ -222,16 +222,11 @@ class Ball3DReconstructor:
             if clean_pts[i] is None:
                 continue
 
-            pre_idx = next((j for j in range(i - 3, max(-1, i - 8), -1) if clean_pts[j] is not None), None)
-            if pre_idx is None:
-                pre_idx = next((j for j in range(i - 1, max(-1, i - 4), -1) if clean_pts[j] is not None), None)
-
-            post_idx = next((j for j in range(i + 1, min(n, i + 18)) if clean_pts[j] is not None), None)
+            pre_idx = next((j for j in range(i - 1, max(-1, i - 5), -1) if clean_pts[j] is not None), None)
+            pre_far = next((j for j in range(i - 3, max(-1, i - 7), -1) if clean_pts[j] is not None), pre_idx)
+            post_idx = next((j for j in range(i + 1, min(n, i + 16)) if clean_pts[j] is not None), None)
             if pre_idx is None or post_idx is None:
                 continue
-
-            # Find a second post point slightly further out to verify outgoing velocity vector
-            post_idx2 = next((j for j in range(post_idx + 2, min(n, post_idx + 7)) if clean_pts[j] is not None), post_idx)
 
             gap = post_idx - i
             p_curr = clean_pts[i]
@@ -243,11 +238,20 @@ class Ball3DReconstructor:
             if not near_players:
                 continue
 
-            v_in = np.array([p_curr[0] - clean_pts[pre_idx][0], p_curr[1] - clean_pts[pre_idx][1]]) / max(1, i - pre_idx)
-            if post_idx2 > post_idx:
-                v_out = np.array([clean_pts[post_idx2][0] - clean_pts[post_idx][0], clean_pts[post_idx2][1] - clean_pts[post_idx][1]]) / max(1, post_idx2 - post_idx)
+            # For contiguous detections (gap == 1), compare immediate local tangent only so hits aren't triggered 3 frames early
+            if gap == 1:
+                pre_ref = pre_idx if (i - pre_idx) >= 2 or pre_far is None else pre_far
+                post_ref = next((j for j in range(post_idx + 1, min(n, post_idx + 3)) if clean_pts[j] is not None), post_idx)
+                v_in = np.array([p_curr[0] - clean_pts[pre_ref][0], p_curr[1] - clean_pts[pre_ref][1]]) / max(1, i - pre_ref)
+                v_out = np.array([clean_pts[post_ref][0] - p_curr[0], clean_pts[post_ref][1] - p_curr[1]]) / max(1, post_ref - i)
             else:
-                v_out = np.array([clean_pts[post_idx][0] - p_curr[0], clean_pts[post_idx][1] - p_curr[1]]) / max(1, gap)
+                pre_ref = pre_far if pre_far is not None else pre_idx
+                post_idx2 = next((j for j in range(post_idx + 2, min(n, post_idx + 6)) if clean_pts[j] is not None), post_idx)
+                v_in = np.array([p_curr[0] - clean_pts[pre_ref][0], p_curr[1] - clean_pts[pre_ref][1]]) / max(1, i - pre_ref)
+                if post_idx2 > post_idx:
+                    v_out = np.array([clean_pts[post_idx2][0] - clean_pts[post_idx][0], clean_pts[post_idx2][1] - clean_pts[post_idx][1]]) / max(1, post_idx2 - post_idx)
+                else:
+                    v_out = np.array([clean_pts[post_idx][0] - p_curr[0], clean_pts[post_idx][1] - p_curr[1]]) / max(1, gap)
 
             n_in, n_out = np.linalg.norm(v_in), np.linalg.norm(v_out)
             if n_in > 3.0 * norm_px and n_out > 2.5 * norm_px:
@@ -263,10 +267,8 @@ class Ball3DReconstructor:
                     hit_frame = i
                     hit_px = p_curr
                     if gap >= 2:
-                        # Interpolate contact time between i and post_idx based on gap midpoint toward closest player
                         mid_k = i + max(1, min(gap - 1, gap // 3 if gap >= 6 else gap // 2))
                         hit_frame = mid_k
-                        # Predict ball position entering player's torso plane
                         best_p = self._find_closest_player_box(p_curr[0], p_curr[1], telemetry_stream[min(n - 1, hit_frame)].get("players", near_players))
                         if best_p and best_p.get("box"):
                             bx1, by1, bx2, by2 = best_p["box"]
@@ -278,17 +280,31 @@ class Ball3DReconstructor:
                             players_hit = telemetry_stream[hit_frame].get("players", near_players)
                             best_p = self._find_closest_player_box(hit_px[0], hit_px[1], players_hit)
                     else:
-                        best_p = self._find_closest_player_box(hit_px[0], hit_px[1], near_players)
+                        # Refine to local turnaround extremum in [i, i+2] if ball still travels further before reversing
+                        best_i = i
+                        if i + 1 < n and clean_pts[i + 1] is not None and cos_theta > -0.7:
+                            # If ball moved along v_in direction to i+1 before snapping back, advance hit_frame to i+1
+                            step1 = np.array([clean_pts[i + 1][0] - p_curr[0], clean_pts[i + 1][1] - p_curr[1]])
+                            if np.dot(step1, v_in) > 0 and i + 2 < n and clean_pts[i + 2] is not None:
+                                step2 = np.array([clean_pts[i + 2][0] - clean_pts[i + 1][0], clean_pts[i + 2][1] - clean_pts[i + 1][1]])
+                                if np.dot(step1, step2) < np.dot(v_in, step1):
+                                    best_i = i + 1
+                                    hit_px = clean_pts[best_i]
+                        hit_frame = best_i
+                        best_p = self._find_closest_player_box(hit_px[0], hit_px[1], telemetry_stream[hit_frame].get("players", near_players))
 
                     if best_p is None or any(abs(hit_frame - af) < 6 for af in anchors):
                         continue
 
                     p_h = self._estimate_paddle_height_ft(hit_px[1], best_p["box"])
-                    # Anchor tightly at player's actual court position (with paddle offset) to prevent parallax confusion
-                    if best_p.get("court_ft"):
+                    ray_cft = calibrator.pixel_to_court_at_height_ft(hit_px[0], hit_px[1], p_h) or calibrator.pixel_to_court_ft(hit_px[0], hit_px[1])
+                    if best_p.get("court_ft") and ray_cft is not None:
+                        px_ft, py_ft = float(best_p["court_ft"][0]), float(best_p["court_ft"][1])
+                        cft = (float(0.6 * ray_cft[0] + 0.4 * px_ft), float(0.5 * ray_cft[1] + 0.5 * py_ft))
+                    elif best_p.get("court_ft"):
                         cft = (float(best_p["court_ft"][0]), float(best_p["court_ft"][1]))
                     else:
-                        cft = calibrator.pixel_to_court_at_height_ft(hit_px[0], hit_px[1], p_h) or calibrator.pixel_to_court_ft(hit_px[0], hit_px[1])
+                        cft = ray_cft
 
                     if cft:
                         anchors[hit_frame] = ShotAnchor(
@@ -366,26 +382,38 @@ class Ball3DReconstructor:
         obs_u_arr = np.array(obs_u, dtype=np.float64)
         obs_v_arr = np.array(obs_v, dtype=np.float64)
 
-        if prev_anchor_state is not None:
+        a1_x, a1_y = a1.court_xy_ft
+        a2_x, a2_y = a2.court_xy_ft
+        if prev_anchor_state is not None and np.hypot(prev_anchor_state[0] - a1_x, prev_anchor_state[1] - a1_y) < 5.5:
             x1_init, y1_init, z1_init = prev_anchor_state
+            use_prev = True
         else:
-            x1_init, y1_init = a1.court_xy_ft
+            x1_init, y1_init = a1_x, a1_y
             z1_init = float(a1.height_ft)
+            use_prev = False
 
-        x2_init, y2_init = a2.court_xy_ft
+        x2_init, y2_init = a2_x, a2_y
         z2_init = float(a2.height_ft)
         g_eff = self.gravity_ft_s2
         k_d = 0.25
 
         if calibrator.result.pose_calibrated and len(obs_k) >= 3:
-            w_end1 = 22.0 if prev_anchor_state is not None else (6.0 if a1.kind == "ground_bounce" else 2.8)
-            w_end2 = 6.0 if a2.kind == "ground_bounce" else 2.8
-            wz1 = 22.0 if prev_anchor_state is not None else (10.0 if a1.kind == "ground_bounce" else 4.5)
-            wz2 = 10.0 if a2.kind == "ground_bounce" else 4.5
-            z1_min = 0.0 if a1.kind == "ground_bounce" else (0.5 if prev_anchor_state is not None else (1.2 if a1.height_ft >= 1.5 else 0.5))
-            z1_max = 0.05 if a1.kind == "ground_bounce" else 7.5
+            n_obs = len(obs_k)
+            w_end1 = max(5.5, 0.35 * n_obs) if a1.kind == "ground_bounce" else max(4.2, 0.28 * n_obs)
+            w_end2 = max(5.5, 0.35 * n_obs) if a2.kind == "ground_bounce" else max(4.2, 0.28 * n_obs)
+            if use_prev:
+                w_end1 += 4.0
+            wz1 = 12.0 if a1.kind == "ground_bounce" else (7.0 if use_prev else 5.0)
+            wz2 = 12.0 if a2.kind == "ground_bounce" else 5.0
+            z1_min = 0.0 if a1.kind == "ground_bounce" else (0.5 if use_prev else (1.2 if a1.height_ft >= 1.5 else 0.5))
+            z1_max = 0.05 if a1.kind == "ground_bounce" else 7.2
             z2_min = 0.0 if a2.kind == "ground_bounce" else (1.2 if a2.height_ft >= 1.5 else 0.5)
-            z2_max = 0.05 if a2.kind == "ground_bounce" else 7.5
+            z2_max = 0.05 if a2.kind == "ground_bounce" else 7.2
+
+            dx1_tol = 3.5 if a1.kind == "ground_bounce" else 6.0
+            dy1_tol = 4.5 if a1.kind == "ground_bounce" else 8.5
+            dx2_tol = 3.5 if a2.kind == "ground_bounce" else 6.0
+            dy2_tol = 4.5 if a2.kind == "ground_bounce" else 8.5
 
             def residuals(params):
                 px1, py1, pz1, px2, py2, pz2, kd, g = params
@@ -407,6 +435,7 @@ class Ball3DReconstructor:
                     else:
                         proj_u[idx], proj_v[idx] = obs_u_arr[idx], obs_v_arr[idx]
 
+                z_peak_excess = max(0.0, float(np.max(Z)) - 11.5)
                 res_px = np.concatenate([proj_u - obs_u_arr, proj_v - obs_v_arr])
                 priors = np.array([
                     (px1 - x1_init) * w_end1,
@@ -416,39 +445,45 @@ class Ball3DReconstructor:
                     (py2 - y2_init) * w_end2,
                     (pz2 - z2_init) * wz2,
                     (kd - 0.25) * 4.0,
-                    (g - 30.0) * 0.6,
+                    (g - 30.0) * 0.8,
+                    z_peak_excess * 12.0,
                 ])
                 return np.concatenate([res_px, priors])
 
-            if prev_anchor_state is not None:
-                px1_c = float(np.clip(x1_init, -15.0, 38.0))
-                py1_c = float(np.clip(y1_init, -18.0, 60.0))
-                pz1_c = float(np.clip(z1_init, z1_min, z1_max))
-                x0 = [
-                    px1_c,
-                    py1_c,
-                    pz1_c,
-                    np.clip(x2_init, -15.0, 35.0),
-                    np.clip(y2_init, -15.0, 58.0),
-                    np.clip(z2_init, z2_min, z2_max),
-                    0.25,
-                    30.0,
-                ]
-                lb = [px1_c - 0.05, py1_c - 0.05, max(0.0, pz1_c - 0.05), -15.0, -18.0, z2_min, 0.0, 20.0]
-                ub = [px1_c + 0.05, py1_c + 0.05, min(7.5, pz1_c + 0.05), 38.0, 60.0, z2_max, 1.2, 38.0]
+            lb1_x = max(-15.0, a1_x - dx1_tol)
+            ub1_x = min(38.0, a1_x + dx1_tol)
+            lb1_y = max(-18.0, a1_y - dy1_tol)
+            ub1_y = min(60.0, a1_y + dy1_tol)
+            lb2_x = max(-15.0, a2_x - dx2_tol)
+            ub2_x = min(38.0, a2_x + dx2_tol)
+            lb2_y = max(-18.0, a2_y - dy2_tol)
+            ub2_y = min(60.0, a2_y + dy2_tol)
+
+            if use_prev:
+                lb1_x = max(lb1_x, x1_init - 1.2)
+                ub1_x = min(ub1_x, x1_init + 1.2)
+                lb1_y = max(lb1_y, y1_init - 1.5)
+                ub1_y = min(ub1_y, y1_init + 1.5)
+                z1_lo = max(z1_min, z1_init - 0.8)
+                z1_hi = min(z1_max, z1_init + 0.8)
             else:
-                x0 = [
-                    np.clip(x1_init, -15.0, 35.0),
-                    np.clip(y1_init, -15.0, 58.0),
-                    np.clip(z1_init, z1_min, z1_max),
-                    np.clip(x2_init, -15.0, 35.0),
-                    np.clip(y2_init, -15.0, 58.0),
-                    np.clip(z2_init, z2_min, z2_max),
-                    0.25,
-                    30.0,
-                ]
-                lb = [-15.0, -18.0, z1_min, -15.0, -18.0, z2_min, 0.0, 20.0]
-                ub = [38.0, 60.0, z1_max, 38.0, 60.0, z2_max, 1.2, 38.0]
+                z1_lo, z1_hi = z1_min, z1_max
+
+            if z1_lo >= z1_hi:
+                z1_hi = z1_lo + 0.05
+
+            x0 = [
+                float(np.clip(x1_init, lb1_x, ub1_x)),
+                float(np.clip(y1_init, lb1_y, ub1_y)),
+                float(np.clip(z1_init, z1_lo, z1_hi)),
+                float(np.clip(x2_init, lb2_x, ub2_x)),
+                float(np.clip(y2_init, lb2_y, ub2_y)),
+                float(np.clip(z2_init, z2_min, z2_max)),
+                0.25,
+                30.0,
+            ]
+            lb = [lb1_x, lb1_y, z1_lo, lb2_x, lb2_y, z2_min, 0.0, 22.0]
+            ub = [ub1_x, ub1_y, z1_hi, ub2_x, ub2_y, z2_max, 1.2, 36.0]
 
             try:
                 opt = least_squares(residuals, x0, bounds=(lb, ub), max_nfev=80)
@@ -532,6 +567,9 @@ class Ball3DReconstructor:
         max_interp_gap_frames = max(12, int(round(0.45 * eff_fps)))
         obs_indices = [i for i, p in enumerate(clean_pts) if p is not None]
 
+        norm_px = max(0.45, scale_px)
+        img_sz = calibrator.result.image_size
+
         def _gap_span_at(k_idx: int) -> int:
             if clean_pts[k_idx] is not None:
                 return 0
@@ -541,9 +579,33 @@ class Ball3DReconstructor:
                 return 999999
             return int(obs_indices[pos] - obs_indices[pos - 1])
 
+        def _segment_has_break(a1: ShotAnchor, a2: ShotAnchor) -> bool:
+            if (a2.timestamp_s - a1.timestamp_s) > 2.4:
+                return True
+            prev_obs_k = None
+            for kk in range(a1.frame_idx, a2.frame_idx + 1):
+                if clean_pts[kk] is not None:
+                    if prev_obs_k is not None:
+                        df = kk - prev_obs_k
+                        if df > max_interp_gap_frames:
+                            return True
+                        p0, p1 = clean_pts[prev_obs_k], clean_pts[kk]
+                        dist_px = float(np.hypot(p1[0] - p0[0], p1[1] - p0[1]))
+                        if df > 1 and dist_px > max(95.0 * norm_px, 42.0 * norm_px * df):
+                            return True
+                        tid0 = (telemetry_stream[prev_obs_k].get("ball") or {}).get("track_id")
+                        tid1 = (telemetry_stream[kk].get("ball") or {}).get("track_id")
+                        if tid0 is not None and tid1 is not None and tid0 != tid1 and (df > 1 or dist_px > 85.0 * norm_px):
+                            return True
+                    prev_obs_k = kk
+            return False
+
         reconstructed: Dict[int, Tuple[float, float, float, bool]] = {}
         prev_state: Optional[Tuple[float, float, float]] = None
         for i in range(len(anchors) - 1):
+            if _segment_has_break(anchors[i], anchors[i + 1]):
+                prev_state = None
+                continue
             seg = self._reconstruct_segment(
                 telemetry_stream,
                 clean_pts,
@@ -554,7 +616,7 @@ class Ball3DReconstructor:
             )
             reconstructed.update(seg)
             end_k = anchors[i + 1].frame_idx
-            if end_k in seg:
+            if end_k in seg and anchors[i + 1].kind != "endpoint":
                 prev_state = (seg[end_k][0], seg[end_k][1], seg[end_k][2])
             else:
                 prev_state = None
@@ -575,15 +637,56 @@ class Ball3DReconstructor:
                 ball["height_ft"] = mz_r
             else:
                 # Do not fabricate balls across long untracked non-rally intervals (> 0.45s gap)
-                if ball is None and _gap_span_at(k) > max_interp_gap_frames:
+                gap_span = _gap_span_at(k)
+                if gap_span > max_interp_gap_frames:
                     continue
 
+                pos = int(np.searchsorted(obs_indices, k))
+                chord_pt: Optional[Tuple[float, float]] = None
+                chord_dist = 0.0
+                if 0 < pos < len(obs_indices):
+                    ip, inx = obs_indices[pos - 1], obs_indices[pos]
+                    tid_p = (telemetry_stream[ip].get("ball") or {}).get("track_id")
+                    tid_n = (telemetry_stream[inx].get("ball") or {}).get("track_id")
+                    p_prev, p_next = clean_pts[ip], clean_pts[inx]
+                    chord_dist = float(np.hypot(p_next[0] - p_prev[0], p_next[1] - p_prev[1]))
+                    if (tid_p is not None and tid_n is not None and tid_p != tid_n) or chord_dist > max(95.0 * norm_px, 42.0 * norm_px * (inx - ip)):
+                        if ball is not None and ball.get("interpolated", False):
+                            rec["ball"] = None
+                        continue
+                    frac = (k - ip) / max(1, inx - ip)
+                    chord_pt = (p_prev[0] + frac * (p_next[0] - p_prev[0]), p_prev[1] + frac * (p_next[1] - p_prev[1]))
+
                 px_proj = calibrator.court_3d_to_pixel(mx, my, mz)
-                px_list = [round(px_proj[0], 1), round(px_proj[1], 1)] if px_proj else (ball.get("pixel") if ball else None)
-                box_list = (
-                    [round(px_list[0] - box_half, 1), round(px_list[1] - box_half, 1), round(px_list[0] + box_half, 1), round(px_list[1] + box_half, 1)]
-                    if px_list else [0.0, 0.0, 0.0, 0.0]
-                )
+                px_ok = px_proj is not None
+                if px_ok and img_sz is not None:
+                    iw, ih = img_sz
+                    if px_proj[0] < -20.0 or px_proj[0] > (iw + 20.0) or px_proj[1] < -20.0 or px_proj[1] > (ih + 20.0):
+                        px_ok = False
+                if px_ok and chord_pt is not None:
+                    dev_lim = max(42.0 * norm_px, 0.40 * chord_dist + 18.0 * norm_px)
+                    if float(np.hypot(px_proj[0] - chord_pt[0], px_proj[1] - chord_pt[1])) > dev_lim:
+                        px_ok = False
+
+                if px_ok:
+                    px_list = [round(px_proj[0], 1), round(px_proj[1], 1)]
+                elif chord_pt is not None:
+                    existing_px = ball.get("pixel") if ball else None
+                    dev_lim = max(42.0 * norm_px, 0.40 * chord_dist + 18.0 * norm_px)
+                    if existing_px and float(np.hypot(existing_px[0] - chord_pt[0], existing_px[1] - chord_pt[1])) <= dev_lim:
+                        px_list = [round(float(existing_px[0]), 1), round(float(existing_px[1]), 1)]
+                    else:
+                        px_list = [round(chord_pt[0], 1), round(chord_pt[1], 1)]
+                    safe_cft = calibrator.pixel_to_court_at_height_ft(px_list[0], px_list[1], min(mz, 6.0))
+                    if safe_cft is not None:
+                        mx_r, my_r = round(float(safe_cft[0]), 2), round(float(safe_cft[1]), 2)
+                else:
+                    px_list = ball.get("pixel") if ball else None
+
+                if px_list is None:
+                    continue
+
+                box_list = [round(px_list[0] - box_half, 1), round(px_list[1] - box_half, 1), round(px_list[0] + box_half, 1), round(px_list[1] + box_half, 1)]
                 if ball is not None:
                     ball["pixel"] = px_list
                     ball["box"] = box_list
@@ -593,6 +696,7 @@ class Ball3DReconstructor:
                     ball["height_ft"] = mz_r
                     ball["interpolated"] = True
                 else:
+                    tid_inherit = (telemetry_stream[obs_indices[pos - 1]].get("ball") or {}).get("track_id") if pos > 0 else None
                     rec["ball"] = {
                         "frame_idx": k,
                         "timestamp_s": rec.get("timestamp_s", round(k / eff_fps, 3)),
@@ -606,6 +710,7 @@ class Ball3DReconstructor:
                         "ground_shadow_ft": [mx_r, my_r],
                         "height_ft": mz_r,
                         "interpolated": True,
+                        "track_id": tid_inherit,
                     }
 
         return telemetry_stream, updated_bounces

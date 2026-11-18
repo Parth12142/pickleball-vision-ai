@@ -157,7 +157,7 @@ class BallDetector:
 
     def __init__(
         self,
-        model_path: str = "weights/ball_colab_dukcv.pt",
+        model_path: str = "weights/ball_yolo26_tuned.pt",
         conf_thresh: float = 0.15,
         imgsz: int = 1280,
         multiscale: bool = False,
@@ -170,6 +170,8 @@ class BallDetector:
         candidates = [
             model_path,
             os.path.join(REPO_ROOT, model_path) if model_path and not os.path.isabs(model_path) else None,
+            "weights/ball_yolo26_tuned.pt",
+            os.path.join(REPO_ROOT, "weights/ball_yolo26_tuned.pt"),
             "weights/ball_yolo26_best.pt",
             os.path.join(REPO_ROOT, "weights/ball_yolo26_best.pt"),
             "weights/ball_colab_dukcv.pt",

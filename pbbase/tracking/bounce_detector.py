@@ -340,25 +340,27 @@ class SavitzkyGolayBounceAnalyzer:
     def _extract_clean_anchors(
         stream: List[Dict[str, Any]],
         max_gap_frames: int,
+        scale_px: float = 1.0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Extract genuine observed pixels, deduplicate telecine freezes, and fill short gaps."""
+        """Extract genuine observed pixels, deduplicate telecine freezes, and fill short same-track gaps."""
         n = len(stream)
         obs_idx: List[int] = []
         obs_x: List[float] = []
         obs_y: List[float] = []
+        obs_tid: List[Optional[int]] = []
 
         # Collect genuine non-interpolated anchors
-        raw_obs: List[Tuple[int, float, float]] = []
+        raw_obs: List[Tuple[int, float, float, Optional[int]]] = []
         for r in stream:
             fi = int(r["frame_idx"])
             b = r.get("ball")
             if b is not None and b.get("pixel") and not b.get("interpolated", False):
-                raw_obs.append((fi, float(b["pixel"][0]), float(b["pixel"][1])))
+                raw_obs.append((fi, float(b["pixel"][0]), float(b["pixel"][1]), b.get("track_id")))
 
         # Collapse consecutive telecine freeze repeats smoothly across plateau intervals
         idx_r = 0
         while idx_r < len(raw_obs):
-            fi0, px0, py0 = raw_obs[idx_r]
+            fi0, px0, py0, tid0 = raw_obs[idx_r]
             end_r = idx_r
             while (
                 end_r + 1 < len(raw_obs)
@@ -371,6 +373,7 @@ class SavitzkyGolayBounceAnalyzer:
             obs_idx.append(fi0)
             obs_x.append(px0)
             obs_y.append(py0)
+            obs_tid.append(tid0)
             idx_r = end_r + 1
 
         x_clean = np.full(n, np.nan, dtype=float)
@@ -380,11 +383,18 @@ class SavitzkyGolayBounceAnalyzer:
         if not obs_idx:
             return x_clean, y_clean, valid
 
+        norm_s = max(0.45, scale_px)
         for k in range(len(obs_idx) - 1):
             i0, i1 = obs_idx[k], obs_idx[k + 1]
-            if (i1 - i0) <= max_gap_frames:
+            df = i1 - i0
+            dist_px = math.hypot(obs_x[k + 1] - obs_x[k], obs_y[k + 1] - obs_y[k])
+            tid_changed = (obs_tid[k] is not None and obs_tid[k + 1] is not None and obs_tid[k] != obs_tid[k + 1])
+            max_bridge_px = max(75.0 * norm_s, 42.0 * norm_s * df)
+            x_clean[i0], y_clean[i0] = obs_x[k], obs_y[k]
+            valid[i0] = True
+            if df <= max_gap_frames and not tid_changed and dist_px <= max_bridge_px:
                 span = np.arange(i0, i1 + 1)
-                t = (span - i0) / max(1, i1 - i0)
+                t = (span - i0) / max(1, df)
                 x_clean[span] = obs_x[k] + t * (obs_x[k + 1] - obs_x[k])
                 y_clean[span] = obs_y[k] + t * (obs_y[k + 1] - obs_y[k])
                 valid[span] = True
@@ -397,11 +407,12 @@ class SavitzkyGolayBounceAnalyzer:
             valid[last_i] = True
 
         # Preserve final interpolated tail only if within 3 frames and physically close
+        tail_step_lim = max(35.0, 45.0 * norm_s)
         for r in stream:
             fi = int(r["frame_idx"])
             if not valid[fi] and r.get("ball") and r["ball"].get("pixel"):
                 px, py = float(r["ball"]["pixel"][0]), float(r["ball"]["pixel"][1])
-                if fi > 0 and valid[fi - 1] and math.hypot(px - x_clean[fi - 1], py - y_clean[fi - 1]) < 45.0:
+                if fi > 0 and valid[fi - 1] and math.hypot(px - x_clean[fi - 1], py - y_clean[fi - 1]) < tail_step_lim:
                     x_clean[fi], y_clean[fi] = px, py
                     valid[fi] = True
 
@@ -498,7 +509,7 @@ class SavitzkyGolayBounceAnalyzer:
         max_gap = max(6, int(round(self.max_gap_s * fps)))
         base_win = 9 if fps < 45.0 else 15
 
-        x_clean, y_clean, valid = self._extract_clean_anchors(stream, max_gap_frames=max_gap)
+        x_clean, y_clean, valid = self._extract_clean_anchors(stream, max_gap_frames=max_gap, scale_px=norm_px_scale)
 
         # Find contiguous valid intervals
         segments: List[Tuple[int, int]] = []

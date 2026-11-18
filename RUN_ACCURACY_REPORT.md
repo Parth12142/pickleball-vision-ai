@@ -1,26 +1,26 @@
 # 🏓 PickleBallVisualizer — Run Accuracy & Performance Report
 
-> **Last Updated**: `2026-11-17 14:35:19`  
-> **Total Pipeline Runs Recorded**: `35`  
+> **Last Updated**: `2026-11-18 14:51:30`  
+> **Total Pipeline Runs Recorded**: `47`  
 > **Output Guide & Telemetry Specification**: See [`OUTPUT_EXPLANATION.md`](OUTPUT_EXPLANATION.md) for full visual overlay and JSON schema definitions.
 
 ---
 
-## 🎯 Latest Execution Summary (`match2.mp4`)
+## 🎯 Latest Execution Summary (`match_hd_1min.mp4`)
 
 | Metric | Result | Benchmark Target | Status |
 | :--- | :--- | :--- | :--- |
-| **Clip Name** | `match2.mp4` | — | — |
-| **Resolution & Video FPS** | `1296x738` @ `30.0 FPS` | — | — |
-| **Frames Processed** | `280` frames | Full Rally | ✅ Analyzed |
-| **Inference Throughput** | **`5.7 FPS`** | > 30 FPS (Real-Time) | ⚡ Real-Time |
-| **Ball Detection Rate** | **`99.3%`** (278 frames) | > 85% Sustained | ✅ Target Met |
-| **Active Players Tracked** | **`4.0 / 4.0`** | 4.0 Players (Doubles) | ✅ Locked (4/4) |
+| **Clip Name** | `match_hd_1min.mp4` | — | — |
+| **Resolution & Video FPS** | `1280x720` @ `30.0 FPS` | — | — |
+| **Frames Processed** | `1800` frames | Full Rally | ✅ Analyzed |
+| **Inference Throughput** | **`4.49 FPS`** | > 30 FPS (Real-Time) | ⚡ Real-Time |
+| **Ball Detection Rate** | **`60.2%`** (1084 frames) | > 85% Sustained | ⚠️ Tuning Required |
+| **Active Players Tracked** | **`3.76 / 4.0`** | 4.0 Players (Doubles) | ⚠️ Tracking Gap |
 | **Court Calibration (RMSE)** | **`0.0000 ft`** | < 0.05 ft Error | ✅ Sub-Millimeter |
 
 ### Generated Outputs for Latest Run:
-- 📊 **Structured JSON Telemetry**: [`/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match2_base_telemetry.json`](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match2_base_telemetry.json)
-- 🎥 **Visual Overlay MP4**: [`/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match2_base_preview.mp4`](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match2_base_preview.mp4)
+- 📊 **Structured JSON Telemetry**: [`/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_hd_1min_base_telemetry.json`](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_hd_1min_base_telemetry.json)
+- 🎥 **Visual Overlay MP4**: [`/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_hd_1min_base_preview.mp4`](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_hd_1min_base_preview.mp4)
 
 ---
 
@@ -28,6 +28,18 @@
 
 | Run | Timestamp | Clip Name | Res | Frames | Ball Detect % | Players / 4 | Court RMSE (ft) | FPS | Outputs |
 | :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| #47 | `2026-11-18 14:51:30` | **match_hd_1min.mp4** | 1280x720 | 1800 | **60.2%** (1084f) | 3.76 / 4.0 | ✅ 0.0000 | 4.5 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_hd_1min_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_hd_1min_base_preview.mp4) |
+| #46 | `2026-11-18 14:33:57` | **match_hd_1min.mp4** | 1280x720 | 1800 | **73.7%** (1327f) | 3.76 / 4.0 | ✅ 0.0000 | 5.7 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_hd_1min_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_hd_1min_base_preview.mp4) |
+| #45 | `2026-11-18 14:25:44` | **match_hd_1min.mp4** | 1280x720 | 30 | **90.0%** (27f) | 3.87 / 4.0 | ✅ 0.0000 | 5.3 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_hd_1min_base_telemetry.json) |
+| #44 | `2026-11-18 13:12:18` | **match_1min.mp4** | 640x360 | 1800 | **70.1%** (1262f) | 3.57 / 4.0 | ✅ 0.0000 | 4.2 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_1min_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_1min_base_preview.mp4) |
+| #43 | `2026-11-18 13:03:03` | **match_1min.mp4** | 640x360 | 60 | **90.0%** (54f) | 3.33 / 4.0 | ✅ 0.0000 | 4.1 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_1min_base_telemetry.json) |
+| #42 | `2026-11-18 13:02:27` | **match_mlp.mp4** | 1280x720 | 300 | **86.3%** (259f) | 4.0 / 4.0 | ✅ 0.0000 | 5.6 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_mlp_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_mlp_base_preview.mp4) |
+| #41 | `2026-11-18 12:58:07` | **match_mlp.mp4** | 1280x720 | 300 | **87.0%** (261f) | 4.0 / 4.0 | ✅ 0.0000 | 4.5 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_mlp_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_mlp_base_preview.mp4) |
+| #40 | `2026-11-18 12:36:41` | **match_mlp.mp4** | 1280x720 | 300 | **89.3%** (268f) | 4.0 / 4.0 | ✅ 0.0000 | 5.5 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_mlp_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match_mlp_base_preview.mp4) |
+| #39 | `2026-11-18 12:19:10` | **match2.mp4** | 1296x738 | 280 | **99.3%** (278f) | 4.0 / 4.0 | ✅ 0.0000 | 5.4 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match2_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match2_base_preview.mp4) |
+| #38 | `2026-11-18 12:18:12` | **match1.mp4** | 1302x740 | 289 | **98.6%** (285f) | 4.0 / 4.0 | ✅ 0.0000 | 5.6 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #37 | `2026-11-18 12:17:01` | **match1.mp4** | 1302x740 | 30 | **100.0%** (30f) | 4.0 / 4.0 | ✅ 0.0000 | 4.6 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
+| #36 | `2026-11-18 12:16:20` | **match1.mp4** | 1302x740 | 30 | **96.7%** (29f) | 4.0 / 4.0 | ✅ 0.0000 | 4.5 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
 | #35 | `2026-11-17 14:35:19` | **match2.mp4** | 1296x738 | 280 | **99.3%** (278f) | 4.0 / 4.0 | ✅ 0.0000 | 5.7 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match2_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match2_base_preview.mp4) |
 | #34 | `2026-11-17 14:34:27` | **match1.mp4** | 1302x740 | 289 | **94.1%** (272f) | 4.0 / 4.0 | ✅ 0.0000 | 6.0 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |
 | #33 | `2026-11-17 14:05:38` | **match1.mp4** | 1302x740 | 289 | **94.1%** (272f) | 4.0 / 4.0 | ✅ 0.0000 | 6.5 | [JSON](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_telemetry.json) | [MP4](/home/pce118/Desktop/pickleball-vision-ai-main/outputs/match1_base_preview.mp4) |

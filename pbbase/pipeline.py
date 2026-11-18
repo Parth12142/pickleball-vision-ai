@@ -38,12 +38,114 @@ PLAYER_THEMES = [
 
 
 def _default_ball_weights() -> str:
+    tuned_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "weights", "ball_yolo26_tuned.pt")
+    )
+    if os.path.exists(tuned_path):
+        return "weights/ball_yolo26_tuned.pt"
     best_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "weights", "ball_yolo26_best.pt")
     )
     if os.path.exists(best_path):
         return "weights/ball_yolo26_best.pt"
     return "weights/ball_colab_dukcv.pt"
+
+
+def _scrub_unconfirmed_coast_tails(telemetry_stream: List[Dict[str, Any]]) -> None:
+    """
+    Remove speculative open-loop coasting (`interpolated=True`) frames not bounded
+    on both sides by real model detections (`interpolated=False`) of the same track.
+    """
+    n = len(telemetry_stream)
+    i = 0
+    while i < n:
+        b = telemetry_stream[i].get("ball")
+        if b is None:
+            i += 1
+            continue
+        tid = b.get("track_id")
+        j = i
+        while j + 1 < n:
+            nb = telemetry_stream[j + 1].get("ball")
+            if nb is None:
+                break
+            ntid = nb.get("track_id")
+            if tid is not None and ntid is not None and ntid != tid:
+                break
+            j += 1
+
+        obs_indices = [k for k in range(i, j + 1) if not telemetry_stream[k]["ball"].get("interpolated", False)]
+        if not obs_indices:
+            for k in range(i, j + 1):
+                telemetry_stream[k]["ball"] = None
+        else:
+            first_obs, last_obs = obs_indices[0], obs_indices[-1]
+            for k in range(i, first_obs):
+                telemetry_stream[k]["ball"] = None
+            for k in range(last_obs + 1, j + 1):
+                telemetry_stream[k]["ball"] = None
+        i = j + 1
+
+
+def _prune_ghost_ball_tracks(telemetry_stream: List[Dict[str, Any]], scale_px: float = 1.0) -> None:
+    """
+    Remove short, uncorroborated orphan ball fragments (low-conf bleacher flickers
+    or tiny stagnant spots between rallies) so dead-ball search intervals stay clean.
+    """
+    n = len(telemetry_stream)
+    if n < 12:
+        return
+    norm_s = max(0.45, scale_px)
+    runs: List[Tuple[int, int]] = []
+    i = 0
+    while i < n:
+        b = telemetry_stream[i].get("ball")
+        if b is None:
+            i += 1
+            continue
+        tid = b.get("track_id")
+        j = i
+        while j + 1 < n:
+            nb = telemetry_stream[j + 1].get("ball")
+            if nb is None:
+                break
+            ntid = nb.get("track_id")
+            if tid is not None and ntid is not None and ntid != tid:
+                break
+            j += 1
+        runs.append((i, j))
+        i = j + 1
+
+    for r_idx, (st, en) in enumerate(runs):
+        obs = [k for k in range(st, en + 1) if telemetry_stream[k]["ball"].get("pixel") and not telemetry_stream[k]["ball"].get("interpolated", False)]
+        if not obs:
+            for k in range(st, en + 1):
+                telemetry_stream[k]["ball"] = None
+            continue
+        max_conf = max(float(telemetry_stream[k]["ball"].get("conf", 0.0)) for k in obs)
+        p0 = telemetry_stream[obs[0]]["ball"]["pixel"]
+        pend = telemetry_stream[obs[-1]]["ball"]["pixel"]
+        max_span = max(float(np.hypot(telemetry_stream[k]["ball"]["pixel"][0] - p0[0], telemetry_stream[k]["ball"]["pixel"][1] - p0[1])) for k in obs)
+
+        drop_run = False
+        if len(obs) == 1 and max_conf < 0.72:
+            drop_run = True
+        elif len(obs) <= 4:
+            if max_conf < 0.50:
+                drop_run = True
+            elif max_span < (14.0 * norm_s) and max_conf < 0.68:
+                drop_run = True
+            else:
+                prev_px = telemetry_stream[runs[r_idx - 1][1]]["ball"]["pixel"] if r_idx > 0 and telemetry_stream[runs[r_idx - 1][1]].get("ball") else None
+                next_px = telemetry_stream[runs[r_idx + 1][0]]["ball"]["pixel"] if (r_idx + 1) < len(runs) and telemetry_stream[runs[r_idx + 1][0]].get("ball") else None
+                jump_prev = float(np.hypot(p0[0] - prev_px[0], p0[1] - prev_px[1])) if prev_px else 0.0
+                jump_next = float(np.hypot(next_px[0] - pend[0], next_px[1] - pend[1])) if next_px else 0.0
+                if (prev_px and jump_prev > 115.0 * norm_s) and (next_px and jump_next > 115.0 * norm_s) and max_conf < 0.62:
+                    drop_run = True
+
+        if drop_run:
+            for k in range(st, en + 1):
+                telemetry_stream[k]["ball"] = None
 
 
 class BasePerceptionPipeline:
@@ -212,6 +314,11 @@ class BasePerceptionPipeline:
 
         cap.release()
 
+        # Scrub speculative dead-end coasting & short orphan ghost tracks BEFORE SG / 3D fitting
+        _scrub_unconfirmed_coast_tails(telemetry_stream)
+        scale_px_post = max(0.45, self.court_calibrator.get_court_pixel_scale((h, w)))
+        _prune_ghost_ball_tracks(telemetry_stream, scale_px=scale_px_post)
+
         # =====================================================================
         # SAVITZKY-GOLAY BOUNCE REFINEMENT & 3D BALLISTIC RECONSTRUCTION
         # =====================================================================
@@ -226,16 +333,48 @@ class BasePerceptionPipeline:
         )
         t_3d_ms = round((time.time() - t_3d_start) * 1000, 1)
 
+        # Ensure zero unconfirmed coasting tails or 1-frame isolated flashes survive reconstruction
+        _scrub_unconfirmed_coast_tails(telemetry_stream)
+        n_stream = len(telemetry_stream)
+        if n_stream >= 6:
+            iso_jump_px = 95.0 * scale_px_post
+            for idx_s in range(n_stream):
+                rec_s = telemetry_stream[idx_s]
+                b_s = rec_s.get("ball")
+                if b_s is None or not b_s.get("pixel") or rec_s.get("bounce") is not None:
+                    continue
+                if float(b_s.get("conf", 0.0)) >= 0.72:
+                    continue
+                bx_s, by_s = b_s["pixel"][0], b_s["pixel"][1]
+                tid_s = b_s.get("track_id")
+                prev_b = telemetry_stream[idx_s - 1].get("ball") if idx_s > 0 else None
+                next_b = telemetry_stream[idx_s + 1].get("ball") if (idx_s + 1) < n_stream else None
+                isolated_prev = (
+                    prev_b is None
+                    or not prev_b.get("pixel")
+                    or (tid_s is not None and prev_b.get("track_id") is not None and prev_b.get("track_id") != tid_s)
+                    or float(np.hypot(bx_s - prev_b["pixel"][0], by_s - prev_b["pixel"][1])) > iso_jump_px
+                )
+                isolated_next = (
+                    next_b is None
+                    or not next_b.get("pixel")
+                    or (tid_s is not None and next_b.get("track_id") is not None and next_b.get("track_id") != tid_s)
+                    or float(np.hypot(bx_s - next_b["pixel"][0], by_s - next_b["pixel"][1])) > iso_jump_px
+                )
+                if isolated_prev and isolated_next:
+                    rec_s["ball"] = None
+        _scrub_unconfirmed_coast_tails(telemetry_stream)
+
         # Recompute ball continuity metrics & camera history after 3D gap reconstruction
         frames_with_ball = sum(1 for r in telemetry_stream if r.get("ball") is not None)
         raw_frames_with_ball = sum(
             1 for r in telemetry_stream if r.get("ball") is not None and not r["ball"].get("interpolated", False)
         )
-        ball_pts_history: List[Optional[Tuple[float, float, float]]] = []
+        ball_pts_history: List[Optional[Tuple[float, float, float, Optional[int]]]] = []
         for r in telemetry_stream:
             b = r.get("ball")
             if b is not None and b.get("pixel"):
-                ball_pts_history.append((b["pixel"][0], b["pixel"][1], b.get("speed_px_per_frame", 0.0)))
+                ball_pts_history.append((b["pixel"][0], b["pixel"][1], b.get("speed_px_per_frame", 0.0), b.get("track_id")))
             else:
                 ball_pts_history.append(None)
 
@@ -411,9 +550,9 @@ class BasePerceptionPipeline:
             if p.get("speed_mph", 0.0) > 1.0:
                 lbl += f" {p['speed_mph']:.1f}mph"
 
-            p_font = 0.30 if is_compact else (0.72 if is_hi_res else 0.38)
-            char_w = 6 if is_compact else (14 if is_hi_res else 8)
-            pill_h = 14 if is_compact else (34 if is_hi_res else 18)
+            p_font = 0.27 if is_compact else (0.72 if is_hi_res else 0.38)
+            char_w = 5 if is_compact else (14 if is_hi_res else 8)
+            pill_h = 12 if is_compact else (34 if is_hi_res else 18)
             pill_w = len(lbl) * char_w + (20 if is_hi_res else 12)
             bx1 = max(4, min(w - pill_w - 4, cx - pill_w // 2))
             by1 = max(4, y1 - (pill_h + 6 if is_hi_res else pill_h + 3))
@@ -426,11 +565,21 @@ class BasePerceptionPipeline:
         ball = record["ball"]
         if ball is not None and ball.get("pixel"):
             trail_len = 16
+            scale_px = self.court_calibrator.get_court_pixel_scale((h, w))
+            max_trail_step_px = max(72.0, 108.0 * scale_px * (30.0 / max(15.0, fps)))
             valid_pts = []
             for i in range(len(ball_history) - 1, max(-1, len(ball_history) - 1 - trail_len), -1):
                 pt = ball_history[i]
                 if pt is None:
                     break
+                if valid_pts:
+                    nxt = valid_pts[-1]
+                    tid_p = pt[3] if len(pt) > 3 else None
+                    tid_n = nxt[3] if len(nxt) > 3 else None
+                    if tid_p is not None and tid_n is not None and tid_p != tid_n:
+                        break
+                    if float(np.hypot(nxt[0] - pt[0], nxt[1] - pt[1])) > max_trail_step_px:
+                        break
                 valid_pts.append(pt)
             valid_pts.reverse()
 
@@ -498,12 +647,12 @@ class BasePerceptionPipeline:
 
         hud_title = "PICKVIZ (3D MINIMAP)" if render_minimap else "PICKVIZ (3D PERCEPTION)"
         if is_compact:
-            cv2.rectangle(vis, (8, 8), (308, 52), (15, 23, 42), -1)
-            cv2.rectangle(vis, (8, 8), (308, 52), (0, 255, 220), 1)
-            cv2.putText(vis, hud_title, (14, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.34, (0, 255, 220), 1, cv2.LINE_AA)
-            cv2.putText(vis, status_line, (14, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.29, (250, 250, 250), 1, cv2.LINE_AA)
+            cv2.rectangle(vis, (6, 6), (242, 44), (15, 23, 42), -1)
+            cv2.rectangle(vis, (6, 6), (242, 44), (0, 255, 220), 1)
+            cv2.putText(vis, hud_title, (11, 17), cv2.FONT_HERSHEY_SIMPLEX, 0.29, (0, 255, 220), 1, cv2.LINE_AA)
+            cv2.putText(vis, status_line, (11, 29), cv2.FONT_HERSHEY_SIMPLEX, 0.25, (250, 250, 250), 1, cv2.LINE_AA)
             cv2.putText(vis, f"Time: {int(sec//60):02d}:{int(sec%60):02d}.{int((sec%1)*100):02d} | Zero Rules Core",
-                        (14, 48), cv2.FONT_HERSHEY_SIMPLEX, 0.27, (160, 160, 160), 1, cv2.LINE_AA)
+                        (11, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.23, (160, 160, 160), 1, cv2.LINE_AA)
         elif is_hi_res:
             cv2.rectangle(vis, (24, 24), (820, 160), (15, 23, 42), -1)
             cv2.rectangle(vis, (24, 24), (820, 160), (0, 255, 220), 2)

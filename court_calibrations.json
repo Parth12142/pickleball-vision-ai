@@ -165,31 +165,87 @@
   },
   "match.mp4": {
     "resolution": [
-      1920,
-      1080
+      640,
+      360
     ],
     "aspect_ratio": "16:9_landscape",
     "corners_px": [
       [
-        627.0,
-        258.0
+        248.0,
+        89.0
       ],
       [
-        1261.0,
-        258.0
+        398.5,
+        89.0
       ],
       [
-        1596.0,
-        879.0
+        626.5,
+        320.0
       ],
       [
-        301.0,
-        879.0
+        13.0,
+        320.0
       ]
     ],
     "rmse_ft": 0.0,
-    "source": "broadcast_1080p_recommended",
-    "notes": "Full HD 1080p broadcast match"
+    "source": "human_pinned_calibrated",
+    "notes": "PPA broadcast Waters/Johns vs Todd/Newman (640x360 @ 30fps)"
+  },
+  "match_1min.mp4": {
+    "resolution": [
+      640,
+      360
+    ],
+    "aspect_ratio": "16:9_landscape",
+    "corners_px": [
+      [
+        248.0,
+        89.0
+      ],
+      [
+        398.5,
+        89.0
+      ],
+      [
+        626.5,
+        320.0
+      ],
+      [
+        13.0,
+        320.0
+      ]
+    ],
+    "rmse_ft": 0.0,
+    "source": "human_pinned_calibrated",
+    "notes": "1-minute continuous PPA broadcast rally extract from match.mp4 (640x360 @ 30fps)"
+  },
+  "match_hd_1min.mp4": {
+    "resolution": [
+      1280,
+      720
+    ],
+    "aspect_ratio": "16:9_landscape",
+    "corners_px": [
+      [
+        495.5,
+        152.5
+      ],
+      [
+        785.5,
+        151.0
+      ],
+      [
+        1144.5,
+        505.5
+      ],
+      [
+        122.5,
+        505.5
+      ]
+    ],
+    "rmse_ft": 0.0,
+    "source": "human_pinned_calibrated",
+    "notes": "Bright 1280x720 Carvana PPA Veolia National Championships 1-min broadcast clip"
   },
   "screencast.mp4": {
     "resolution": [

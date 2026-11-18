@@ -544,6 +544,136 @@ class TestCrossClipInvarianceUpgrades(unittest.TestCase):
         )
         self.assertEqual(canvas.shape[:2], (minimap.canvas_h, minimap.canvas_w))
 
+    def test_slow_lob_apex_not_evicted_as_static_decoy(self):
+        calibrator = CourtCalibrator([(486.0, 116.5), (789.0, 120.0), (1144.3, 578.8), (113.0, 581.0)], image_size=(1280, 720))
+        tracker = BallTrajectoryTracker(max_jump_px=85.0, max_coast_frames=3)
+        dummy_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+
+        # Simulate lob apex slowing to ~1.8 px/frame before accelerating down-left
+        pts = [
+            (710.7, 109.4), (713.1, 107.0), (715.3, 105.4), (717.1, 104.5),
+            (718.7, 105.0), (719.8, 106.3), (718.5, 105.1), (714.8, 103.2), (711.2, 102.4),
+        ]
+        results = []
+        for f_idx, (px, py) in enumerate(pts):
+            cands = [{"box": [px - 4, py - 4, px + 4, py + 4], "conf": 0.75, "center_px": (px, py)}]
+            res = tracker.process_candidates(cands, f_idx, f_idx / 30.0, calibrator, frame=dummy_frame)
+            results.append(res)
+
+        self.assertTrue(all(r is not None and not r["interpolated"] for r in results))
+        self.assertEqual(results[-1]["pixel"], (711.2, 102.4))
+        self.assertEqual(results[0]["track_id"], results[-1]["track_id"])
+
+    def test_3d_reconstructor_prevents_depth_collapse_and_chord_spikes(self):
+        from pbbase.tracking.ball_3d_tracker import Ball3DReconstructor, ShotAnchor
+        calibrator = CourtCalibrator([(486.0, 116.5), (789.0, 120.0), (1144.3, 578.8), (113.0, 581.0)], image_size=(1280, 720))
+        reconstructor = Ball3DReconstructor()
+
+        # Construct realistic rally segment with 3 missing frames mid-flight; pixel gap outputs must stay near chord
+        stream = []
+        for k in range(30):
+            tau = k / 29.0
+            u = 600.0 + tau * 120.0
+            v = 450.0 - tau * 345.0
+            if k in (14, 15, 16):
+                ball = None
+            else:
+                ball = {
+                    "frame_idx": k,
+                    "timestamp_s": k / 30.0,
+                    "pixel": [round(u, 1), round(v, 1)],
+                    "box": [u - 5, v - 5, u + 5, v + 5],
+                    "conf": 0.75,
+                    "speed_mph": 30.0,
+                    "speed_px_per_frame": 12.0,
+                    "court_ft": [10.0, 44.0 * (1.0 - tau)],
+                    "interpolated": False,
+                    "track_id": 0,
+                }
+            stream.append({"frame_idx": k, "timestamp_s": k / 30.0, "players": [], "ball": ball, "bounce": None})
+
+        out_stream, _ = reconstructor.reconstruct_stream(stream, [], calibrator)
+        for k in (14, 15, 16):
+            b = out_stream[k]["ball"]
+            self.assertIsNotNone(b)
+            tau = k / 29.0
+            exp_u, exp_v = 600.0 + tau * 120.0, 450.0 - tau * 345.0
+            self.assertLess(float(np.hypot(b["pixel"][0] - exp_u, b["pixel"][1] - exp_v)), 45.0)
+            self.assertGreaterEqual(b["pixel"][1], 0.0)
+
+    def test_scrub_unconfirmed_coast_tails_preserves_bounded_and_drops_open_tails(self):
+        from pbbase.pipeline import _scrub_unconfirmed_coast_tails
+
+        def _det(tid, px, interp=False, conf=0.65):
+            return {
+                "track_id": tid,
+                "pixel": [float(px[0]), float(px[1])],
+                "interpolated": interp,
+                "conf": conf,
+            }
+
+        stream = [
+            {"frame_idx": 0, "ball": _det(1, (500, 300), interp=False)},
+            {"frame_idx": 1, "ball": _det(1, (515, 290), interp=False)},
+            {"frame_idx": 2, "ball": _det(1, (530, 282), interp=True, conf=0.20)},
+            {"frame_idx": 3, "ball": _det(1, (545, 276), interp=False)},
+            {"frame_idx": 4, "ball": _det(1, (560, 255), interp=True, conf=0.18)},
+            {"frame_idx": 5, "ball": _det(1, (575, 230), interp=True, conf=0.16)},
+            {"frame_idx": 6, "ball": None},
+            {"frame_idx": 7, "ball": _det(2, (700, 260), interp=False)},
+            {"frame_idx": 8, "ball": _det(2, (712, 240), interp=True, conf=0.19)},
+        ]
+
+        _scrub_unconfirmed_coast_tails(stream)
+
+        self.assertIsNotNone(stream[2]["ball"], "Bounded occlusion coast should remain")
+        self.assertIsNone(stream[4]["ball"], "Unconfirmed open-loop coast tail must be scrubbed")
+        self.assertIsNone(stream[5]["ball"], "Unconfirmed open-loop coast tail must be scrubbed")
+        self.assertIsNotNone(stream[7]["ball"], "Observed detection should remain")
+        self.assertIsNone(stream[8]["ball"], "End-of-stream coast tail must be scrubbed")
+
+    def test_prune_ghost_ball_tracks_drops_short_ghost_and_keeps_real_rally(self):
+        from pbbase.pipeline import _prune_ghost_ball_tracks
+
+        stream = [{"frame_idx": i, "ball": None} for i in range(25)]
+        # Short 2-frame low-confidence ghost fragment
+        for idx in (0, 1):
+            stream[idx]["ball"] = {
+                "track_id": 10,
+                "pixel": [843.0 + idx * 0.5, 83.0],
+                "interpolated": False,
+                "conf": 0.24,
+            }
+
+        # 10-frame moving real rally track
+        for k in range(10):
+            stream[10 + k]["ball"] = {
+                "track_id": 11,
+                "pixel": [400.0 + 20.0 * k, 350.0 - 15.0 * k + 1.2 * k * k],
+                "interpolated": False,
+                "conf": 0.58,
+            }
+
+        _prune_ghost_ball_tracks(stream, scale_px=1.0)
+
+        self.assertIsNone(stream[0]["ball"])
+        self.assertIsNone(stream[1]["ball"])
+        for k in range(10):
+            self.assertIsNotNone(stream[10 + k]["ball"], f"Real track frame {10 + k} should survive")
+
+    def test_low_conf_noise_does_not_initialize_new_track(self):
+        calibrator = CourtCalibrator([(420, 180), (860, 180), (1140, 640), (140, 640)])
+        tracker = BallTrajectoryTracker()
+        noisy = [{"center_px": (640.0, 360.0), "conf": 0.18, "box": [635.0, 355.0, 645.0, 365.0]}]
+        self.assertIsNone(
+            tracker.process_candidates(noisy, frame_idx=0, timestamp_s=0.0, court_calibrator=calibrator)
+        )
+
+        solid = [{"center_px": (640.0, 360.0), "conf": 0.45, "box": [635.0, 355.0, 645.0, 365.0]}]
+        self.assertIsNotNone(
+            tracker.process_candidates(solid, frame_idx=1, timestamp_s=1.0 / 30.0, court_calibrator=calibrator)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

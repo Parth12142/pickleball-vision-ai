@@ -12,7 +12,7 @@ models:
     filter_spectators: true
 
   ball:
-    weights: "weights/ball_yolo26_best.pt"
+    weights: "weights/ball_yolo26_tuned.pt"
     imgsz: 1312
     conf: 0.15
     trail_length: 12

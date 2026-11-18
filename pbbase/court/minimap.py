@@ -115,6 +115,7 @@ class CourtMinimap:
         self.ball_trail.clear()
         self.active_bounces.clear()
         self.missing_ball_frames = 0
+        self._last_ball_tid = None
 
     def court_to_canvas(self, x_ft: float, y_ft: float) -> Tuple[int, int]:
         """Convert metric court coordinates (feet) to minimap canvas pixel coordinates."""
@@ -236,23 +237,28 @@ class CourtMinimap:
 
         # 2. Extract best court coordinates for ball (prefer 3D-reconstructed minimap_court_ft)
         ball_cft = None
+        ball_tid = None
         if ball is not None:
             ball_cft = ball.get("minimap_court_ft") or ball.get("court_ft")
+            ball_tid = ball.get("track_id")
 
         if ball_cft is not None:
             new_pt = (float(ball_cft[0]), float(ball_cft[1]))
-            # Break trail if ball was lost for several frames or jumped across court (new rally)
-            if self.missing_ball_frames >= 4 or (
-                self.ball_trail and float(np.hypot(new_pt[0] - self.ball_trail[-1][0], new_pt[1] - self.ball_trail[-1][1])) > 14.0
+            prev_tid = getattr(self, "_last_ball_tid", None)
+            tid_changed = (prev_tid is not None and ball_tid is not None and prev_tid != ball_tid)
+            # Break trail if ball was lost, switched track ID, or jumped implausibly across court
+            if tid_changed or self.missing_ball_frames >= 2 or (
+                self.ball_trail and float(np.hypot(new_pt[0] - self.ball_trail[-1][0], new_pt[1] - self.ball_trail[-1][1])) > 9.0
             ):
                 self.ball_trail.clear()
+            self._last_ball_tid = ball_tid
             self.missing_ball_frames = 0
             self.ball_trail.append(new_pt)
             if len(self.ball_trail) > self.trail_len:
                 self.ball_trail.pop(0)
         else:
             self.missing_ball_frames += 1
-            if self.missing_ball_frames >= 4:
+            if self.missing_ball_frames >= 2:
                 self.ball_trail.clear()
 
         # 3. Render smooth tapered Ball Trajectory Ribbon (Orthographic Ground Shadow Path)
