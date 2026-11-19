@@ -50,11 +50,11 @@ export const CLIPS_DATA = {
 
   "match_mlp": {
     id: "match_mlp",
-    shortName: "match_mlp.mp4",
+    shortName: "match_mlp_base_preview.mp4",
     isPortrait: false,
-    badgeTitle: "MATCH MLP (10.0S CLEAN HD)",
+    badgeTitle: "MATCH MLP PREVIEW (10.0S HD)",
     resSummary: "1280×720 @ 30 FPS",
-    label: "match_mlp.mp4 • 10.00s MLP Tournament Rally (1280×720 @ 30fps)",
+    label: "match_mlp_base_preview.mp4 • 10.00s MLP Tournament Rally (1280×720 @ 30fps)",
     videoUrl: "/outputs/match_mlp_base_preview.mp4",
     resolution: "1280×720",
     frames: 300,

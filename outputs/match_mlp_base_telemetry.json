@@ -1,13 +1,13 @@
 {
   "schema_version": "1.0.0",
   "producer": "Pickleball Base Perception Engine (Zero-Rule Core)",
-  "timestamp": "2026-11-18 13:02:27",
+  "timestamp": "2026-11-18 15:13:04",
   "video_path": "/home/pce118/Desktop/pickleball-vision-ai-main/clips/match_mlp.mp4",
   "total_frames_processed": 300,
   "fps": 30.0,
   "resolution": "1280x720",
-  "elapsed_s": 53.59,
-  "processing_fps": 5.6,
+  "elapsed_s": 51.52,
+  "processing_fps": 5.82,
   "court": {
     "calibrated": true,
     "reprojection_rmse_ft": 0.0,
@@ -43,20 +43,20 @@
     ]
   },
   "benchmark_summary": {
-    "ball_detection_rate_pct": 86.3,
-    "raw_ball_detection_rate_pct": 81.3,
-    "frames_with_ball": 259,
-    "raw_frames_with_ball": 244,
+    "ball_detection_rate_pct": 82.0,
+    "raw_ball_detection_rate_pct": 78.7,
+    "frames_with_ball": 246,
+    "raw_frames_with_ball": 236,
     "mean_players_per_frame": 4.0,
     "multiscale_inference": false,
     "total_bounces_detected": 2,
-    "ball_3d_reconstruction_ms": 256.3,
+    "ball_3d_reconstruction_ms": 275.4,
     "stage_latencies_ms": {
-      "player_ms": 36.0,
-      "ball_ms": 125.9,
+      "player_ms": 35.1,
+      "ball_ms": 120.2,
       "bounce_ms": 0.03,
       "court_ms": 0.02,
-      "render_ms": 7.5
+      "render_ms": 7.1
     }
   },
   "bounces": [
@@ -100,13 +100,13 @@
   "court_reprojection_rmse_ft": 0.0,
   "multiscale_inference": false,
   "mean_players_per_frame": 4.0,
-  "frames_with_ball": 259,
-  "ball_detection_rate_pct": 86.3,
-  "player_ms": 36.0,
-  "ball_ms": 125.9,
+  "frames_with_ball": 246,
+  "ball_detection_rate_pct": 82.0,
+  "player_ms": 35.1,
+  "ball_ms": 120.2,
   "bounce_ms": 0.03,
   "court_ms": 0.02,
-  "render_ms": 7.5,
+  "render_ms": 7.1,
   "telemetry_stream": [
     {
       "frame_idx": 0,
@@ -212,8 +212,8 @@
         "speed_mph": 0.0,
         "speed_px_per_frame": 0.0,
         "court_ft": [
-          17.31,
-          9.53
+          17.33,
+          9.3
         ],
         "interpolated": false,
         "track_id": 1,
@@ -222,12 +222,12 @@
           90.2
         ],
         "minimap_court_ft": [
-          17.31,
-          9.53
+          17.33,
+          9.3
         ],
         "ground_shadow_ft": [
-          17.31,
-          9.53
+          17.33,
+          9.3
         ],
         "height_ft": 1.2
       },
@@ -376,8 +376,8 @@
         "speed_mph": 0.5,
         "speed_px_per_frame": 0.3,
         "court_ft": [
-          16.99,
-          10.47
+          17.02,
+          10.21
         ],
         "interpolated": false,
         "track_id": 1,
@@ -386,12 +386,12 @@
           90.26
         ],
         "minimap_court_ft": [
-          16.99,
-          10.47
+          17.02,
+          10.21
         ],
         "ground_shadow_ft": [
-          16.99,
-          10.47
+          17.02,
+          10.21
         ],
         "height_ft": 1.6
       },
@@ -556,8 +556,8 @@
         "speed_mph": 7.1,
         "speed_px_per_frame": 0.9,
         "court_ft": [
-          16.65,
-          11.81
+          16.68,
+          11.55
         ],
         "interpolated": false,
         "track_id": 1,
@@ -566,12 +566,12 @@
           90.98
         ],
         "minimap_court_ft": [
-          16.65,
-          11.81
+          16.68,
+          11.55
         ],
         "ground_shadow_ft": [
-          16.65,
-          11.81
+          16.68,
+          11.55
         ],
         "height_ft": 1.99
       },
@@ -752,8 +752,8 @@
         "speed_mph": 12.8,
         "speed_px_per_frame": 1.4,
         "court_ft": [
-          16.32,
-          13.24
+          16.35,
+          12.99
         ],
         "interpolated": false,
         "track_id": 1,
@@ -762,12 +762,12 @@
           92.3
         ],
         "minimap_court_ft": [
-          16.32,
-          13.24
+          16.35,
+          12.99
         ],
         "ground_shadow_ft": [
-          16.32,
-          13.24
+          16.35,
+          12.99
         ],
         "height_ft": 2.34
       },
@@ -964,8 +964,8 @@
         "speed_mph": 16.5,
         "speed_px_per_frame": 2.0,
         "court_ft": [
-          16.0,
-          14.61
+          16.03,
+          14.38
         ],
         "interpolated": false,
         "track_id": 1,
@@ -974,12 +974,12 @@
           94.22
         ],
         "minimap_court_ft": [
-          16.0,
-          14.61
+          16.03,
+          14.38
         ],
         "ground_shadow_ft": [
-          16.0,
-          14.61
+          16.03,
+          14.38
         ],
         "height_ft": 2.66
       },
@@ -1192,8 +1192,8 @@
         "speed_mph": 25.5,
         "speed_px_per_frame": 3.1,
         "court_ft": [
-          15.69,
-          15.97
+          15.71,
+          15.76
         ],
         "interpolated": false,
         "track_id": 1,
@@ -1202,12 +1202,12 @@
           96.8
         ],
         "minimap_court_ft": [
-          15.69,
-          15.97
+          15.71,
+          15.76
         ],
         "ground_shadow_ft": [
-          15.69,
-          15.97
+          15.71,
+          15.76
         ],
         "height_ft": 2.97
       },
@@ -1436,8 +1436,8 @@
         "speed_mph": 24.4,
         "speed_px_per_frame": 3.1,
         "court_ft": [
-          15.39,
-          17.33
+          15.41,
+          17.14
         ],
         "interpolated": false,
         "track_id": 1,
@@ -1446,12 +1446,12 @@
           99.95
         ],
         "minimap_court_ft": [
-          15.39,
-          17.33
+          15.41,
+          17.14
         ],
         "ground_shadow_ft": [
-          15.39,
-          17.33
+          15.41,
+          17.14
         ],
         "height_ft": 3.25
       },
@@ -1696,8 +1696,8 @@
         "speed_mph": 33.7,
         "speed_px_per_frame": 4.4,
         "court_ft": [
-          15.1,
-          18.71
+          15.11,
+          18.54
         ],
         "interpolated": false,
         "track_id": 1,
@@ -1706,12 +1706,12 @@
           103.75
         ],
         "minimap_court_ft": [
-          15.1,
-          18.71
+          15.11,
+          18.54
         ],
         "ground_shadow_ft": [
-          15.1,
-          18.71
+          15.11,
+          18.54
         ],
         "height_ft": 3.51
       },
@@ -1972,8 +1972,8 @@
         "speed_mph": 33.4,
         "speed_px_per_frame": 4.5,
         "court_ft": [
-          14.8,
-          20.13
+          14.82,
+          19.98
         ],
         "interpolated": false,
         "track_id": 1,
@@ -1982,12 +1982,12 @@
           108.11
         ],
         "minimap_court_ft": [
-          14.8,
-          20.13
+          14.82,
+          19.98
         ],
         "ground_shadow_ft": [
-          14.8,
-          20.13
+          14.82,
+          19.98
         ],
         "height_ft": 3.74
       },
@@ -2264,8 +2264,8 @@
         "speed_mph": 40.0,
         "speed_px_per_frame": 5.7,
         "court_ft": [
-          14.52,
-          21.58
+          14.53,
+          21.46
         ],
         "interpolated": false,
         "track_id": 1,
@@ -2274,12 +2274,12 @@
           113.6
         ],
         "minimap_court_ft": [
-          14.52,
-          21.58
+          14.53,
+          21.46
         ],
         "ground_shadow_ft": [
-          14.52,
-          21.58
+          14.53,
+          21.46
         ],
         "height_ft": 3.95
       },
@@ -2572,8 +2572,8 @@
         "speed_mph": 43.2,
         "speed_px_per_frame": 6.4,
         "court_ft": [
-          14.23,
-          23.07
+          14.24,
+          22.97
         ],
         "interpolated": false,
         "track_id": 1,
@@ -2582,12 +2582,12 @@
           119.8
         ],
         "minimap_court_ft": [
-          14.23,
-          23.07
+          14.24,
+          22.97
         ],
         "ground_shadow_ft": [
-          14.23,
-          23.07
+          14.24,
+          22.97
         ],
         "height_ft": 4.13
       },
@@ -2897,7 +2897,7 @@
         "speed_px_per_frame": 8.5,
         "court_ft": [
           13.94,
-          24.59
+          24.5
         ],
         "interpolated": false,
         "track_id": 1,
@@ -2907,11 +2907,11 @@
         ],
         "minimap_court_ft": [
           13.94,
-          24.59
+          24.5
         ],
         "ground_shadow_ft": [
           13.94,
-          24.59
+          24.5
         ],
         "height_ft": 4.29
       },
@@ -3236,8 +3236,8 @@
         "speed_mph": 44.3,
         "speed_px_per_frame": 7.8,
         "court_ft": [
-          13.65,
-          26.06
+          13.66,
+          25.98
         ],
         "interpolated": false,
         "track_id": 1,
@@ -3246,12 +3246,12 @@
           134.96
         ],
         "minimap_court_ft": [
-          13.65,
-          26.06
+          13.66,
+          25.98
         ],
         "ground_shadow_ft": [
-          13.65,
-          26.06
+          13.66,
+          25.98
         ],
         "height_ft": 4.43
       },
@@ -3592,8 +3592,8 @@
         "speed_mph": 51.6,
         "speed_px_per_frame": 9.9,
         "court_ft": [
-          13.38,
-          27.5
+          13.39,
+          27.42
         ],
         "interpolated": false,
         "track_id": 1,
@@ -3602,12 +3602,12 @@
           144.21
         ],
         "minimap_court_ft": [
-          13.38,
-          27.5
+          13.39,
+          27.42
         ],
         "ground_shadow_ft": [
-          13.38,
-          27.5
+          13.39,
+          27.42
         ],
         "height_ft": 4.53
       },
@@ -3964,8 +3964,8 @@
         "speed_mph": 51.6,
         "speed_px_per_frame": 10.6,
         "court_ft": [
-          13.11,
-          28.9
+          13.12,
+          28.83
         ],
         "interpolated": false,
         "track_id": 1,
@@ -3974,12 +3974,12 @@
           154.33
         ],
         "minimap_court_ft": [
-          13.11,
-          28.9
+          13.12,
+          28.83
         ],
         "ground_shadow_ft": [
-          13.11,
-          28.9
+          13.12,
+          28.83
         ],
         "height_ft": 4.62
       },
@@ -4352,8 +4352,8 @@
         "speed_mph": 57.4,
         "speed_px_per_frame": 13.3,
         "court_ft": [
-          12.85,
-          30.25
+          12.86,
+          30.18
         ],
         "interpolated": false,
         "track_id": 1,
@@ -4362,12 +4362,12 @@
           166.4
         ],
         "minimap_court_ft": [
-          12.85,
-          30.25
+          12.86,
+          30.18
         ],
         "ground_shadow_ft": [
-          12.85,
-          30.25
+          12.86,
+          30.18
         ],
         "height_ft": 4.68
       },
@@ -4757,7 +4757,7 @@
         "speed_px_per_frame": 12.7,
         "court_ft": [
           12.61,
-          31.5
+          31.43
         ],
         "interpolated": false,
         "track_id": 1,
@@ -4767,11 +4767,11 @@
         ],
         "minimap_court_ft": [
           12.61,
-          31.5
+          31.43
         ],
         "ground_shadow_ft": [
           12.61,
-          31.5
+          31.43
         ],
         "height_ft": 4.72
       },
@@ -5177,21 +5177,21 @@
         "speed_px_per_frame": 16.5,
         "court_ft": [
           12.37,
-          32.69
+          32.62
         ],
         "interpolated": false,
         "track_id": 1,
         "trail_pixel": [
-          718.64,
-          193.36
+          718.45,
+          193.46
         ],
         "minimap_court_ft": [
           12.37,
-          32.69
+          32.62
         ],
         "ground_shadow_ft": [
           12.37,
-          32.69
+          32.62
         ],
         "height_ft": 4.73
       },
@@ -5613,21 +5613,21 @@
         "speed_px_per_frame": 14.8,
         "court_ft": [
           12.15,
-          33.77
+          33.71
         ],
         "interpolated": false,
         "track_id": 1,
         "trail_pixel": [
-          713.25,
-          209.39
+          713.54,
+          209.23
         ],
         "minimap_court_ft": [
           12.15,
-          33.77
+          33.71
         ],
         "ground_shadow_ft": [
           12.15,
-          33.77
+          33.71
         ],
         "height_ft": 4.72
       },
@@ -6064,22 +6064,22 @@
         "speed_mph": 53.8,
         "speed_px_per_frame": 18.7,
         "court_ft": [
-          11.93,
-          34.82
+          11.95,
+          34.48
         ],
         "interpolated": false,
         "track_id": 1,
         "trail_pixel": [
-          707.74,
-          226.88
+          708.31,
+          226.57
         ],
         "minimap_court_ft": [
-          11.93,
-          34.82
+          11.95,
+          34.48
         ],
         "ground_shadow_ft": [
-          11.93,
-          34.82
+          11.95,
+          34.48
         ],
         "height_ft": 4.68
       },
@@ -6517,37 +6517,39 @@
       ],
       "ball": {
         "frame_idx": 20,
-        "timestamp_s": 0.6666666666666666,
+        "timestamp_s": 0.667,
         "pixel": [
-          700.7,
-          247.4
+          697.9,
+          209.9
         ],
         "box": [
-          694.4,
-          241.5,
-          707.0,
-          253.3
+          691.1,
+          203.1,
+          704.7,
+          216.7
         ],
-        "conf": 0.092,
-        "speed_mph": 54.4,
-        "speed_px_per_frame": 22.4,
+        "conf": 0.592,
+        "speed_mph": 53.8,
+        "speed_px_per_frame": 18.4,
         "court_ft": [
-          11.72,
-          35.82
+          11.75,
+          35.05
         ],
-        "interpolated": false,
+        "interpolated": true,
+        "coast_frame": 1,
         "track_id": 1,
+        "retro_parabolic_refined": true,
         "trail_pixel": [
-          702.01,
-          246.03
+          702.68,
+          245.66
         ],
         "minimap_court_ft": [
-          11.72,
-          35.82
+          11.75,
+          35.05
         ],
         "ground_shadow_ft": [
-          11.72,
-          35.82
+          11.75,
+          35.05
         ],
         "height_ft": 4.62
       },
@@ -7013,25 +7015,25 @@
           274.2
         ],
         "conf": 0.72,
-        "speed_mph": 42.7,
-        "speed_px_per_frame": 19.1,
+        "speed_mph": 50.7,
+        "speed_px_per_frame": 23.1,
         "court_ft": [
-          11.54,
-          36.73
+          11.55,
+          36.39
         ],
         "interpolated": false,
         "track_id": 1,
         "trail_pixel": [
-          695.98,
-          266.94
+          696.55,
+          266.62
         ],
         "minimap_court_ft": [
-          11.54,
-          36.73
+          11.55,
+          36.39
         ],
         "ground_shadow_ft": [
-          11.54,
-          36.73
+          11.55,
+          36.39
         ],
         "height_ft": 4.53
       },
@@ -7517,21 +7519,21 @@
         "speed_px_per_frame": 24.7,
         "court_ft": [
           11.35,
-          37.6
+          37.54
         ],
         "interpolated": false,
         "track_id": 1,
         "trail_pixel": [
-          689.34,
-          289.4
+          689.63,
+          289.25
         ],
         "minimap_court_ft": [
           11.35,
-          37.6
+          37.54
         ],
         "ground_shadow_ft": [
           11.35,
-          37.6
+          37.54
         ],
         "height_ft": 4.43
       },
@@ -8033,21 +8035,21 @@
         "speed_px_per_frame": 24.2,
         "court_ft": [
           11.17,
-          38.44
+          38.38
         ],
         "interpolated": false,
         "track_id": 1,
         "trail_pixel": [
-          682.25,
-          316.02
+          682.06,
+          316.13
         ],
         "minimap_court_ft": [
           11.17,
-          38.44
+          38.38
         ],
         "ground_shadow_ft": [
           11.17,
-          38.44
+          38.38
         ],
         "height_ft": 4.29
       },
@@ -8565,7 +8567,7 @@
         "speed_px_per_frame": 28.8,
         "court_ft": [
           11.0,
-          39.23
+          39.18
         ],
         "interpolated": false,
         "track_id": 1,
@@ -8575,11 +8577,11 @@
         ],
         "minimap_court_ft": [
           11.0,
-          39.23
+          39.18
         ],
         "ground_shadow_ft": [
           11.0,
-          39.23
+          39.18
         ],
         "height_ft": 4.13
       },
@@ -9101,7 +9103,7 @@
         "speed_px_per_frame": 28.3,
         "court_ft": [
           10.83,
-          39.92
+          39.87
         ],
         "interpolated": false,
         "track_id": 1,
@@ -9111,11 +9113,11 @@
         ],
         "minimap_court_ft": [
           10.83,
-          39.92
+          39.87
         ],
         "ground_shadow_ft": [
           10.83,
-          39.92
+          39.87
         ],
         "height_ft": 3.95
       },
@@ -9637,7 +9639,7 @@
         "speed_px_per_frame": 6.2,
         "court_ft": [
           10.69,
-          40.44
+          40.39
         ],
         "interpolated": false,
         "track_id": 1,
@@ -9647,11 +9649,11 @@
         ],
         "minimap_court_ft": [
           10.69,
-          40.44
+          40.39
         ],
         "ground_shadow_ft": [
           10.69,
-          40.44
+          40.39
         ],
         "height_ft": 3.74
       },
@@ -10172,8 +10174,8 @@
         "speed_mph": 6.5,
         "speed_px_per_frame": 7.3,
         "court_ft": [
-          10.56,
-          40.82
+          10.55,
+          40.78
         ],
         "interpolated": false,
         "track_id": 1,
@@ -10182,12 +10184,12 @@
           377.82
         ],
         "minimap_court_ft": [
-          10.56,
-          40.82
+          10.55,
+          40.78
         ],
         "ground_shadow_ft": [
-          10.56,
-          40.82
+          10.55,
+          40.78
         ],
         "height_ft": 3.51
       },
@@ -10709,7 +10711,7 @@
         "speed_px_per_frame": 8.4,
         "court_ft": [
           10.42,
-          41.15
+          41.11
         ],
         "interpolated": false,
         "track_id": 1,
@@ -10719,11 +10721,11 @@
         ],
         "minimap_court_ft": [
           10.42,
-          41.15
+          41.11
         ],
         "ground_shadow_ft": [
           10.42,
-          41.15
+          41.11
         ],
         "height_ft": 3.25
       },
@@ -11245,7 +11247,7 @@
         "speed_px_per_frame": 9.5,
         "court_ft": [
           10.28,
-          41.44
+          41.41
         ],
         "interpolated": false,
         "track_id": 1,
@@ -11255,11 +11257,11 @@
         ],
         "minimap_court_ft": [
           10.28,
-          41.44
+          41.41
         ],
         "ground_shadow_ft": [
           10.28,
-          41.44
+          41.41
         ],
         "height_ft": 2.97
       },
@@ -11781,7 +11783,7 @@
         "speed_px_per_frame": 11.1,
         "court_ft": [
           10.14,
-          41.73
+          41.7
         ],
         "interpolated": false,
         "track_id": 1,
@@ -11791,11 +11793,11 @@
         ],
         "minimap_court_ft": [
           10.14,
-          41.73
+          41.7
         ],
         "ground_shadow_ft": [
           10.14,
-          41.73
+          41.7
         ],
         "height_ft": 2.66
       },
@@ -12317,7 +12319,7 @@
         "speed_px_per_frame": 15.8,
         "court_ft": [
           9.98,
-          42.04
+          42.02
         ],
         "interpolated": false,
         "track_id": 1,
@@ -12327,11 +12329,11 @@
         ],
         "minimap_court_ft": [
           9.98,
-          42.04
+          42.02
         ],
         "ground_shadow_ft": [
           9.98,
-          42.04
+          42.02
         ],
         "height_ft": 2.34
       },
@@ -12853,7 +12855,7 @@
         "speed_px_per_frame": 14.4,
         "court_ft": [
           9.84,
-          42.37
+          42.34
         ],
         "interpolated": false,
         "track_id": 1,
@@ -12863,11 +12865,11 @@
         ],
         "minimap_court_ft": [
           9.84,
-          42.37
+          42.34
         ],
         "ground_shadow_ft": [
           9.84,
-          42.37
+          42.34
         ],
         "height_ft": 1.97
       },
@@ -13389,7 +13391,7 @@
         "speed_px_per_frame": 17.2,
         "court_ft": [
           9.71,
-          42.94
+          42.92
         ],
         "interpolated": false,
         "track_id": 1,
@@ -13399,11 +13401,11 @@
         ],
         "minimap_court_ft": [
           9.71,
-          42.94
+          42.92
         ],
         "ground_shadow_ft": [
           9.71,
-          42.94
+          42.92
         ],
         "height_ft": 1.6
       },
@@ -13924,8 +13926,8 @@
         "speed_mph": 16.6,
         "speed_px_per_frame": 20.1,
         "court_ft": [
-          10.85,
-          42.63
+          10.84,
+          42.6
         ],
         "interpolated": false,
         "track_id": 1,
@@ -13934,12 +13936,12 @@
           453.24
         ],
         "minimap_court_ft": [
-          10.85,
-          42.63
+          10.84,
+          42.6
         ],
         "ground_shadow_ft": [
-          10.85,
-          42.63
+          10.84,
+          42.6
         ],
         "height_ft": 2.0
       },
@@ -14461,7 +14463,7 @@
         "speed_px_per_frame": 21.6,
         "court_ft": [
           10.49,
-          42.96
+          42.94
         ],
         "interpolated": false,
         "track_id": 1,
@@ -14471,11 +14473,11 @@
         ],
         "minimap_court_ft": [
           10.49,
-          42.96
+          42.94
         ],
         "ground_shadow_ft": [
           10.49,
-          42.96
+          42.94
         ],
         "height_ft": 2.64
       },
@@ -15535,7 +15537,7 @@
         "speed_px_per_frame": 90.6,
         "court_ft": [
           10.46,
-          42.76
+          42.74
         ],
         "interpolated": false,
         "track_id": 1,
@@ -15545,11 +15547,11 @@
         ],
         "minimap_court_ft": [
           10.46,
-          42.76
+          42.74
         ],
         "ground_shadow_ft": [
           10.46,
-          42.76
+          42.74
         ],
         "height_ft": 3.8
       },
@@ -16071,7 +16073,7 @@
         "speed_px_per_frame": 48.4,
         "court_ft": [
           10.43,
-          42.54
+          42.52
         ],
         "interpolated": false,
         "track_id": 1,
@@ -16081,11 +16083,11 @@
         ],
         "minimap_court_ft": [
           10.43,
-          42.54
+          42.52
         ],
         "ground_shadow_ft": [
           10.43,
-          42.54
+          42.52
         ],
         "height_ft": 4.35
       },
@@ -16607,7 +16609,7 @@
         "speed_px_per_frame": 51.4,
         "court_ft": [
           10.52,
-          42.15
+          42.13
         ],
         "interpolated": false,
         "track_id": 1,
@@ -16617,11 +16619,11 @@
         ],
         "minimap_court_ft": [
           10.52,
-          42.15
+          42.13
         ],
         "ground_shadow_ft": [
           10.52,
-          42.15
+          42.13
         ],
         "height_ft": 4.86
       },
@@ -17142,8 +17144,8 @@
         "speed_mph": 70.7,
         "speed_px_per_frame": 37.0,
         "court_ft": [
-          10.61,
-          41.85
+          10.6,
+          41.83
         ],
         "interpolated": false,
         "track_id": 1,
@@ -17152,14 +17154,14 @@
           259.54
         ],
         "minimap_court_ft": [
-          10.61,
-          41.85
+          10.6,
+          41.83
         ],
         "ground_shadow_ft": [
-          10.61,
-          41.85
+          10.6,
+          41.83
         ],
-        "height_ft": 5.35
+        "height_ft": 5.34
       },
       "bounce": null
     },
@@ -17678,8 +17680,8 @@
         "speed_mph": 75.0,
         "speed_px_per_frame": 34.8,
         "court_ft": [
-          10.68,
-          41.61
+          10.67,
+          41.59
         ],
         "interpolated": false,
         "track_id": 1,
@@ -17688,12 +17690,12 @@
           226.58
         ],
         "minimap_court_ft": [
-          10.68,
-          41.61
+          10.67,
+          41.59
         ],
         "ground_shadow_ft": [
-          10.68,
-          41.61
+          10.67,
+          41.59
         ],
         "height_ft": 5.81
       },
@@ -18215,7 +18217,7 @@
         "speed_px_per_frame": 30.2,
         "court_ft": [
           10.73,
-          41.45
+          41.43
         ],
         "interpolated": false,
         "track_id": 1,
@@ -18225,11 +18227,11 @@
         ],
         "minimap_court_ft": [
           10.73,
-          41.45
+          41.43
         ],
         "ground_shadow_ft": [
           10.73,
-          41.45
+          41.43
         ],
         "height_ft": 6.24
       },
@@ -18751,7 +18753,7 @@
         "speed_px_per_frame": 20.1,
         "court_ft": [
           10.77,
-          41.42
+          41.4
         ],
         "interpolated": false,
         "track_id": 1,
@@ -18761,11 +18763,11 @@
         ],
         "minimap_court_ft": [
           10.77,
-          41.42
+          41.4
         ],
         "ground_shadow_ft": [
           10.77,
-          41.42
+          41.4
         ],
         "height_ft": 6.64
       },
@@ -19286,8 +19288,8 @@
         "speed_mph": 71.6,
         "speed_px_per_frame": 18.3,
         "court_ft": [
-          10.8,
-          41.44
+          10.79,
+          41.42
         ],
         "interpolated": false,
         "track_id": 1,
@@ -19296,12 +19298,12 @@
           161.44
         ],
         "minimap_court_ft": [
-          10.8,
-          41.44
+          10.79,
+          41.42
         ],
         "ground_shadow_ft": [
-          10.8,
-          41.44
+          10.79,
+          41.42
         ],
         "height_ft": 7.02
       },
@@ -19823,7 +19825,7 @@
         "speed_px_per_frame": 16.3,
         "court_ft": [
           10.82,
-          41.51
+          41.49
         ],
         "interpolated": false,
         "track_id": 1,
@@ -19833,11 +19835,11 @@
         ],
         "minimap_court_ft": [
           10.82,
-          41.51
+          41.49
         ],
         "ground_shadow_ft": [
           10.82,
-          41.51
+          41.49
         ],
         "height_ft": 7.36
       },
@@ -20359,7 +20361,7 @@
         "speed_px_per_frame": 12.6,
         "court_ft": [
           10.83,
-          41.64
+          41.62
         ],
         "interpolated": false,
         "track_id": 1,
@@ -20369,11 +20371,11 @@
         ],
         "minimap_court_ft": [
           10.83,
-          41.64
+          41.62
         ],
         "ground_shadow_ft": [
           10.83,
-          41.64
+          41.62
         ],
         "height_ft": 7.68
       },
@@ -20895,7 +20897,7 @@
         "speed_px_per_frame": 9.5,
         "court_ft": [
           10.84,
-          41.84
+          41.82
         ],
         "interpolated": false,
         "track_id": 1,
@@ -20905,11 +20907,11 @@
         ],
         "minimap_court_ft": [
           10.84,
-          41.84
+          41.82
         ],
         "ground_shadow_ft": [
           10.84,
-          41.84
+          41.82
         ],
         "height_ft": 7.97
       },
@@ -21431,7 +21433,7 @@
         "speed_px_per_frame": 8.5,
         "court_ft": [
           10.84,
-          42.09
+          42.07
         ],
         "interpolated": false,
         "track_id": 1,
@@ -21441,11 +21443,11 @@
         ],
         "minimap_court_ft": [
           10.84,
-          42.09
+          42.07
         ],
         "ground_shadow_ft": [
           10.84,
-          42.09
+          42.07
         ],
         "height_ft": 8.23
       },
@@ -21966,8 +21968,8 @@
         "speed_mph": 32.7,
         "speed_px_per_frame": 5.6,
         "court_ft": [
-          10.83,
-          42.37
+          10.82,
+          42.35
         ],
         "interpolated": false,
         "track_id": 1,
@@ -21976,14 +21978,14 @@
           114.05
         ],
         "minimap_court_ft": [
-          10.83,
-          42.37
+          10.82,
+          42.35
         ],
         "ground_shadow_ft": [
-          10.83,
-          42.37
+          10.82,
+          42.35
         ],
-        "height_ft": 8.47
+        "height_ft": 8.46
       },
       "bounce": null
     },
@@ -22503,7 +22505,7 @@
         "speed_px_per_frame": 6.1,
         "court_ft": [
           10.8,
-          42.65
+          42.63
         ],
         "interpolated": false,
         "track_id": 1,
@@ -22513,11 +22515,11 @@
         ],
         "minimap_court_ft": [
           10.8,
-          42.65
+          42.63
         ],
         "ground_shadow_ft": [
           10.8,
-          42.65
+          42.63
         ],
         "height_ft": 8.67
       },
@@ -23038,8 +23040,8 @@
         "speed_mph": 17.3,
         "speed_px_per_frame": 3.6,
         "court_ft": [
-          10.78,
-          42.93
+          10.77,
+          42.91
         ],
         "interpolated": false,
         "track_id": 1,
@@ -23048,12 +23050,12 @@
           107.07
         ],
         "minimap_court_ft": [
-          10.78,
-          42.93
+          10.77,
+          42.91
         ],
         "ground_shadow_ft": [
-          10.78,
-          42.93
+          10.77,
+          42.91
         ],
         "height_ft": 8.85
       },
@@ -23575,7 +23577,7 @@
         "speed_px_per_frame": 2.4,
         "court_ft": [
           10.74,
-          43.19
+          43.17
         ],
         "interpolated": false,
         "track_id": 1,
@@ -23585,13 +23587,13 @@
         ],
         "minimap_court_ft": [
           10.74,
-          43.19
+          43.17
         ],
         "ground_shadow_ft": [
           10.74,
-          43.19
+          43.17
         ],
-        "height_ft": 9.0
+        "height_ft": 8.99
       },
       "bounce": null
     },
@@ -24111,7 +24113,7 @@
         "speed_px_per_frame": 2.4,
         "court_ft": [
           10.7,
-          43.4
+          43.38
         ],
         "interpolated": false,
         "track_id": 1,
@@ -24121,11 +24123,11 @@
         ],
         "minimap_court_ft": [
           10.7,
-          43.4
+          43.38
         ],
         "ground_shadow_ft": [
           10.7,
-          43.4
+          43.38
         ],
         "height_ft": 9.12
       },
@@ -24647,7 +24649,7 @@
         "speed_px_per_frame": 1.1,
         "court_ft": [
           10.67,
-          43.56
+          43.54
         ],
         "interpolated": false,
         "track_id": 1,
@@ -24657,11 +24659,11 @@
         ],
         "minimap_court_ft": [
           10.67,
-          43.56
+          43.54
         ],
         "ground_shadow_ft": [
           10.67,
-          43.56
+          43.54
         ],
         "height_ft": 9.21
       },
@@ -25183,7 +25185,7 @@
         "speed_px_per_frame": 2.1,
         "court_ft": [
           10.63,
-          43.67
+          43.65
         ],
         "interpolated": false,
         "track_id": 1,
@@ -25193,13 +25195,13 @@
         ],
         "minimap_court_ft": [
           10.63,
-          43.67
+          43.65
         ],
         "ground_shadow_ft": [
           10.63,
-          43.67
+          43.65
         ],
-        "height_ft": 9.28
+        "height_ft": 9.27
       },
       "bounce": null
     },
@@ -25719,7 +25721,7 @@
         "speed_px_per_frame": 2.3,
         "court_ft": [
           10.6,
-          43.71
+          43.69
         ],
         "interpolated": false,
         "track_id": 1,
@@ -25729,13 +25731,13 @@
         ],
         "minimap_court_ft": [
           10.6,
-          43.71
+          43.69
         ],
         "ground_shadow_ft": [
           10.6,
-          43.71
+          43.69
         ],
-        "height_ft": 9.32
+        "height_ft": 9.31
       },
       "bounce": null
     },
@@ -26255,7 +26257,7 @@
         "speed_px_per_frame": 3.7,
         "court_ft": [
           10.57,
-          43.69
+          43.67
         ],
         "interpolated": false,
         "track_id": 1,
@@ -26265,11 +26267,11 @@
         ],
         "minimap_court_ft": [
           10.57,
-          43.69
+          43.67
         ],
         "ground_shadow_ft": [
           10.57,
-          43.69
+          43.67
         ],
         "height_ft": 9.32
       },
@@ -26791,7 +26793,7 @@
         "speed_px_per_frame": 4.0,
         "court_ft": [
           10.55,
-          43.63
+          43.62
         ],
         "interpolated": false,
         "track_id": 1,
@@ -26801,13 +26803,13 @@
         ],
         "minimap_court_ft": [
           10.55,
-          43.63
+          43.62
         ],
         "ground_shadow_ft": [
           10.55,
-          43.63
+          43.62
         ],
-        "height_ft": 9.31
+        "height_ft": 9.3
       },
       "bounce": null
     },
@@ -27327,7 +27329,7 @@
         "speed_px_per_frame": 4.6,
         "court_ft": [
           10.52,
-          43.54
+          43.52
         ],
         "interpolated": false,
         "track_id": 1,
@@ -27337,13 +27339,13 @@
         ],
         "minimap_court_ft": [
           10.52,
-          43.54
+          43.52
         ],
         "ground_shadow_ft": [
           10.52,
-          43.54
+          43.52
         ],
-        "height_ft": 9.26
+        "height_ft": 9.25
       },
       "bounce": null
     },
@@ -27863,7 +27865,7 @@
         "speed_px_per_frame": 4.8,
         "court_ft": [
           10.5,
-          43.41
+          43.39
         ],
         "interpolated": false,
         "track_id": 1,
@@ -27873,11 +27875,11 @@
         ],
         "minimap_court_ft": [
           10.5,
-          43.41
+          43.39
         ],
         "ground_shadow_ft": [
           10.5,
-          43.41
+          43.39
         ],
         "height_ft": 9.18
       },
@@ -28399,7 +28401,7 @@
         "speed_px_per_frame": 5.2,
         "court_ft": [
           10.48,
-          43.25
+          43.23
         ],
         "interpolated": false,
         "track_id": 1,
@@ -28409,11 +28411,11 @@
         ],
         "minimap_court_ft": [
           10.48,
-          43.25
+          43.23
         ],
         "ground_shadow_ft": [
           10.48,
-          43.25
+          43.23
         ],
         "height_ft": 9.08
       },
@@ -28935,7 +28937,7 @@
         "speed_px_per_frame": 5.6,
         "court_ft": [
           10.46,
-          43.04
+          43.02
         ],
         "interpolated": false,
         "track_id": 1,
@@ -28945,13 +28947,13 @@
         ],
         "minimap_court_ft": [
           10.46,
-          43.04
+          43.02
         ],
         "ground_shadow_ft": [
           10.46,
-          43.04
+          43.02
         ],
-        "height_ft": 8.95
+        "height_ft": 8.94
       },
       "bounce": null
     },
@@ -29471,7 +29473,7 @@
         "speed_px_per_frame": 6.7,
         "court_ft": [
           10.42,
-          42.8
+          42.78
         ],
         "interpolated": false,
         "track_id": 1,
@@ -29481,13 +29483,13 @@
         ],
         "minimap_court_ft": [
           10.42,
-          42.8
+          42.78
         ],
         "ground_shadow_ft": [
           10.42,
-          42.8
+          42.78
         ],
-        "height_ft": 8.79
+        "height_ft": 8.78
       },
       "bounce": null
     },
@@ -30007,7 +30009,7 @@
         "speed_px_per_frame": 7.4,
         "court_ft": [
           10.39,
-          42.55
+          42.54
         ],
         "interpolated": false,
         "track_id": 1,
@@ -30017,11 +30019,11 @@
         ],
         "minimap_court_ft": [
           10.39,
-          42.55
+          42.54
         ],
         "ground_shadow_ft": [
           10.39,
-          42.55
+          42.54
         ],
         "height_ft": 8.6
       },
@@ -30543,7 +30545,7 @@
         "speed_px_per_frame": 9.8,
         "court_ft": [
           10.33,
-          42.31
+          42.29
         ],
         "interpolated": false,
         "track_id": 1,
@@ -30553,11 +30555,11 @@
         ],
         "minimap_court_ft": [
           10.33,
-          42.31
+          42.29
         ],
         "ground_shadow_ft": [
           10.33,
-          42.31
+          42.29
         ],
         "height_ft": 8.38
       },
@@ -31079,7 +31081,7 @@
         "speed_px_per_frame": 10.5,
         "court_ft": [
           10.27,
-          42.07
+          42.06
         ],
         "interpolated": false,
         "track_id": 1,
@@ -31089,13 +31091,13 @@
         ],
         "minimap_court_ft": [
           10.27,
-          42.07
+          42.06
         ],
         "ground_shadow_ft": [
           10.27,
-          42.07
+          42.06
         ],
-        "height_ft": 8.14
+        "height_ft": 8.13
       },
       "bounce": null
     },
@@ -31615,7 +31617,7 @@
         "speed_px_per_frame": 12.0,
         "court_ft": [
           10.2,
-          41.86
+          41.85
         ],
         "interpolated": false,
         "track_id": 1,
@@ -31625,13 +31627,13 @@
         ],
         "minimap_court_ft": [
           10.2,
-          41.86
+          41.85
         ],
         "ground_shadow_ft": [
           10.2,
-          41.86
+          41.85
         ],
-        "height_ft": 7.87
+        "height_ft": 7.86
       },
       "bounce": null
     },
@@ -32151,7 +32153,7 @@
         "speed_px_per_frame": 14.0,
         "court_ft": [
           10.13,
-          41.67
+          41.66
         ],
         "interpolated": false,
         "track_id": 1,
@@ -32161,11 +32163,11 @@
         ],
         "minimap_court_ft": [
           10.13,
-          41.67
+          41.66
         ],
         "ground_shadow_ft": [
           10.13,
-          41.67
+          41.66
         ],
         "height_ft": 7.56
       },
@@ -32687,7 +32689,7 @@
         "speed_px_per_frame": 14.3,
         "court_ft": [
           10.04,
-          41.53
+          41.52
         ],
         "interpolated": false,
         "track_id": 1,
@@ -32697,13 +32699,13 @@
         ],
         "minimap_court_ft": [
           10.04,
-          41.53
+          41.52
         ],
         "ground_shadow_ft": [
           10.04,
-          41.53
+          41.52
         ],
-        "height_ft": 7.24
+        "height_ft": 7.23
       },
       "bounce": null
     },
@@ -33223,7 +33225,7 @@
         "speed_px_per_frame": 20.2,
         "court_ft": [
           9.94,
-          41.46
+          41.45
         ],
         "interpolated": false,
         "track_id": 1,
@@ -33233,11 +33235,11 @@
         ],
         "minimap_court_ft": [
           9.94,
-          41.46
+          41.45
         ],
         "ground_shadow_ft": [
           9.94,
-          41.46
+          41.45
         ],
         "height_ft": 6.88
       },
@@ -33759,7 +33761,7 @@
         "speed_px_per_frame": 19.9,
         "court_ft": [
           9.84,
-          41.42
+          41.41
         ],
         "interpolated": false,
         "track_id": 1,
@@ -33769,11 +33771,11 @@
         ],
         "minimap_court_ft": [
           9.84,
-          41.42
+          41.41
         ],
         "ground_shadow_ft": [
           9.84,
-          41.42
+          41.41
         ],
         "height_ft": 6.49
       },
@@ -34295,7 +34297,7 @@
         "speed_px_per_frame": 23.9,
         "court_ft": [
           9.73,
-          41.42
+          41.41
         ],
         "interpolated": false,
         "track_id": 1,
@@ -34305,11 +34307,11 @@
         ],
         "minimap_court_ft": [
           9.73,
-          41.42
+          41.41
         ],
         "ground_shadow_ft": [
           9.73,
-          41.42
+          41.41
         ],
         "height_ft": 6.08
       },
@@ -34831,7 +34833,7 @@
         "speed_px_per_frame": 22.3,
         "court_ft": [
           9.62,
-          41.44
+          41.43
         ],
         "interpolated": false,
         "track_id": 1,
@@ -34841,11 +34843,11 @@
         ],
         "minimap_court_ft": [
           9.62,
-          41.44
+          41.43
         ],
         "ground_shadow_ft": [
           9.62,
-          41.44
+          41.43
         ],
         "height_ft": 5.64
       },
@@ -35367,7 +35369,7 @@
         "speed_px_per_frame": 32.1,
         "court_ft": [
           9.5,
-          41.54
+          41.53
         ],
         "interpolated": false,
         "track_id": 1,
@@ -35377,11 +35379,11 @@
         ],
         "minimap_court_ft": [
           9.5,
-          41.54
+          41.53
         ],
         "ground_shadow_ft": [
           9.5,
-          41.54
+          41.53
         ],
         "height_ft": 5.16
       },
@@ -36975,7 +36977,7 @@
         "speed_px_per_frame": 39.6,
         "court_ft": [
           9.11,
-          41.98
+          41.97
         ],
         "interpolated": false,
         "track_id": 1,
@@ -36985,13 +36987,13 @@
         ],
         "minimap_court_ft": [
           9.11,
-          41.98
+          41.97
         ],
         "ground_shadow_ft": [
           9.11,
-          41.98
+          41.97
         ],
-        "height_ft": 3.59
+        "height_ft": 3.58
       },
       "bounce": null
     },
@@ -37510,7 +37512,7 @@
         "speed_mph": 45.7,
         "speed_px_per_frame": 40.8,
         "court_ft": [
-          8.98,
+          8.99,
           42.18
         ],
         "interpolated": false,
@@ -37520,11 +37522,11 @@
           393.75
         ],
         "minimap_court_ft": [
-          8.98,
+          8.99,
           42.18
         ],
         "ground_shadow_ft": [
-          8.98,
+          8.99,
           42.18
         ],
         "height_ft": 3.01
@@ -38063,7 +38065,7 @@
           8.87,
           42.4
         ],
-        "height_ft": 2.41
+        "height_ft": 2.4
       },
       "bounce": null
     },
@@ -39655,7 +39657,7 @@
         "speed_px_per_frame": 32.9,
         "court_ft": [
           9.44,
-          42.6
+          42.66
         ],
         "interpolated": false,
         "track_id": 1,
@@ -39665,11 +39667,11 @@
         ],
         "minimap_court_ft": [
           9.44,
-          42.6
+          42.66
         ],
         "ground_shadow_ft": [
           9.44,
-          42.6
+          42.66
         ],
         "height_ft": 0.0
       },
@@ -40207,7 +40209,7 @@
         "speed_px_per_frame": 18.1,
         "court_ft": [
           8.63,
-          43.04
+          43.09
         ],
         "interpolated": false,
         "track_id": 1,
@@ -40217,11 +40219,11 @@
         ],
         "minimap_court_ft": [
           8.63,
-          43.04
+          43.09
         ],
         "ground_shadow_ft": [
           8.63,
-          43.04
+          43.09
         ],
         "height_ft": 0.39
       },
@@ -40742,8 +40744,8 @@
         "speed_mph": 6.7,
         "speed_px_per_frame": 17.2,
         "court_ft": [
-          8.43,
-          43.32
+          8.44,
+          43.36
         ],
         "interpolated": false,
         "track_id": 1,
@@ -40752,12 +40754,12 @@
           544.56
         ],
         "minimap_court_ft": [
-          8.43,
-          43.32
+          8.44,
+          43.36
         ],
         "ground_shadow_ft": [
-          8.43,
-          43.32
+          8.44,
+          43.36
         ],
         "height_ft": 1.12
       },
@@ -41279,7 +41281,7 @@
         "speed_px_per_frame": 52.2,
         "court_ft": [
           8.49,
-          43.3
+          43.34
         ],
         "interpolated": false,
         "track_id": 1,
@@ -41289,11 +41291,11 @@
         ],
         "minimap_court_ft": [
           8.49,
-          43.3
+          43.34
         ],
         "ground_shadow_ft": [
           8.49,
-          43.3
+          43.34
         ],
         "height_ft": 1.82
       },
@@ -41815,7 +41817,7 @@
         "speed_px_per_frame": 63.6,
         "court_ft": [
           8.57,
-          43.09
+          43.13
         ],
         "interpolated": false,
         "track_id": 1,
@@ -41825,11 +41827,11 @@
         ],
         "minimap_court_ft": [
           8.57,
-          43.09
+          43.13
         ],
         "ground_shadow_ft": [
           8.57,
-          43.09
+          43.13
         ],
         "height_ft": 2.52
       },
@@ -42351,7 +42353,7 @@
         "speed_px_per_frame": 58.5,
         "court_ft": [
           8.68,
-          42.85
+          42.88
         ],
         "interpolated": false,
         "track_id": 1,
@@ -42361,11 +42363,11 @@
         ],
         "minimap_court_ft": [
           8.68,
-          42.85
+          42.88
         ],
         "ground_shadow_ft": [
           8.68,
-          42.85
+          42.88
         ],
         "height_ft": 3.18
       },
@@ -42886,8 +42888,8 @@
         "speed_mph": 55.2,
         "speed_px_per_frame": 51.1,
         "court_ft": [
-          8.81,
-          42.62
+          8.82,
+          42.66
         ],
         "interpolated": false,
         "track_id": 1,
@@ -42896,12 +42898,12 @@
           355.86
         ],
         "minimap_court_ft": [
-          8.81,
-          42.62
+          8.82,
+          42.66
         ],
         "ground_shadow_ft": [
-          8.81,
-          42.62
+          8.82,
+          42.66
         ],
         "height_ft": 3.81
       },
@@ -43423,7 +43425,7 @@
         "speed_px_per_frame": 45.8,
         "court_ft": [
           8.96,
-          42.43
+          42.47
         ],
         "interpolated": false,
         "track_id": 1,
@@ -43433,11 +43435,11 @@
         ],
         "minimap_court_ft": [
           8.96,
-          42.43
+          42.47
         ],
         "ground_shadow_ft": [
           8.96,
-          42.43
+          42.47
         ],
         "height_ft": 4.43
       },
@@ -43959,7 +43961,7 @@
         "speed_px_per_frame": 42.8,
         "court_ft": [
           9.1,
-          42.3
+          42.34
         ],
         "interpolated": false,
         "track_id": 1,
@@ -43969,11 +43971,11 @@
         ],
         "minimap_court_ft": [
           9.1,
-          42.3
+          42.34
         ],
         "ground_shadow_ft": [
           9.1,
-          42.3
+          42.34
         ],
         "height_ft": 5.01
       },
@@ -44495,7 +44497,7 @@
         "speed_px_per_frame": 31.9,
         "court_ft": [
           9.24,
-          42.25
+          42.28
         ],
         "interpolated": false,
         "track_id": 1,
@@ -44505,11 +44507,11 @@
         ],
         "minimap_court_ft": [
           9.24,
-          42.25
+          42.28
         ],
         "ground_shadow_ft": [
           9.24,
-          42.25
+          42.28
         ],
         "height_ft": 5.57
       },
@@ -45030,8 +45032,8 @@
         "speed_mph": 75.0,
         "speed_px_per_frame": 36.4,
         "court_ft": [
-          9.37,
-          42.21
+          9.38,
+          42.24
         ],
         "interpolated": false,
         "track_id": 1,
@@ -45040,12 +45042,12 @@
           216.3
         ],
         "minimap_court_ft": [
-          9.37,
-          42.21
+          9.38,
+          42.24
         ],
         "ground_shadow_ft": [
-          9.37,
-          42.21
+          9.38,
+          42.24
         ],
         "height_ft": 6.12
       },
@@ -45567,7 +45569,7 @@
         "speed_px_per_frame": 29.4,
         "court_ft": [
           9.5,
-          42.22
+          42.26
         ],
         "interpolated": false,
         "track_id": 1,
@@ -45577,11 +45579,11 @@
         ],
         "minimap_court_ft": [
           9.5,
-          42.22
+          42.26
         ],
         "ground_shadow_ft": [
           9.5,
-          42.22
+          42.26
         ],
         "height_ft": 6.63
       },
@@ -46102,8 +46104,8 @@
         "speed_mph": 75.0,
         "speed_px_per_frame": 25.8,
         "court_ft": [
-          9.61,
-          42.31
+          9.62,
+          42.34
         ],
         "interpolated": false,
         "track_id": 1,
@@ -46112,12 +46114,12 @@
           166.64
         ],
         "minimap_court_ft": [
-          9.61,
-          42.31
+          9.62,
+          42.34
         ],
         "ground_shadow_ft": [
-          9.61,
-          42.31
+          9.62,
+          42.34
         ],
         "height_ft": 7.12
       },
@@ -46639,7 +46641,7 @@
         "speed_px_per_frame": 24.6,
         "court_ft": [
           9.73,
-          42.46
+          42.49
         ],
         "interpolated": false,
         "track_id": 1,
@@ -46649,11 +46651,11 @@
         ],
         "minimap_court_ft": [
           9.73,
-          42.46
+          42.49
         ],
         "ground_shadow_ft": [
           9.73,
-          42.46
+          42.49
         ],
         "height_ft": 7.59
       },
@@ -47175,7 +47177,7 @@
         "speed_px_per_frame": 19.7,
         "court_ft": [
           9.83,
-          42.69
+          42.72
         ],
         "interpolated": false,
         "track_id": 1,
@@ -47185,11 +47187,11 @@
         ],
         "minimap_court_ft": [
           9.83,
-          42.69
+          42.72
         ],
         "ground_shadow_ft": [
           9.83,
-          42.69
+          42.72
         ],
         "height_ft": 8.03
       },
@@ -47710,8 +47712,8 @@
         "speed_mph": 75.0,
         "speed_px_per_frame": 20.6,
         "court_ft": [
-          9.92,
-          43.0
+          9.93,
+          43.02
         ],
         "interpolated": false,
         "track_id": 1,
@@ -47720,12 +47722,12 @@
           113.75
         ],
         "minimap_court_ft": [
-          9.92,
-          43.0
+          9.93,
+          43.02
         ],
         "ground_shadow_ft": [
-          9.92,
-          43.0
+          9.93,
+          43.02
         ],
         "height_ft": 8.44
       },
@@ -48246,8 +48248,8 @@
         "speed_mph": 75.0,
         "speed_px_per_frame": 14.2,
         "court_ft": [
-          10.0,
-          43.46
+          10.01,
+          43.48
         ],
         "interpolated": false,
         "track_id": 1,
@@ -48256,12 +48258,12 @@
           100.89
         ],
         "minimap_court_ft": [
-          10.0,
-          43.46
+          10.01,
+          43.48
         ],
         "ground_shadow_ft": [
-          10.0,
-          43.46
+          10.01,
+          43.48
         ],
         "height_ft": 8.84
       },
@@ -48783,7 +48785,7 @@
         "speed_px_per_frame": 14.4,
         "court_ft": [
           10.07,
-          43.99
+          44.02
         ],
         "interpolated": false,
         "track_id": 1,
@@ -48793,11 +48795,11 @@
         ],
         "minimap_court_ft": [
           10.07,
-          43.99
+          44.02
         ],
         "ground_shadow_ft": [
           10.07,
-          43.99
+          44.02
         ],
         "height_ft": 9.21
       },
@@ -49318,8 +49320,8 @@
         "speed_mph": 75.0,
         "speed_px_per_frame": 12.0,
         "court_ft": [
-          10.1,
-          44.56
+          10.11,
+          44.59
         ],
         "interpolated": false,
         "track_id": 1,
@@ -49328,12 +49330,12 @@
           81.56
         ],
         "minimap_court_ft": [
-          10.1,
-          44.56
+          10.11,
+          44.59
         ],
         "ground_shadow_ft": [
-          10.1,
-          44.56
+          10.11,
+          44.59
         ],
         "height_ft": 9.55
       },
@@ -49854,8 +49856,8 @@
         "speed_mph": 75.0,
         "speed_px_per_frame": 10.4,
         "court_ft": [
-          10.11,
-          45.1
+          10.12,
+          45.12
         ],
         "interpolated": false,
         "track_id": 1,
@@ -49864,12 +49866,12 @@
           74.22
         ],
         "minimap_court_ft": [
-          10.11,
-          45.1
+          10.12,
+          45.12
         ],
         "ground_shadow_ft": [
-          10.11,
-          45.1
+          10.12,
+          45.12
         ],
         "height_ft": 9.87
       },
@@ -50391,7 +50393,7 @@
         "speed_px_per_frame": 9.3,
         "court_ft": [
           10.1,
-          45.48
+          45.51
         ],
         "interpolated": false,
         "track_id": 1,
@@ -50401,11 +50403,11 @@
         ],
         "minimap_court_ft": [
           10.1,
-          45.48
+          45.51
         ],
         "ground_shadow_ft": [
           10.1,
-          45.48
+          45.51
         ],
         "height_ft": 10.17
       },
@@ -50927,7 +50929,7 @@
         "speed_px_per_frame": 8.0,
         "court_ft": [
           10.08,
-          45.66
+          45.69
         ],
         "interpolated": false,
         "track_id": 1,
@@ -50937,11 +50939,11 @@
         ],
         "minimap_court_ft": [
           10.08,
-          45.66
+          45.69
         ],
         "ground_shadow_ft": [
           10.08,
-          45.66
+          45.69
         ],
         "height_ft": 10.43
       },
@@ -51463,7 +51465,7 @@
         "speed_px_per_frame": 7.1,
         "court_ft": [
           10.05,
-          45.66
+          45.69
         ],
         "interpolated": false,
         "track_id": 1,
@@ -51473,11 +51475,11 @@
         ],
         "minimap_court_ft": [
           10.05,
-          45.66
+          45.69
         ],
         "ground_shadow_ft": [
           10.05,
-          45.66
+          45.69
         ],
         "height_ft": 10.68
       },
@@ -51999,7 +52001,7 @@
         "speed_px_per_frame": 6.0,
         "court_ft": [
           10.03,
-          45.53
+          45.56
         ],
         "interpolated": false,
         "track_id": 1,
@@ -52009,11 +52011,11 @@
         ],
         "minimap_court_ft": [
           10.03,
-          45.53
+          45.56
         ],
         "ground_shadow_ft": [
           10.03,
-          45.53
+          45.56
         ],
         "height_ft": 10.9
       },
@@ -52535,7 +52537,7 @@
         "speed_px_per_frame": 5.5,
         "court_ft": [
           10.01,
-          45.14
+          45.18
         ],
         "interpolated": false,
         "track_id": 1,
@@ -52545,11 +52547,11 @@
         ],
         "minimap_court_ft": [
           10.01,
-          45.14
+          45.18
         ],
         "ground_shadow_ft": [
           10.01,
-          45.14
+          45.18
         ],
         "height_ft": 11.1
       },
@@ -53071,7 +53073,7 @@
         "speed_px_per_frame": 5.5,
         "court_ft": [
           10.0,
-          44.49
+          44.52
         ],
         "interpolated": false,
         "track_id": 1,
@@ -53081,11 +53083,11 @@
         ],
         "minimap_court_ft": [
           10.0,
-          44.49
+          44.52
         ],
         "ground_shadow_ft": [
           10.0,
-          44.49
+          44.52
         ],
         "height_ft": 11.27
       },
@@ -53607,7 +53609,7 @@
         "speed_px_per_frame": 4.2,
         "court_ft": [
           10.01,
-          44.29
+          44.31
         ],
         "interpolated": false,
         "track_id": 1,
@@ -53617,11 +53619,11 @@
         ],
         "minimap_court_ft": [
           10.01,
-          44.29
+          44.31
         ],
         "ground_shadow_ft": [
           10.01,
-          44.29
+          44.31
         ],
         "height_ft": 11.42
       },
@@ -54143,7 +54145,7 @@
         "speed_px_per_frame": 5.4,
         "court_ft": [
           10.03,
-          44.34
+          44.36
         ],
         "interpolated": false,
         "track_id": 1,
@@ -54153,11 +54155,11 @@
         ],
         "minimap_court_ft": [
           10.03,
-          44.34
+          44.36
         ],
         "ground_shadow_ft": [
           10.03,
-          44.34
+          44.36
         ],
         "height_ft": 11.54
       },
@@ -54679,7 +54681,7 @@
         "speed_px_per_frame": 5.3,
         "court_ft": [
           10.05,
-          44.39
+          44.41
         ],
         "interpolated": false,
         "track_id": 1,
@@ -54689,11 +54691,11 @@
         ],
         "minimap_court_ft": [
           10.05,
-          44.39
+          44.41
         ],
         "ground_shadow_ft": [
           10.05,
-          44.39
+          44.41
         ],
         "height_ft": 11.64
       },
@@ -55215,7 +55217,7 @@
         "speed_px_per_frame": 5.3,
         "court_ft": [
           10.06,
-          44.43
+          44.46
         ],
         "interpolated": false,
         "track_id": 1,
@@ -55225,11 +55227,11 @@
         ],
         "minimap_court_ft": [
           10.06,
-          44.43
+          44.46
         ],
         "ground_shadow_ft": [
           10.06,
-          44.43
+          44.46
         ],
         "height_ft": 11.72
       },
@@ -55751,7 +55753,7 @@
         "speed_px_per_frame": 5.2,
         "court_ft": [
           10.08,
-          44.48
+          44.5
         ],
         "interpolated": false,
         "track_id": 1,
@@ -55761,11 +55763,11 @@
         ],
         "minimap_court_ft": [
           10.08,
-          44.48
+          44.5
         ],
         "ground_shadow_ft": [
           10.08,
-          44.48
+          44.5
         ],
         "height_ft": 11.77
       },
@@ -56287,7 +56289,7 @@
         "speed_px_per_frame": 5.6,
         "court_ft": [
           10.1,
-          44.53
+          44.55
         ],
         "interpolated": false,
         "track_id": 1,
@@ -56297,11 +56299,11 @@
         ],
         "minimap_court_ft": [
           10.1,
-          44.53
+          44.55
         ],
         "ground_shadow_ft": [
           10.1,
-          44.53
+          44.55
         ],
         "height_ft": 11.8
       },
@@ -56823,7 +56825,7 @@
         "speed_px_per_frame": 5.7,
         "court_ft": [
           10.11,
-          44.57
+          44.59
         ],
         "interpolated": false,
         "track_id": 1,
@@ -56833,11 +56835,11 @@
         ],
         "minimap_court_ft": [
           10.11,
-          44.57
+          44.59
         ],
         "ground_shadow_ft": [
           10.11,
-          44.57
+          44.59
         ],
         "height_ft": 11.8
       },
@@ -57359,7 +57361,7 @@
         "speed_px_per_frame": 6.4,
         "court_ft": [
           10.13,
-          44.62
+          44.64
         ],
         "interpolated": false,
         "track_id": 1,
@@ -57369,11 +57371,11 @@
         ],
         "minimap_court_ft": [
           10.13,
-          44.62
+          44.64
         ],
         "ground_shadow_ft": [
           10.13,
-          44.62
+          44.64
         ],
         "height_ft": 11.77
       },
@@ -58433,7 +58435,7 @@
         "speed_px_per_frame": 12.5,
         "court_ft": [
           10.16,
-          44.7
+          44.72
         ],
         "interpolated": false,
         "track_id": 1,
@@ -58443,11 +58445,11 @@
         ],
         "minimap_court_ft": [
           10.16,
-          44.7
+          44.72
         ],
         "ground_shadow_ft": [
           10.16,
-          44.7
+          44.72
         ],
         "height_ft": 11.65
       },
@@ -58969,7 +58971,7 @@
         "speed_px_per_frame": 6.7,
         "court_ft": [
           10.17,
-          44.75
+          44.76
         ],
         "interpolated": false,
         "track_id": 1,
@@ -58979,11 +58981,11 @@
         ],
         "minimap_court_ft": [
           10.17,
-          44.75
+          44.76
         ],
         "ground_shadow_ft": [
           10.17,
-          44.75
+          44.76
         ],
         "height_ft": 11.56
       },
@@ -59504,8 +59506,8 @@
         "speed_mph": 57.5,
         "speed_px_per_frame": 8.5,
         "court_ft": [
-          10.19,
-          44.79
+          10.18,
+          44.8
         ],
         "interpolated": false,
         "track_id": 1,
@@ -59514,12 +59516,12 @@
           113.22
         ],
         "minimap_court_ft": [
-          10.19,
-          44.79
+          10.18,
+          44.8
         ],
         "ground_shadow_ft": [
-          10.19,
-          44.79
+          10.18,
+          44.8
         ],
         "height_ft": 11.44
       },
@@ -60579,7 +60581,7 @@
         "speed_px_per_frame": 17.2,
         "court_ft": [
           10.22,
-          45.83
+          45.85
         ],
         "interpolated": false,
         "track_id": 1,
@@ -60589,11 +60591,11 @@
         ],
         "minimap_court_ft": [
           10.22,
-          45.83
+          45.85
         ],
         "ground_shadow_ft": [
           10.22,
-          45.83
+          45.85
         ],
         "height_ft": 11.12
       },
@@ -61115,7 +61117,7 @@
         "speed_px_per_frame": 15.1,
         "court_ft": [
           10.25,
-          46.26
+          46.27
         ],
         "interpolated": false,
         "track_id": 1,
@@ -61125,11 +61127,11 @@
         ],
         "minimap_court_ft": [
           10.25,
-          46.26
+          46.27
         ],
         "ground_shadow_ft": [
           10.25,
-          46.26
+          46.27
         ],
         "height_ft": 10.93
       },
@@ -61651,7 +61653,7 @@
         "speed_px_per_frame": 14.4,
         "court_ft": [
           10.27,
-          46.44
+          46.45
         ],
         "interpolated": false,
         "track_id": 1,
@@ -61661,11 +61663,11 @@
         ],
         "minimap_court_ft": [
           10.27,
-          46.44
+          46.45
         ],
         "ground_shadow_ft": [
           10.27,
-          46.44
+          46.45
         ],
         "height_ft": 10.71
       },
@@ -62187,7 +62189,7 @@
         "speed_px_per_frame": 15.2,
         "court_ft": [
           10.29,
-          46.58
+          46.6
         ],
         "interpolated": false,
         "track_id": 1,
@@ -62197,11 +62199,11 @@
         ],
         "minimap_court_ft": [
           10.29,
-          46.58
+          46.6
         ],
         "ground_shadow_ft": [
           10.29,
-          46.58
+          46.6
         ],
         "height_ft": 10.47
       },
@@ -62723,7 +62725,7 @@
         "speed_px_per_frame": 18.5,
         "court_ft": [
           10.31,
-          46.69
+          46.7
         ],
         "interpolated": false,
         "track_id": 1,
@@ -62733,11 +62735,11 @@
         ],
         "minimap_court_ft": [
           10.31,
-          46.69
+          46.7
         ],
         "ground_shadow_ft": [
           10.31,
-          46.69
+          46.7
         ],
         "height_ft": 10.2
       },
@@ -63259,7 +63261,7 @@
         "speed_px_per_frame": 22.5,
         "court_ft": [
           10.31,
-          46.74
+          46.75
         ],
         "interpolated": false,
         "track_id": 1,
@@ -63269,11 +63271,11 @@
         ],
         "minimap_court_ft": [
           10.31,
-          46.74
+          46.75
         ],
         "ground_shadow_ft": [
           10.31,
-          46.74
+          46.75
         ],
         "height_ft": 9.91
       },
@@ -63795,7 +63797,7 @@
         "speed_px_per_frame": 18.8,
         "court_ft": [
           10.31,
-          46.75
+          46.76
         ],
         "interpolated": false,
         "track_id": 1,
@@ -63805,11 +63807,11 @@
         ],
         "minimap_court_ft": [
           10.31,
-          46.75
+          46.76
         ],
         "ground_shadow_ft": [
           10.31,
-          46.75
+          46.76
         ],
         "height_ft": 9.6
       },
@@ -64331,7 +64333,7 @@
         "speed_px_per_frame": 26.5,
         "court_ft": [
           10.3,
-          46.39
+          46.4
         ],
         "interpolated": false,
         "track_id": 1,
@@ -64341,11 +64343,11 @@
         ],
         "minimap_court_ft": [
           10.3,
-          46.39
+          46.4
         ],
         "ground_shadow_ft": [
           10.3,
-          46.39
+          46.4
         ],
         "height_ft": 9.25
       },
@@ -65405,7 +65407,7 @@
         "speed_px_per_frame": 28.6,
         "court_ft": [
           10.22,
-          46.29
+          46.3
         ],
         "interpolated": false,
         "track_id": 1,
@@ -65415,11 +65417,11 @@
         ],
         "minimap_court_ft": [
           10.22,
-          46.29
+          46.3
         ],
         "ground_shadow_ft": [
           10.22,
-          46.29
+          46.3
         ],
         "height_ft": 8.5
       },
@@ -65940,8 +65942,8 @@
         "speed_mph": 55.7,
         "speed_px_per_frame": 32.6,
         "court_ft": [
-          10.16,
-          46.57
+          10.15,
+          46.58
         ],
         "interpolated": false,
         "track_id": 1,
@@ -65950,12 +65952,12 @@
           298.94
         ],
         "minimap_court_ft": [
-          10.16,
-          46.57
+          10.15,
+          46.58
         ],
         "ground_shadow_ft": [
-          10.16,
-          46.57
+          10.15,
+          46.58
         ],
         "height_ft": 8.08
       },
@@ -68085,7 +68087,7 @@
         "speed_px_per_frame": 16.3,
         "court_ft": [
           9.77,
-          45.82
+          45.83
         ],
         "interpolated": false,
         "track_id": 1,
@@ -68095,11 +68097,11 @@
         ],
         "minimap_court_ft": [
           9.77,
-          45.82
+          45.83
         ],
         "ground_shadow_ft": [
           9.77,
-          45.82
+          45.83
         ],
         "height_ft": 6.18
       },
@@ -68620,7 +68622,7 @@
         "speed_mph": 11.7,
         "speed_px_per_frame": 17.2,
         "court_ft": [
-          9.65,
+          9.64,
           45.51
         ],
         "interpolated": false,
@@ -68630,11 +68632,11 @@
           362.28
         ],
         "minimap_court_ft": [
-          9.65,
+          9.64,
           45.51
         ],
         "ground_shadow_ft": [
-          9.65,
+          9.64,
           45.51
         ],
         "height_ft": 5.65
@@ -70764,7 +70766,7 @@
         "speed_mph": 18.6,
         "speed_px_per_frame": 26.2,
         "court_ft": [
-          9.31,
+          9.3,
           44.79
         ],
         "interpolated": false,
@@ -70774,11 +70776,11 @@
           409.26
         ],
         "minimap_court_ft": [
-          9.31,
+          9.3,
           44.79
         ],
         "ground_shadow_ft": [
-          9.31,
+          9.3,
           44.79
         ],
         "height_ft": 3.25
@@ -71300,7 +71302,7 @@
         "speed_mph": 20.0,
         "speed_px_per_frame": 28.8,
         "court_ft": [
-          9.55,
+          9.54,
           44.94
         ],
         "interpolated": false,
@@ -71310,11 +71312,11 @@
           427.5
         ],
         "minimap_court_ft": [
-          9.55,
+          9.54,
           44.94
         ],
         "ground_shadow_ft": [
-          9.55,
+          9.54,
           44.94
         ],
         "height_ft": 2.6
@@ -73450,7 +73452,7 @@
         "speed_mph": 64.6,
         "speed_px_per_frame": 59.1,
         "court_ft": [
-          7.77,
+          7.76,
           42.93
         ],
         "interpolated": false,
@@ -73460,11 +73462,11 @@
           371.51
         ],
         "minimap_court_ft": [
-          7.77,
+          7.76,
           42.93
         ],
         "ground_shadow_ft": [
-          7.77,
+          7.76,
           42.93
         ],
         "height_ft": 2.8
@@ -74539,7 +74541,7 @@
           6.98,
           39.98
         ],
-        "height_ft": 3.5
+        "height_ft": 3.51
       },
       "bounce": null
     },
@@ -78811,7 +78813,7 @@
         "speed_px_per_frame": 13.5,
         "court_ft": [
           5.55,
-          30.54
+          30.55
         ],
         "interpolated": false,
         "track_id": 1,
@@ -78821,11 +78823,11 @@
         ],
         "minimap_court_ft": [
           5.55,
-          30.54
+          30.55
         ],
         "ground_shadow_ft": [
           5.55,
-          30.54
+          30.55
         ],
         "height_ft": 5.15
       },
@@ -79347,7 +79349,7 @@
         "speed_px_per_frame": 10.5,
         "court_ft": [
           5.43,
-          29.54
+          29.55
         ],
         "interpolated": false,
         "track_id": 1,
@@ -79357,11 +79359,11 @@
         ],
         "minimap_court_ft": [
           5.43,
-          29.54
+          29.55
         ],
         "ground_shadow_ft": [
           5.43,
-          29.54
+          29.55
         ],
         "height_ft": 5.22
       },
@@ -79883,7 +79885,7 @@
         "speed_px_per_frame": 9.5,
         "court_ft": [
           5.31,
-          28.56
+          28.57
         ],
         "interpolated": false,
         "track_id": 1,
@@ -79893,11 +79895,11 @@
         ],
         "minimap_court_ft": [
           5.31,
-          28.56
+          28.57
         ],
         "ground_shadow_ft": [
           5.31,
-          28.56
+          28.57
         ],
         "height_ft": 5.27
       },
@@ -80955,7 +80957,7 @@
         "speed_px_per_frame": 6.9,
         "court_ft": [
           5.08,
-          26.68
+          26.69
         ],
         "interpolated": false,
         "track_id": 1,
@@ -80965,11 +80967,11 @@
         ],
         "minimap_court_ft": [
           5.08,
-          26.68
+          26.69
         ],
         "ground_shadow_ft": [
           5.08,
-          26.68
+          26.69
         ],
         "height_ft": 5.28
       },
@@ -82563,7 +82565,7 @@
         "speed_px_per_frame": 4.3,
         "court_ft": [
           4.77,
-          24.1
+          24.11
         ],
         "interpolated": false,
         "track_id": 1,
@@ -82573,11 +82575,11 @@
         ],
         "minimap_court_ft": [
           4.77,
-          24.1
+          24.11
         ],
         "ground_shadow_ft": [
           4.77,
-          24.1
+          24.11
         ],
         "height_ft": 5.08
       },
@@ -83098,7 +83100,7 @@
         "speed_mph": 5.1,
         "speed_px_per_frame": 3.6,
         "court_ft": [
-          4.67,
+          4.68,
           23.3
         ],
         "interpolated": false,
@@ -83108,11 +83110,11 @@
           114.96
         ],
         "minimap_court_ft": [
-          4.67,
+          4.68,
           23.3
         ],
         "ground_shadow_ft": [
-          4.67,
+          4.68,
           23.3
         ],
         "height_ft": 4.95
@@ -83634,7 +83636,7 @@
         "speed_mph": 4.5,
         "speed_px_per_frame": 3.2,
         "court_ft": [
-          4.57,
+          4.58,
           22.5
         ],
         "interpolated": false,
@@ -83644,11 +83646,11 @@
           115.44
         ],
         "minimap_court_ft": [
-          4.57,
+          4.58,
           22.5
         ],
         "ground_shadow_ft": [
-          4.57,
+          4.58,
           22.5
         ],
         "height_ft": 4.8
@@ -84171,7 +84173,7 @@
         "speed_px_per_frame": 3.9,
         "court_ft": [
           4.48,
-          21.75
+          21.76
         ],
         "interpolated": false,
         "track_id": 1,
@@ -84181,11 +84183,11 @@
         ],
         "minimap_court_ft": [
           4.48,
-          21.75
+          21.76
         ],
         "ground_shadow_ft": [
           4.48,
-          21.75
+          21.76
         ],
         "height_ft": 4.62
       },
@@ -85243,7 +85245,7 @@
         "speed_px_per_frame": 4.1,
         "court_ft": [
           4.3,
-          20.32
+          20.33
         ],
         "interpolated": false,
         "track_id": 1,
@@ -85253,13 +85255,13 @@
         ],
         "minimap_court_ft": [
           4.3,
-          20.32
+          20.33
         ],
         "ground_shadow_ft": [
           4.3,
-          20.32
+          20.33
         ],
-        "height_ft": 4.16
+        "height_ft": 4.17
       },
       "bounce": null
     },
@@ -85778,8 +85780,8 @@
         "speed_mph": 17.6,
         "speed_px_per_frame": 3.8,
         "court_ft": [
-          4.2,
-          19.6
+          4.21,
+          19.61
         ],
         "interpolated": false,
         "track_id": 1,
@@ -85788,12 +85790,12 @@
           124.68
         ],
         "minimap_court_ft": [
-          4.2,
-          19.6
+          4.21,
+          19.61
         ],
         "ground_shadow_ft": [
-          4.2,
-          19.6
+          4.21,
+          19.61
         ],
         "height_ft": 3.9
       },
@@ -86315,7 +86317,7 @@
         "speed_px_per_frame": 5.0,
         "court_ft": [
           4.12,
-          18.91
+          18.92
         ],
         "interpolated": false,
         "track_id": 1,
@@ -86325,13 +86327,13 @@
         ],
         "minimap_court_ft": [
           4.12,
-          18.91
+          18.92
         ],
         "ground_shadow_ft": [
           4.12,
-          18.91
+          18.92
         ],
-        "height_ft": 3.6
+        "height_ft": 3.61
       },
       "bounce": null
     },
@@ -86851,7 +86853,7 @@
         "speed_px_per_frame": 4.9,
         "court_ft": [
           4.03,
-          18.24
+          18.25
         ],
         "interpolated": false,
         "track_id": 1,
@@ -86861,11 +86863,11 @@
         ],
         "minimap_court_ft": [
           4.03,
-          18.24
+          18.25
         ],
         "ground_shadow_ft": [
           4.03,
-          18.24
+          18.25
         ],
         "height_ft": 3.27
       },
@@ -87386,7 +87388,7 @@
         "speed_mph": 34.5,
         "speed_px_per_frame": 7.0,
         "court_ft": [
-          3.94,
+          3.95,
           17.64
         ],
         "interpolated": false,
@@ -87396,11 +87398,11 @@
           138.16
         ],
         "minimap_court_ft": [
-          3.94,
+          3.95,
           17.64
         ],
         "ground_shadow_ft": [
-          3.94,
+          3.95,
           17.64
         ],
         "height_ft": 2.92
@@ -87923,7 +87925,7 @@
         "speed_px_per_frame": 5.6,
         "court_ft": [
           3.86,
-          17.0
+          17.01
         ],
         "interpolated": false,
         "track_id": 1,
@@ -87933,11 +87935,11 @@
         ],
         "minimap_court_ft": [
           3.86,
-          17.0
+          17.01
         ],
         "ground_shadow_ft": [
           3.86,
-          17.0
+          17.01
         ],
         "height_ft": 2.54
       },
@@ -88458,8 +88460,8 @@
         "speed_mph": 23.9,
         "speed_px_per_frame": 5.3,
         "court_ft": [
-          3.77,
-          16.34
+          3.78,
+          16.35
         ],
         "interpolated": false,
         "track_id": 1,
@@ -88468,12 +88470,12 @@
           149.34
         ],
         "minimap_court_ft": [
-          3.77,
-          16.34
+          3.78,
+          16.35
         ],
         "ground_shadow_ft": [
-          3.77,
-          16.34
+          3.78,
+          16.35
         ],
         "height_ft": 2.12
       },
@@ -88995,7 +88997,7 @@
         "speed_px_per_frame": 7.2,
         "court_ft": [
           3.49,
-          15.6
+          15.61
         ],
         "interpolated": false,
         "track_id": 1,
@@ -89005,11 +89007,11 @@
         ],
         "minimap_court_ft": [
           3.49,
-          15.6
+          15.61
         ],
         "ground_shadow_ft": [
           3.49,
-          15.6
+          15.61
         ],
         "height_ft": 1.69
       },
@@ -89517,21 +89519,21 @@
         "frame_idx": 175,
         "timestamp_s": 5.833,
         "pixel": [
-          496.7,
-          153.9
+          496.8,
+          154.0
         ],
         "box": [
-          489.9,
-          147.1,
-          503.5,
-          160.7
+          490.0,
+          147.2,
+          503.6,
+          160.8
         ],
         "conf": 0.595,
         "speed_mph": 32.7,
         "speed_px_per_frame": 2.0,
         "court_ft": [
           3.09,
-          14.8
+          14.81
         ],
         "interpolated": true,
         "coast_frame": 1,
@@ -89543,11 +89545,11 @@
         ],
         "minimap_court_ft": [
           3.09,
-          14.8
+          14.81
         ],
         "ground_shadow_ft": [
           3.09,
-          14.8
+          14.81
         ],
         "height_ft": 1.22
       },
@@ -90069,7 +90071,7 @@
         "speed_px_per_frame": 12.7,
         "court_ft": [
           3.11,
-          14.33
+          14.34
         ],
         "interpolated": false,
         "track_id": 1,
@@ -90079,11 +90081,11 @@
         ],
         "minimap_court_ft": [
           3.11,
-          14.33
+          14.34
         ],
         "ground_shadow_ft": [
           3.11,
-          14.33
+          14.34
         ],
         "height_ft": 0.72
       },
@@ -90605,7 +90607,7 @@
         "speed_px_per_frame": 6.9,
         "court_ft": [
           3.66,
-          13.22
+          13.23
         ],
         "interpolated": false,
         "track_id": 1,
@@ -90615,11 +90617,11 @@
         ],
         "minimap_court_ft": [
           3.66,
-          13.22
+          13.23
         ],
         "ground_shadow_ft": [
           3.66,
-          13.22
+          13.23
         ],
         "height_ft": 0.0
       },
@@ -91157,7 +91159,7 @@
         "speed_px_per_frame": 0.7,
         "court_ft": [
           4.38,
-          13.86
+          13.87
         ],
         "interpolated": false,
         "track_id": 1,
@@ -91167,11 +91169,11 @@
         ],
         "minimap_court_ft": [
           4.38,
-          13.86
+          13.87
         ],
         "ground_shadow_ft": [
           4.38,
-          13.86
+          13.87
         ],
         "height_ft": 0.23
       },
@@ -92247,7 +92249,7 @@
           4.81,
           13.88
         ],
-        "height_ft": 0.88
+        "height_ft": 0.87
       },
       "bounce": null
     },
@@ -93838,8 +93840,8 @@
         "speed_mph": 23.0,
         "speed_px_per_frame": 4.6,
         "court_ft": [
-          5.51,
-          14.16
+          5.5,
+          14.15
         ],
         "interpolated": false,
         "track_id": 1,
@@ -93848,12 +93850,12 @@
           142.95
         ],
         "minimap_court_ft": [
-          5.51,
-          14.16
+          5.5,
+          14.15
         ],
         "ground_shadow_ft": [
-          5.51,
-          14.16
+          5.5,
+          14.15
         ],
         "height_ft": 1.62
       },
@@ -94375,7 +94377,7 @@
         "speed_px_per_frame": 4.0,
         "court_ft": [
           5.65,
-          14.21
+          14.2
         ],
         "interpolated": false,
         "track_id": 1,
@@ -94385,11 +94387,11 @@
         ],
         "minimap_court_ft": [
           5.65,
-          14.21
+          14.2
         ],
         "ground_shadow_ft": [
           5.65,
-          14.21
+          14.2
         ],
         "height_ft": 1.81
       },
@@ -97055,7 +97057,7 @@
         "speed_px_per_frame": 11.7,
         "court_ft": [
           7.23,
-          14.65
+          14.64
         ],
         "interpolated": false,
         "track_id": 1,
@@ -97065,11 +97067,11 @@
         ],
         "minimap_court_ft": [
           7.23,
-          14.65
+          14.64
         ],
         "ground_shadow_ft": [
           7.23,
-          14.65
+          14.64
         ],
         "height_ft": 2.47
       },
@@ -101343,7 +101345,7 @@
         "speed_px_per_frame": 19.4,
         "court_ft": [
           11.86,
-          29.14
+          29.13
         ],
         "interpolated": false,
         "track_id": 1,
@@ -101353,11 +101355,11 @@
         ],
         "minimap_court_ft": [
           11.86,
-          29.14
+          29.13
         ],
         "ground_shadow_ft": [
           11.86,
-          29.14
+          29.13
         ],
         "height_ft": 4.26
       },
@@ -104028,8 +104030,8 @@
         "interpolated": false,
         "track_id": 1,
         "trail_pixel": [
-          780.96,
-          233.56
+          779.41,
+          231.94
         ],
         "minimap_court_ft": [
           13.86,
@@ -104564,8 +104566,8 @@
         "interpolated": false,
         "track_id": 1,
         "trail_pixel": [
-          800.22,
-          251.17
+          798.92,
+          249.81
         ],
         "minimap_court_ft": [
           14.21,
@@ -105100,8 +105102,8 @@
         "interpolated": false,
         "track_id": 1,
         "trail_pixel": [
-          815.03,
-          265.22
+          818.8,
+          269.1
         ],
         "minimap_court_ft": [
           14.53,
@@ -127232,10 +127234,10 @@
           22.49
         ],
         "interpolated": false,
-        "track_id": 4,
+        "track_id": 3,
         "trail_pixel": [
-          784.8,
-          228.0
+          784.94,
+          227.34
         ]
       },
       "bounce": null
@@ -127759,10 +127761,10 @@
           23.23
         ],
         "interpolated": false,
-        "track_id": 4,
+        "track_id": 3,
         "trail_pixel": [
           783.97,
-          234.45
+          235.21
         ]
       },
       "bounce": null
@@ -128286,10 +128288,10 @@
           24.09
         ],
         "interpolated": false,
-        "track_id": 4,
+        "track_id": 3,
         "trail_pixel": [
           783.14,
-          238.62
+          239.92
         ]
       },
       "bounce": null
@@ -128813,10 +128815,10 @@
           24.29
         ],
         "interpolated": false,
-        "track_id": 4,
+        "track_id": 3,
         "trail_pixel": [
-          782.44,
-          240.9
+          782.34,
+          241.73
         ]
       },
       "bounce": null
@@ -129340,10 +129342,10 @@
           23.96
         ],
         "interpolated": false,
-        "track_id": 4,
+        "track_id": 3,
         "trail_pixel": [
-          781.8,
-          240.49
+          781.79,
+          241.05
         ]
       },
       "bounce": null
@@ -129867,10 +129869,10 @@
           23.81
         ],
         "interpolated": false,
-        "track_id": 4,
+        "track_id": 3,
         "trail_pixel": [
-          781.48,
-          238.76
+          781.5,
+          237.45
         ]
       },
       "bounce": null
@@ -130373,34 +130375,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 252,
-        "timestamp_s": 8.4,
-        "pixel": [
-          781.25,
-          238.16
-        ],
-        "box": [
-          774.5,
-          231.1,
-          788.0,
-          244.6
-        ],
-        "conf": 0.292,
-        "speed_mph": 3.1,
-        "speed_px_per_frame": 0.4,
-        "court_ft": [
-          15.88,
-          23.76
-        ],
-        "interpolated": true,
-        "coast_frame": 1,
-        "track_id": 4,
-        "trail_pixel": [
-          781.25,
-          238.16
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -130901,34 +130876,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 253,
-        "timestamp_s": 8.433,
-        "pixel": [
-          781.16,
-          237.71
-        ],
-        "box": [
-          774.4,
-          230.9,
-          787.9,
-          244.4
-        ],
-        "conf": 0.248,
-        "speed_mph": 3.1,
-        "speed_px_per_frame": 0.1,
-        "court_ft": [
-          15.88,
-          23.74
-        ],
-        "interpolated": true,
-        "coast_frame": 2,
-        "track_id": 4,
-        "trail_pixel": [
-          781.16,
-          237.71
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -131429,34 +131377,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 254,
-        "timestamp_s": 8.467,
-        "pixel": [
-          781.2,
-          237.7
-        ],
-        "box": [
-          774.4,
-          230.9,
-          787.9,
-          244.4
-        ],
-        "conf": 0.211,
-        "speed_mph": 3.1,
-        "speed_px_per_frame": 0.0,
-        "court_ft": [
-          15.89,
-          23.74
-        ],
-        "interpolated": true,
-        "coast_frame": 3,
-        "track_id": 4,
-        "trail_pixel": [
-          781.2,
-          237.7
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -145484,33 +145405,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 282,
-        "timestamp_s": 9.4,
-        "pixel": [
-          764.9,
-          268.4
-        ],
-        "box": [
-          760.1,
-          263.9,
-          769.6,
-          272.8
-        ],
-        "conf": 0.271,
-        "speed_mph": 0.0,
-        "speed_px_per_frame": 0.0,
-        "court_ft": [
-          14.74,
-          27.24
-        ],
-        "interpolated": false,
-        "track_id": 5,
-        "trail_pixel": [
-          764.9,
-          268.4
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -146011,33 +145906,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 283,
-        "timestamp_s": 9.433333333333334,
-        "pixel": [
-          764.5,
-          268.3
-        ],
-        "box": [
-          759.6,
-          263.8,
-          769.4,
-          272.8
-        ],
-        "conf": 0.381,
-        "speed_mph": 0.2,
-        "speed_px_per_frame": 0.4,
-        "court_ft": [
-          14.73,
-          27.23
-        ],
-        "interpolated": false,
-        "track_id": 5,
-        "trail_pixel": [
-          764.5,
-          268.3
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -146538,33 +146407,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 284,
-        "timestamp_s": 9.466666666666667,
-        "pixel": [
-          763.6,
-          268.2
-        ],
-        "box": [
-          759.1,
-          263.9,
-          768.0,
-          272.4
-        ],
-        "conf": 0.472,
-        "speed_mph": 0.7,
-        "speed_px_per_frame": 0.9,
-        "court_ft": [
-          14.7,
-          27.22
-        ],
-        "interpolated": false,
-        "track_id": 5,
-        "trail_pixel": [
-          763.6,
-          268.2
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -149090,10 +148933,10 @@
           26.32
         ],
         "interpolated": false,
-        "track_id": 7,
+        "track_id": 5,
         "trail_pixel": [
-          744.73,
-          259.77
+          744.5,
+          259.5
         ]
       },
       "bounce": null
@@ -149617,10 +149460,10 @@
           25.9
         ],
         "interpolated": false,
-        "track_id": 7,
+        "track_id": 5,
         "trail_pixel": [
-          736.09,
-          254.88
+          736.8,
+          255.6
         ]
       },
       "bounce": null
@@ -150144,10 +149987,10 @@
           25.37
         ],
         "interpolated": false,
-        "track_id": 7,
+        "track_id": 5,
         "trail_pixel": [
-          730.23,
-          251.47
+          729.5,
+          250.9
         ]
       },
       "bounce": null
@@ -150650,34 +150493,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 292,
-        "timestamp_s": 9.733,
-        "pixel": [
-          727.18,
-          249.44
-        ],
-        "box": [
-          720.7,
-          242.9,
-          734.2,
-          256.4
-        ],
-        "conf": 0.599,
-        "speed_mph": 11.8,
-        "speed_px_per_frame": 2.4,
-        "court_ft": [
-          13.53,
-          25.23
-        ],
-        "interpolated": true,
-        "coast_frame": 1,
-        "track_id": 7,
-        "trail_pixel": [
-          727.18,
-          249.44
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -151178,34 +150994,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 293,
-        "timestamp_s": 9.767,
-        "pixel": [
-          725.99,
-          248.69
-        ],
-        "box": [
-          720.0,
-          242.5,
-          733.5,
-          256.0
-        ],
-        "conf": 0.509,
-        "speed_mph": 11.8,
-        "speed_px_per_frame": 0.7,
-        "court_ft": [
-          13.51,
-          25.18
-        ],
-        "interpolated": true,
-        "coast_frame": 2,
-        "track_id": 7,
-        "trail_pixel": [
-          725.99,
-          248.69
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -151706,34 +151495,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 294,
-        "timestamp_s": 9.8,
-        "pixel": [
-          727.04,
-          249.38
-        ],
-        "box": [
-          719.9,
-          242.3,
-          733.4,
-          255.8
-        ],
-        "conf": 0.433,
-        "speed_mph": 11.8,
-        "speed_px_per_frame": 0.2,
-        "court_ft": [
-          13.51,
-          25.16
-        ],
-        "interpolated": true,
-        "coast_frame": 3,
-        "track_id": 7,
-        "trail_pixel": [
-          727.04,
-          249.38
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -152735,33 +152497,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 296,
-        "timestamp_s": 9.866666666666667,
-        "pixel": [
-          700.9,
-          236.0
-        ],
-        "box": [
-          696.2,
-          231.5,
-          705.7,
-          240.4
-        ],
-        "conf": 0.192,
-        "speed_mph": 0.0,
-        "speed_px_per_frame": 0.0,
-        "court_ft": [
-          12.6,
-          23.61
-        ],
-        "interpolated": false,
-        "track_id": 8,
-        "trail_pixel": [
-          700.9,
-          236.0
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -153262,33 +152998,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 297,
-        "timestamp_s": 9.9,
-        "pixel": [
-          695.5,
-          232.2
-        ],
-        "box": [
-          690.7,
-          227.6,
-          700.2,
-          236.8
-        ],
-        "conf": 0.591,
-        "speed_mph": 10.6,
-        "speed_px_per_frame": 6.6,
-        "court_ft": [
-          12.4,
-          23.13
-        ],
-        "interpolated": false,
-        "track_id": 8,
-        "trail_pixel": [
-          695.5,
-          232.2
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -153789,33 +153499,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 298,
-        "timestamp_s": 9.933333333333334,
-        "pixel": [
-          689.8,
-          229.4
-        ],
-        "box": [
-          685.5,
-          225.3,
-          694.0,
-          233.5
-        ],
-        "conf": 0.59,
-        "speed_mph": 8.5,
-        "speed_px_per_frame": 6.4,
-        "court_ft": [
-          12.18,
-          22.78
-        ],
-        "interpolated": false,
-        "track_id": 8,
-        "trail_pixel": [
-          689.8,
-          229.4
-        ]
-      },
+      "ball": null,
       "bounce": null
     },
     {
@@ -154316,33 +154000,7 @@
           ]
         }
       ],
-      "ball": {
-        "frame_idx": 299,
-        "timestamp_s": 9.966666666666667,
-        "pixel": [
-          685.5,
-          226.6
-        ],
-        "box": [
-          681.4,
-          222.6,
-          689.6,
-          230.6
-        ],
-        "conf": 0.607,
-        "speed_mph": 8.2,
-        "speed_px_per_frame": 5.2,
-        "court_ft": [
-          12.02,
-          22.41
-        ],
-        "interpolated": false,
-        "track_id": 8,
-        "trail_pixel": [
-          685.5,
-          226.6
-        ]
-      },
+      "ball": null,
       "bounce": null
     }
   ]

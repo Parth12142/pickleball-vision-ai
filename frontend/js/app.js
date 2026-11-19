@@ -670,16 +670,9 @@ class PickleballWebsiteApp {
       this.demoVideoEl.play().catch(() => {});
     }
 
-    const badgeTitle = clip.badgeTitle || `${clip.shortName.toUpperCase()} (${clip.clipSeconds.toFixed(1)}S RALLY)`;
-    const resStr = clip.resSummary || `${clip.resolution} @ ${Math.round(clip.fps)} FPS`;
-    this.setText("match-badge-title", badgeTitle);
-    this.setText("match-badge-res", resStr);
-    this.setText("calib-target-clip-label", `${clip.shortName} (${clip.clipSeconds.toFixed(1)}s Rally)`);
     this.setText("hero-watch-label", `Watch ${clip.clipSeconds.toFixed(1)}s Rally Demo`);
     this.setText("footer-active-clip", `Active Clip: ${clip.shortName} (${clip.clipSeconds.toFixed(2)}s Tournament Rally)`);
 
-    this.setText("hero-clip-badge", `LIVE OUTPUT • ${clip.shortName} (${clip.clipSeconds.toFixed(2)}s Rally)`);
-    this.setText("mini-score-val", clip.scoreCall);
     this.setText("mini-players-val", clip.quality.playersTracked);
     this.setText("mini-nvz-val", clip.quality.nvzStatus);
     this.setText("mini-line-val", clip.quality.lineCallVerdict);
@@ -687,7 +680,6 @@ class PickleballWebsiteApp {
 
     this.setText("demo-video-title", clip.label);
     this.setText("demo-ball-tracked", clip.quality.ballDetectionRate);
-    this.setText("demo-score-call", `USAP Score: ${clip.scoreCall} (${clip.servingPlayer})`);
 
     this.setText("t-clip-len", `${clip.clipSeconds.toFixed(2)}s`);
     this.setText("t-total-sec", `${clip.timing.total_s.toFixed(2)}s`);

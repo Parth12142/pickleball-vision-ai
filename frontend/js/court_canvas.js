@@ -87,7 +87,6 @@ export class WorkbenchCourtRenderer {
 
     this.drawPlayers(ctx, b, telemetry.players);
     this.drawBallAndTrail(ctx, b, telemetry.ball, isDark);
-    this.drawHUD(ctx, telemetry, isDark);
   }
 
   drawUSAPCourt(ctx, b, isDark = true) {
@@ -842,21 +841,6 @@ export class AuthPaddleDuelAnimator {
         // Spinning 40-Hole Pickleball
         this.ballAngle += 0.12 * dir;
         drawPerforatedBall(ctx, bx, by, 14, this.ballAngle);
-
-        // Live Telemetry HUD Pill at Top
-        ctx.fillStyle = "rgba(14, 17, 22, 0.82)";
-        ctx.beginPath();
-        ctx.roundRect(24, 16, w - 48, 34, 999);
-        ctx.fill();
-
-        ctx.fillStyle = "#DFFF00";
-        ctx.font = "700 11px 'JetBrains Mono', monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(
-          `LIVE KITCHEN VOLLEY DUEL • ${this.currentSpeedMph} MPH • SPIN ${this.currentSpinRpm} RPM`,
-          midX,
-          37
-        );
       }
 
       requestAnimationFrame(step);

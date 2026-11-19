@@ -109,11 +109,6 @@
           <div class="hero-main-grid">
 
             <div class="hero-copy-col">
-              <div class="live-anim-tag">
-                <span class="pulse-ball"></span>
-                <span>OFFICIAL TOURNAMENT COURT VISION • LIVE MATCH RADAR</span>
-              </div>
-
               <h1 class="hero-stacked-title">
                 PRO MATCH<br />
                 COURT<br />
@@ -138,9 +133,6 @@
 
             <div class="hero-visual-col">
               <div class="hero-video-showcase">
-                <span id="hero-clip-badge" class="hero-video-badge">
-                  LIVE TOURNAMENT MATCH • match11.mp4 (9.63s Pro Rally)
-                </span>
                 <video
                   id="hero-preview-video"
                   src="/outputs/match11_base_preview.mp4"
@@ -151,20 +143,15 @@
                 ></video>
               </div>
 
-              <!-- Overlapping Vibrant Orange Card -->
+              <!-- Clean Telemetry Summary Card -->
               <aside class="floating-orange-card">
                 <div class="floating-card-head">
-                  <span class="floating-loop-mark"></span>
                   <div class="floating-card-title">
-                    USAP MATCH<br />RADAR LIVE
+                    MATCH TELEMETRY SUMMARY
                   </div>
                 </div>
 
                 <div class="floating-card-inner-preview">
-                  <div class="mini-score-strip">
-                    <span>MATCH 1 SCORE</span>
-                    <span id="mini-score-val" class="mini-score-call">8 - 6 - 2</span>
-                  </div>
                   <div class="mini-stat-grid">
                     <div class="mini-stat-box">
                       <small>Players</small>
@@ -200,32 +187,20 @@
 
             <div class="clip-switcher-bar" role="tablist" aria-label="Match Clip Selector">
               <button type="button" class="clip-tab-btn active" data-clip="match11">
-                🎬 Match 11 (9.6s Pro Rally)
+                Match 11 (9.6s Pro Rally)
               </button>
               <button type="button" class="clip-tab-btn" data-clip="match_mlp">
-                🏓 Match MLP (10.0s Clean MLP HD)
+                Match MLP Preview (10.0s HD)
               </button>
             </div>
 
-            <div class="tournament-match-control-bar">
-              <div class="match-badge-tag">
-                <span class="live-sports-beacon"></span>
-                <strong id="match-badge-title">MATCH 1 (9-SEC RALLY)</strong>
-                <span class="tag-sep">•</span>
-                <span id="match-badge-res">1302×740 @ 30 FPS</span>
-                <span class="tag-sep">•</span>
-                <span class="tag-usap">USAP REGULATION</span>
-              </div>
-
-              <div class="match-actions-group">
-                <button id="btn-theater-mode" class="sports-btn-theater" title="Toggle Fullscreen Cinema Theater Broadcast Mode">
-                  <span class="theater-icon">📺</span>
-                  <span id="theater-btn-text">Theater Mode</span>
-                </button>
-                <button id="btn-toggle-pin-court" class="sports-btn-calib" title="Fine-tune 4 court corners on active rally clip">
-                  <span>🎯 Pin &amp; Retrack Court</span>
-                </button>
-              </div>
+            <div class="match-actions-group">
+              <button id="btn-theater-mode" class="sports-btn-theater" title="Toggle Fullscreen Cinema Theater Broadcast Mode">
+                <span id="theater-btn-text">Theater Mode</span>
+              </button>
+              <button id="btn-toggle-pin-court" class="sports-btn-calib" title="Fine-tune 4 court corners on active rally clip">
+                <span>Pin &amp; Retrack Court</span>
+              </button>
             </div>
           </div>
 
@@ -235,24 +210,18 @@
           <div id="court-pinning-workbench" class="court-workbench-panel hidden">
             <div class="workbench-header">
               <div class="workbench-header-left">
-                <span class="workbench-icon">🎯</span>
                 <div>
                   <h3 class="workbench-title">Interactive Court Calibration &amp; Re-Tracking</h3>
                   <p class="workbench-subtitle">
                     Drag the 4 corner pins on Frame 0. Click "Retrack Court" to run full perception + minimap rendering on the selected clip.
                   </p>
                 </div>
-                <span id="calib-status-badge" class="calib-badge success">✅ Calibrated • RMSE: 0.0000 ft</span>
               </div>
 
               <div class="workbench-header-right">
-                <div class="single-clip-lock-badge">
-                  <span>Target Clip:</span>
-                  <strong id="calib-target-clip-label">match11.mp4 (9.6s Rally)</strong>
-                </div>
                 <select id="calib-clip-select" class="workbench-select">
                   <option value="match11.mp4" selected>match11.mp4 (1302x740 • 9.6s Rally)</option>
-                  <option value="match_mlp.mp4">match_mlp.mp4 (1280x720 • 10.0s Clean MLP)</option>
+                  <option value="match_mlp.mp4">match_mlp_base_preview.mp4 (1280x720 • 10.0s Clean MLP)</option>
                 </select>
                 <button id="btn-close-pin-court" class="btn-workbench-close" title="Close calibration tool">✕</button>
               </div>
@@ -266,9 +235,6 @@
                   <span id="pin-loader-text">Loading video frame...</span>
                 </div>
                 <canvas id="court-pin-canvas"></canvas>
-                <div class="canvas-hint-pill">
-                  💡 Tip: Drag pins or use pixel nudge controls. Net (orange) &amp; Kitchen NVZ (lime) update dynamically.
-                </div>
               </div>
 
               <!-- Controls & Coordinate Inputs -->
@@ -435,12 +401,8 @@
             <div class="dark-panel main-match-panel">
               <div class="dark-panel-head">
                 <div class="dark-panel-title">
-                  <span class="live-sports-beacon"></span>
                   <span id="demo-video-title">match11.mp4 • 9.63s Broadcast Rally (1302×740 @ 30fps)</span>
                 </div>
-                <span id="demo-score-call" class="live-score-badge">
-                  USAP Score: 8 - 6 - 2 (P2)
-                </span>
               </div>
 
               <div class="video-box">
@@ -552,11 +514,6 @@
         <div class="sub-hero-wrap">
 
           <div class="sub-header-center">
-            <div class="live-anim-tag">
-              <span class="pulse-ball"></span>
-              <span>PICKVIZ BUSINESS PLANS • CHOOSE YOUR PADDLE TIER</span>
-            </div>
-
             <h1 class="sub-title-xl">
               BUILT FOR PLAYERS,<br />CLUBS &amp; <span>TOURNAMENTS</span>
             </h1>
@@ -858,11 +815,6 @@
                 </button>
               </form>
 
-              <div class="db-conn-pill">
-                <span>🗄️ DB: <strong id="db-engine-label">PostgreSQL + SQLAlchemy</strong></span>
-                <span id="db-users-count">Connected</span>
-              </div>
-
             </div>
 
           </div>
@@ -877,10 +829,6 @@
       <div class="page-container">
         <div class="coming-soon-stage">
           <div class="coming-soon-card">
-            <div class="coming-soon-badge">
-              <span id="soon-badge-text">COMING SOON • TOURNAMENT MODULE</span>
-            </div>
-
             <h1 id="soon-title-text" class="coming-soon-title">
               AUTOMATED USAP 0-0-2 SCORING
             </h1>
@@ -918,7 +866,7 @@
         />
         <span><strong>Pickviz</strong> — Plans: Paddle (Free) • Paddle Pro • Paddle Premium</span>
       </span>
-      <span id="footer-active-clip">Active Clip: match11.mp4 (9.63s Pro Rally) • match_mlp.mp4 (10.0s Clean MLP HD)</span>
+      <span id="footer-active-clip">Active Clip: match11.mp4 (9.63s Pro Rally) • match_mlp_base_preview.mp4 (10.0s Clean MLP HD)</span>
     </footer>
 
     <!-- ====================================================================
