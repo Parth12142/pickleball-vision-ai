@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pickviz — Match Tracking, Subscriptions &amp; Officiating</title>
+  <link rel="icon" type="image/svg+xml" href="/LOGO/pickleballvisualizer-icon.svg" />
+  <link rel="apple-touch-icon" href="/LOGO/pickleballvisualizer-icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "lenis": "https://cdn.jsdelivr.net/npm/lenis@1.1.18/+esm"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- ======================================================================
+       OPENING INTRO CURTAIN LOADER (BASELINE-STYLE WORDMARK + PROGRESS BAR)
+       ====================================================================== -->
+  <div id="baseline-intro-loader" class="intro-curtain-loader" aria-label="Loading Pickviz">
+    <div class="intro-curtain-inner">
+      <div id="intro-wordmark" class="intro-wordmark">
+        <svg class="intro-ball-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M4.8 5.6A9 9 0 0 0 4.8 18.4"/>
+          <path d="M19.2 5.6a9 9 0 0 1 0 12.8"/>
+        </svg>
+        <span>Pickviz</span>
+      </div>
+      <div class="intro-progress-track">
+        <div id="intro-progress-fill" class="intro-progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       LIVE 60 FPS PICKLEBALL RALLY & BOUNCE ANIMATION BACKGROUND
+       ====================================================================== -->
+  <canvas id="pickleball-bg-canvas" aria-hidden="true"></canvas>
+
+  <div class="app-shell">
+
+    <!-- ====================================================================
+         1. STICKY MULTI-PAGE TOP MENU NAVBAR
+         ==================================================================== -->
+    <div class="navbar-sticky-wrap">
+      <header class="pill-navbar">
+        <button class="nav-brand" data-page="home" aria-label="Pickviz Home">
+          <span class="brand-logo-badge">
+            <img
+              class="brand-logo-img brand-logo-dark"
+              src="/LOGO/pickleballvisualizer-logo-dark.svg"
+              alt="Pickviz — Court Vision USAP 2026"
+            />
+            <img
+              class="brand-logo-img brand-logo-light"
+              src="/LOGO/pickleballvisualizer-logo.svg"
+              alt="Pickviz — Court Vision USAP 2026"
+            />
+          </span>
+        </button>
+
+        <nav class="nav-center-links" aria-label="Main Menu">
+          <button class="nav-menu-btn active" data-page="home">
+            Home
+          </button>
+          <button class="nav-menu-btn" data-page="subscriptions">
+            Subscriptions
+          </button>
+          <button class="nav-menu-btn" data-page="ai-coach">
+            <span class="soon-dot"></span>
+            AI Coach
+          </button>
+          <button class="nav-menu-btn" data-page="scoring">
+            <span class="soon-dot"></span>
+            USAP Scoring
+          </button>
+          <button class="nav-menu-btn" data-page="line-var">
+            <span class="soon-dot"></span>
+            In/Out Line VAR
+          </button>
+          <button class="nav-menu-btn" data-page="kitchen-nvz">
+            <span class="soon-dot"></span>
+            Kitchen NVZ
+          </button>
+          <button class="nav-menu-btn" data-page="shot-analytics">
+            <span class="soon-dot"></span>
+            Shot Analytics
+          </button>
+        </nav>
+
+        <div class="nav-right-cluster">
+          <!-- Day / Night Stadium Theme Toggle -->
+          <button id="theme-toggle-btn" class="theme-switch-pill" type="button" title="Toggle Day Sunlight / Night Floodlight Mode">
+            <span id="theme-toggle-icon" class="theme-switch-icon">☀️</span>
+            <span id="theme-toggle-label" class="theme-switch-label">Day Court</span>
+          </button>
+
+          <!-- Guest Auth Actions -->
+          <div id="nav-guest-actions" class="nav-right-actions">
+            <button class="nav-menu-btn" data-page="login">
+              Log In
+            </button>
+            <button class="nav-cta-btn" data-page="signup">
+              <span>Sign Up</span>
+              <span class="cta-plus-badge">+</span>
+            </button>
+          </div>
+
+          <!-- Logged-In User Actions -->
+          <div id="nav-user-actions" class="nav-right-actions hidden" style="display: none;">
+            <div class="user-account-pill">
+              <span id="nav-user-name">Player</span>
+              <span id="nav-user-tier" class="user-tier-tag">PADDLE</span>
+            </div>
+            <button id="nav-logout-btn" class="nav-menu-btn">
+              Log Out
+            </button>
+          </div>
+        </div>
+      </header>
+    </div>
+
+    <!-- ====================================================================
+         PAGE 1: HOME PAGE (HERO + 2-VIDEO COURT VISION + PLAYER TELEMETRY)
+         ==================================================================== -->
+    <main id="page-home" class="page-view">
+      <div class="page-container">
+
+        <!-- Hero Stage (Executive Non-Video Architectural Court HUD) -->
+        <section id="sec-home" class="hero-stage" data-scroll-section="home">
+          <div class="hero-main-grid">
+
+            <div class="hero-copy-col">
+              <div class="hero-status-pill" data-hero-inview data-delay="100">
+                <span class="status-live-dot"></span>
+                <span class="status-pill-text">USAP 2026 COURT VISION AI</span>
+                <span class="status-pill-tag">SUB-MM VAR</span>
+              </div>
+
+              <h1 class="hero-stacked-title" data-hero-lines data-stagger="115" data-duration="1050">
+                <span class="clip-line"><span>PRO MATCH</span></span>
+                <span class="clip-line"><span><em class="hero-title-accent">COURT VISION</em></span></span>
+                <span class="clip-line"><span>&amp; RADAR AI.</span></span>
+              </h1>
+
+              <p class="hero-subtext" data-hero-words data-stagger="22" data-delay="340">
+                Autonomous 4-player foot tracking, sub-pixel ball velocity radar, and USAP regulation 20×44 ft homography telemetry built for championship pickleball clubs and tournaments.
+              </p>
+
+              <div class="hero-cta-row" data-hero-inview data-delay="560">
+                <button id="hero-watch-btn" class="btn-sports-primary" data-hover-btn>
+                  <span id="hero-watch-label">Explore Court Analytics</span>
+                  <span class="btn-arrow-icon" data-hover-nudge>→</span>
+                </button>
+                <button class="btn-sports-outline" data-page="subscriptions" data-hover-btn>
+                  <span>Tournament Memberships</span>
+                </button>
+              </div>
+
+              <!-- Executive 4-Metric Trust Ribbon -->
+              <div class="hero-metrics-ribbon" data-hero-inview data-delay="700">
+                <div class="ribbon-metric">
+                  <strong>20×44 FT</strong>
+                  <span>USAP Homography</span>
+                </div>
+                <div class="ribbon-divider"></div>
+                <div class="ribbon-metric">
+                  <strong>17-KEYPOINT</strong>
+                  <span>Pose Biomechanics</span>
+                </div>
+                <div class="ribbon-divider"></div>
+                <div class="ribbon-metric">
+                  <strong>&lt; 16 MM</strong>
+                  <span>Hawk-Eye Line VAR</span>
+                </div>
+                <div class="ribbon-divider"></div>
+                <div class="ribbon-metric">
+                  <strong>0 SWAPS</strong>
+                  <span>P1–P4 ID Lock</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Architectural Court Telemetry Command Deck (No Running Video) -->
+            <div class="hero-visual-col">
+              <div class="hero-command-deck" data-hero-inview data-delay="480" data-parallax-y="-12,12" data-hover-lift="-6">
+
+                <!-- Top HUD Header Bar -->
+                <div class="deck-topbar">
+                  <div class="deck-topbar-left">
+                    <span class="deck-pulse-led"></span>
+                    <span class="deck-sys-title">USAP 20×44 FT DIGITAL COURT TWIN</span>
+                  </div>
+                  <div class="deck-badges-right">
+                    <span class="deck-chip-mono">RMSE 0.0000 FT</span>
+                    <span class="deck-chip-emerald">LIVE RADAR</span>
+                  </div>
+                </div>
+
+                <!-- Interactive Vector Isometric Court Blueprint Stage (No Video) -->
+                <div class="deck-blueprint-stage">
+                  <!-- Floating Top-Left Sensor Tag -->
+                  <div class="blueprint-overlay-tag top-left">
+                    <small>BALL VELOCITY PEAK</small>
+                    <strong>47.9 MPH • 77.1 KM/H</strong>
+                  </div>
+
+                  <!-- Floating Top-Right Hawk-Eye Verdict Tag -->
+                  <div class="blueprint-overlay-tag top-right verdict-in">
+                    <span class="verdict-dot"></span>
+                    <div>
+                      <small>HAWK-EYE BOUNCE VAR</small>
+                      <strong>CALL: IN (+42.0 MM)</strong>
+                    </div>
+                  </div>
+
+                  <!-- Crisp Vector 3D Perspective Pickleball Court SVG -->
+                  <svg class="hero-iso-court-svg" viewBox="0 0 680 370" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="USAP 20x44 ft Isometric Court Telemetry">
+                    <defs>
+                      <linearGradient id="courtSurfaceGrad" x1="340" y1="28" x2="340" y2="338" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#10345C" />
+                        <stop offset="50%" stop-color="#164A80" />
+                        <stop offset="100%" stop-color="#0E2D50" />
+                      </linearGradient>
+                      <linearGradient id="kitchenZoneGrad" x1="340" y1="115" x2="340" y2="235" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#1B6B56" stop-opacity="0.55" />
+                        <stop offset="100%" stop-color="#0F4C81" stop-opacity="0.35" />
+                      </linearGradient>
+                      <linearGradient id="ballArcGrad" x1="195" y1="275" x2="468" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#52C4A0" stop-opacity="0.15" />
+                        <stop offset="55%" stop-color="#DFFF00" stop-opacity="0.95" />
+                        <stop offset="100%" stop-color="#FF6B35" stop-opacity="1" />
+                      </linearGradient>
+                      <radialGradient id="bounceGlow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#52C4A0" stop-opacity="0.8" />
+                        <stop offset="100%" stop-color="#52C4A0" stop-opacity="0" />
+                      </radialGradient>
+                    </defs>
+
+                    <!-- Background subtle telemetry grid -->
+                    <g stroke="rgba(148, 163, 184, 0.1)" stroke-width="1">
+                      <line x1="40" y1="70" x2="640" y2="70" />
+                      <line x1="40" y1="130" x2="640" y2="130" />
+                      <line x1="40" y1="190" x2="640" y2="190" />
+                      <line x1="40" y1="250" x2="640" y2="250" />
+                      <line x1="40" y1="310" x2="640" y2="310" />
+                      <line x1="140" y1="20" x2="80" y2="350" />
+                      <line x1="340" y1="20" x2="340" y2="350" />
+                      <line x1="540" y1="20" x2="600" y2="350" />
+                    </g>
+
+                    <!-- Outer Stadium Apron -->
+                    <polygon points="155,34 525,34 624,336 56,336" fill="rgba(10, 22, 40, 0.72)" stroke="rgba(82, 196, 160, 0.25)" stroke-width="1.5" />
+
+                    <!-- Regulation 20x44 ft Court Trapezoid -->
+                    <polygon points="188,48 492,48 576,320 104,320" fill="url(#courtSurfaceGrad)" stroke="#E2E8F0" stroke-width="2.5" />
+
+                    <!-- 7-ft Non-Volley Zone (Kitchen) Far & Near -->
+                    <polygon points="164,126 516,126 542,214 138,214" fill="url(#kitchenZoneGrad)" stroke="#52C4A0" stroke-width="2" />
+
+                    <!-- Center Service Lines (Far & Near) -->
+                    <line x1="340" y1="48" x2="340" y2="126" stroke="rgba(226, 232, 240, 0.85)" stroke-width="2" />
+                    <line x1="340" y1="214" x2="340" y2="320" stroke="rgba(226, 232, 240, 0.85)" stroke-width="2" />
+
+                    <!-- Net Line & Posts -->
+                    <line x1="134" y1="170" x2="546" y2="170" stroke="#FFFFFF" stroke-width="3.5" stroke-dasharray="6 4" />
+                    <circle cx="134" cy="170" r="5" fill="#52C4A0" />
+                    <circle cx="546" cy="170" r="5" fill="#52C4A0" />
+
+                    <!-- Corner Homography Calibration Pins -->
+                    <g fill="#FF6B35" stroke="#FFFFFF" stroke-width="1.5">
+                      <circle cx="188" cy="48" r="4.5" />
+                      <circle cx="492" cy="48" r="4.5" />
+                      <circle cx="576" cy="320" r="4.5" />
+                      <circle cx="104" cy="320" r="4.5" />
+                    </g>
+
+                    <!-- Player 3 (Far Left) -->
+                    <g class="svg-player-node">
+                      <ellipse cx="255" cy="90" rx="18" ry="8" fill="rgba(56, 189, 248, 0.22)" stroke="#38BDF8" stroke-width="1.5" />
+                      <circle cx="255" cy="84" r="6" fill="#38BDF8" stroke="#08111E" stroke-width="2" />
+                      <rect x="218" y="56" width="74" height="18" rx="5" fill="rgba(8, 17, 30, 0.88)" stroke="rgba(56, 189, 248, 0.5)" stroke-width="1" />
+                      <text x="255" y="68" fill="#E0F2FE" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="700" text-anchor="middle">P3 • 21.1 km/h</text>
+                    </g>
+
+                    <!-- Player 4 (Far Right) -->
+                    <g class="svg-player-node">
+                      <ellipse cx="432" cy="96" rx="18" ry="8" fill="rgba(56, 189, 248, 0.22)" stroke="#38BDF8" stroke-width="1.5" />
+                      <circle cx="432" cy="90" r="6" fill="#38BDF8" stroke="#08111E" stroke-width="2" />
+                      <rect x="395" y="62" width="74" height="18" rx="5" fill="rgba(8, 17, 30, 0.88)" stroke="rgba(56, 189, 248, 0.5)" stroke-width="1" />
+                      <text x="432" y="74" fill="#E0F2FE" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="700" text-anchor="middle">P4 • 17.9 km/h</text>
+                    </g>
+
+                    <!-- Player 1 (Near Left — Kitchen Line) -->
+                    <g class="svg-player-node">
+                      <ellipse cx="222" cy="238" rx="22" ry="10" fill="rgba(82, 196, 160, 0.24)" stroke="#52C4A0" stroke-width="1.8" />
+                      <circle cx="222" cy="231" r="7" fill="#52C4A0" stroke="#08111E" stroke-width="2" />
+                      <rect x="176" y="254" width="92" height="20" rx="6" fill="rgba(8, 17, 30, 0.9)" stroke="#52C4A0" stroke-width="1.2" />
+                      <text x="222" y="267" fill="#8DE0C4" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" text-anchor="middle">P1 • NVZ +185mm</text>
+                    </g>
+
+                    <!-- Player 2 (Near Right) -->
+                    <g class="svg-player-node">
+                      <ellipse cx="445" cy="252" rx="22" ry="10" fill="rgba(249, 115, 22, 0.24)" stroke="#F97316" stroke-width="1.8" />
+                      <circle cx="445" cy="245" r="7" fill="#F97316" stroke="#08111E" stroke-width="2" />
+                      <rect x="401" y="268" width="88" height="20" rx="6" fill="rgba(8, 17, 30, 0.9)" stroke="#F97316" stroke-width="1.2" />
+                      <text x="445" y="281" fill="#FFEDD5" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" text-anchor="middle">P2 • 19.8 km/h</text>
+                    </g>
+
+                    <!-- Parabolic Ball Trajectory & Hawk-Eye Bounce Spot -->
+                    <path d="M 222 230 Q 338 82 468 66" stroke="url(#ballArcGrad)" stroke-width="3.5" stroke-linecap="round" fill="none" />
+                    <path d="M 222 230 L 468 66" stroke="rgba(223, 255, 0, 0.22)" stroke-width="1.2" stroke-dasharray="4 4" />
+
+                    <!-- Bounce Compression Rings -->
+                    <circle cx="468" cy="66" r="22" fill="url(#bounceGlow)" class="svg-pulse-ring" />
+                    <circle cx="468" cy="66" r="6" fill="#DFFF00" stroke="#08111E" stroke-width="2" />
+                  </svg>
+
+                  <!-- Bottom Blueprint Legend Bar -->
+                  <div class="blueprint-footer-bar">
+                    <span><i class="legend-dot emerald"></i> 7-ft Kitchen NVZ Active</span>
+                    <span><i class="legend-dot lime"></i> TrackNetV2 Parabolic Fit</span>
+                    <span><i class="legend-dot orange"></i> 4-Corner Homography Locked</span>
+                  </div>
+                </div>
+
+                <!-- Clean 4-Column Executive Telemetry Strip (Preserves IDs for app.js) -->
+                <div class="deck-telemetry-bento">
+                  <div class="mini-stat-box">
+                    <small>Players Tracked</small>
+                    <strong id="mini-players-val">4 / 4 Locked</strong>
+                  </div>
+                  <div class="mini-stat-box">
+                    <small>Kitchen NVZ</small>
+                    <strong id="mini-nvz-val">SAFE (+185 mm)</strong>
+                  </div>
+                  <div class="mini-stat-box">
+                    <small>Line Call VAR</small>
+                    <strong id="mini-line-val">IN (+42 mm)</strong>
+                  </div>
+                  <div class="mini-stat-box">
+                    <small>Pipeline Time</small>
+                    <strong id="mini-time-val">54.92s</strong>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Dark Rounded Showcase Banner (ONLY 2 VIDEOS + 2D COURT) -->
+        <section id="match-demo" class="dark-banner-sec" data-inview data-y="36">
+
+          <div class="dark-banner-top">
+            <div>
+              <div class="baseline-eyebrow light" data-inview>
+                <span class="eyebrow-dot"></span>
+                <span>LIVE SYNCHRONIZED COURT TWIN</span>
+              </div>
+              <h2 class="dark-giant-word" data-anim-lines>
+                <span class="clip-line"><span>COURT <em>VISION</em></span></span>
+              </h2>
+            </div>
+
+            <div class="clip-switcher-bar" role="tablist" aria-label="Match Clip Selector">
+              <button type="button" class="clip-tab-btn active" data-clip="match11">
+                Match 11 (9.6s Pro Rally)
+              </button>
+              <button type="button" class="clip-tab-btn" data-clip="match_mlp">
+                Match MLP Preview (10.0s HD)
+              </button>
+            </div>
+
+            <div class="match-actions-group">
+              <button id="btn-theater-mode" class="sports-btn-theater" title="Toggle Fullscreen Cinema Theater Broadcast Mode">
+                <span id="theater-btn-text">Theater Mode</span>
+              </button>
+              <button id="btn-toggle-pin-court" class="sports-btn-calib" title="Fine-tune 4 court corners on active rally clip">
+                <span>Pin &amp; Retrack Court</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ====================================================================
+               INTERACTIVE 4-POINT COURT CALIBRATION & PINNING WORKBENCH
+               ==================================================================== -->
+          <div id="court-pinning-workbench" class="court-workbench-panel hidden">
+            <div class="workbench-header">
+              <div class="workbench-header-left">
+                <div>
+                  <h3 class="workbench-title">Interactive Court Calibration &amp; Re-Tracking</h3>
+                  <p class="workbench-subtitle">
+                    Drag the 4 corner pins on Frame 0. Click "Retrack Court" to run full perception + minimap rendering on the selected clip.
+                  </p>
+                </div>
+              </div>
+
+              <div class="workbench-header-right">
+                <select id="calib-clip-select" class="workbench-select">
+                  <option value="match11.mp4" selected>match11.mp4 (1302x740 • 9.6s Rally)</option>
+                  <option value="match_mlp.mp4">match_mlp_base_preview.mp4 (1280x720 • 10.0s Clean MLP)</option>
+                </select>
+                <button id="btn-close-pin-court" class="btn-workbench-close" title="Close calibration tool">✕</button>
+              </div>
+            </div>
+
+            <div class="workbench-content-grid">
+              <!-- Interactive Canvas Stage -->
+              <div class="pin-canvas-wrapper">
+                <div id="pin-canvas-loader" class="canvas-loader-overlay">
+                  <div class="spinner-ring"></div>
+                  <span id="pin-loader-text">Loading video frame...</span>
+                </div>
+                <canvas id="court-pin-canvas"></canvas>
+              </div>
+
+              <!-- Controls & Coordinate Inputs -->
+              <div class="workbench-controls-col">
+                <div class="pins-cards-grid">
+                  <!-- P1 Far-Left -->
+                  <div class="pin-card p1-card">
+                    <div class="pin-card-head">
+                      <span class="pin-dot p1-dot"></span>
+                      <strong>P1: Far-Left Baseline (0, 0 ft)</strong>
+                    </div>
+                    <div class="coord-inputs-row">
+                      <div class="coord-group">
+                        <label>X (px)</label>
+                        <input type="number" id="pin-p1-x" value="425" />
+                      </div>
+                      <div class="coord-group">
+                        <label>Y (px)</label>
+                        <input type="number" id="pin-p1-y" value="177" />
+                      </div>
+                    </div>
+                    <div class="nudge-btns-row">
+                      <small>X Nudge:</small>
+                      <button type="button" data-nudge-pin="p1" data-axis="x" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="x" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="x" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="x" data-amount="5">+5</button>
+                      <span class="nudge-divider"></span>
+                      <small>Y Nudge:</small>
+                      <button type="button" data-nudge-pin="p1" data-axis="y" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="y" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="y" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p1" data-axis="y" data-amount="5">+5</button>
+                    </div>
+                  </div>
+
+                  <!-- P2 Far-Right -->
+                  <div class="pin-card p2-card">
+                    <div class="pin-card-head">
+                      <span class="pin-dot p2-dot"></span>
+                      <strong>P2: Far-Right Baseline (20, 0 ft)</strong>
+                    </div>
+                    <div class="coord-inputs-row">
+                      <div class="coord-group">
+                        <label>X (px)</label>
+                        <input type="number" id="pin-p2-x" value="855" />
+                      </div>
+                      <div class="coord-group">
+                        <label>Y (px)</label>
+                        <input type="number" id="pin-p2-y" value="177" />
+                      </div>
+                    </div>
+                    <div class="nudge-btns-row">
+                      <small>X Nudge:</small>
+                      <button type="button" data-nudge-pin="p2" data-axis="x" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="x" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="x" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="x" data-amount="5">+5</button>
+                      <span class="nudge-divider"></span>
+                      <small>Y Nudge:</small>
+                      <button type="button" data-nudge-pin="p2" data-axis="y" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="y" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="y" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p2" data-axis="y" data-amount="5">+5</button>
+                    </div>
+                  </div>
+
+                  <!-- P3 Near-Right -->
+                  <div class="pin-card p3-card">
+                    <div class="pin-card-head">
+                      <span class="pin-dot p3-dot"></span>
+                      <strong>P3: Near-Right Baseline (20, 44 ft)</strong>
+                    </div>
+                    <div class="coord-inputs-row">
+                      <div class="coord-group">
+                        <label>X (px)</label>
+                        <input type="number" id="pin-p3-x" value="1080" />
+                      </div>
+                      <div class="coord-group">
+                        <label>Y (px)</label>
+                        <input type="number" id="pin-p3-y" value="610" />
+                      </div>
+                    </div>
+                    <div class="nudge-btns-row">
+                      <small>X Nudge:</small>
+                      <button type="button" data-nudge-pin="p3" data-axis="x" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="x" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="x" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="x" data-amount="5">+5</button>
+                      <span class="nudge-divider"></span>
+                      <small>Y Nudge:</small>
+                      <button type="button" data-nudge-pin="p3" data-axis="y" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="y" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="y" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p3" data-axis="y" data-amount="5">+5</button>
+                    </div>
+                  </div>
+
+                  <!-- P4 Near-Left -->
+                  <div class="pin-card p4-card">
+                    <div class="pin-card-head">
+                      <span class="pin-dot p4-dot"></span>
+                      <strong>P4: Near-Left Baseline (0, 44 ft)</strong>
+                    </div>
+                    <div class="coord-inputs-row">
+                      <div class="coord-group">
+                        <label>X (px)</label>
+                        <input type="number" id="pin-p4-x" value="204" />
+                      </div>
+                      <div class="coord-group">
+                        <label>Y (px)</label>
+                        <input type="number" id="pin-p4-y" value="602" />
+                      </div>
+                    </div>
+                    <div class="nudge-btns-row">
+                      <small>X Nudge:</small>
+                      <button type="button" data-nudge-pin="p4" data-axis="x" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="x" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="x" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="x" data-amount="5">+5</button>
+                      <span class="nudge-divider"></span>
+                      <small>Y Nudge:</small>
+                      <button type="button" data-nudge-pin="p4" data-axis="y" data-amount="-5">-5</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="y" data-amount="-1">-1</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="y" data-amount="1">+1</button>
+                      <button type="button" data-nudge-pin="p4" data-axis="y" data-amount="5">+5</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="workbench-action-row">
+                  <button type="button" id="btn-calib-recommend" class="btn-sports-secondary" title="Reset to official USAP regulation broadcast geometry">
+                    🔄 Reset USAP Corners
+                  </button>
+                  <button type="button" id="btn-calib-save" class="btn-sports-save" title="Save coordinates to court_calibrations.json">
+                    💾 Save Court Geometry
+                  </button>
+                  <button type="button" id="btn-calib-run-pipeline" class="btn-sports-retrack" title="Run perception pipeline with these corners">
+                    ⚡ Retrack Court &amp; Run AI (Active Clip)
+                  </button>
+                </div>
+
+                <!-- Live Pipeline Progress HUD -->
+                <div id="pipeline-progress-hud" class="pipeline-progress-hud" style="display: none;">
+                  <div class="hud-top">
+                    <span id="pipeline-hud-status" class="hud-status">Initializing Perception Pipeline...</span>
+                    <span class="hud-indicator-pulse"></span>
+                  </div>
+                  <div class="hud-track">
+                    <div id="pipeline-hud-bar" class="hud-bar" style="width: 20%;"></div>
+                  </div>
+                </div>
+
+                <!-- Toast Notification -->
+                <div id="calib-toast" class="calib-toast" style="display: none;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="match-demo-grid">
+
+            <!-- Left: Processed Match Video -->
+            <div class="dark-panel main-match-panel">
+              <div class="dark-panel-head">
+                <div class="dark-panel-title">
+                  <span id="demo-video-title">match11.mp4 • 9.63s Broadcast Rally (1302×740 @ 30fps)</span>
+                </div>
+              </div>
+
+              <div class="video-box">
+                <video
+                  id="demo-video-player"
+                  src="/outputs/match11_base_preview.mp4"
+                  autoplay
+                  loop
+                  muted
+                  playsinline
+                  controls
+                ></video>
+              </div>
+
+              <div class="dark-panel-foot">
+                <span id="demo-frame-counter">Frame 000 / 289</span>
+                <span id="demo-ball-tracked">272 / 289 frames (94.1%)</span>
+                <span>P1–P4 IDs Locked (0 Swaps)</span>
+              </div>
+            </div>
+
+            <!-- Right: Interactive 2D USAP Pickleball Court -->
+            <div class="dark-panel">
+              <div class="dark-panel-head">
+                <div class="dark-panel-title">
+                  <span>2D Pickleball Court (20×44 ft)</span>
+                </div>
+
+                <div class="lens-pill-row">
+                  <button class="lens-pill active" data-lens="rally">2D Court</button>
+                  <button class="lens-pill" data-lens="heatmap">Heatmap</button>
+                  <button class="lens-pill" data-lens="kitchen">Kitchen NVZ</button>
+                  <button class="lens-pill" data-lens="var">In/Out</button>
+                </div>
+              </div>
+
+              <div class="court-box">
+                <canvas id="demo-court-canvas"></canvas>
+              </div>
+
+              <div class="dark-panel-foot">
+                <span>20×44 ft Homography</span>
+                <span>7-ft Kitchen Zone Monitored</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 4-Card Processing Time Summary -->
+          <div class="timing-strip">
+            <div class="timing-pill-card" data-inview data-delay="0" data-hover-lift="-6">
+              <small>Clip Duration</small>
+              <strong id="t-clip-len">7.84s</strong>
+            </div>
+            <div class="timing-pill-card highlight" data-inview data-delay="110" data-hover-lift="-6">
+              <small>Total Output Ready In</small>
+              <strong id="t-total-sec">78.79s</strong>
+            </div>
+            <div class="timing-pill-card" data-inview data-delay="220" data-hover-lift="-6">
+              <small>Player Detection (YOLOv8s)</small>
+              <strong id="t-players-sec">14.06s</strong>
+            </div>
+            <div class="timing-pill-card" data-inview data-delay="330" data-hover-lift="-6">
+              <small>Ball Detection (TrackNetV2)</small>
+              <strong id="t-ball-sec">55.33s</strong>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Player Telemetry Table (P1–P4) -->
+        <section id="player-stats" class="clean-sec">
+          <div class="sec-header">
+            <div>
+              <div class="baseline-eyebrow" data-inview>
+                <span class="eyebrow-dot"></span>
+                <span class="sec-kicker" style="margin:0;">Match Telemetry</span>
+              </div>
+              <h2 class="sec-title" data-anim-lines>
+                <span class="clip-line"><span>Player Distance, Speed &amp; Zone Coverage</span></span>
+              </h2>
+            </div>
+          </div>
+
+          <div class="clean-table-wrap" data-inview data-delay="120" data-y="28">
+            <table class="clean-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Team</th>
+                  <th>Distance Covered</th>
+                  <th>Avg Speed</th>
+                  <th>Max Sprint Speed</th>
+                  <th>Kitchen / Net Zone %</th>
+                  <th>Baseline Zone %</th>
+                </tr>
+              </thead>
+              <tbody id="player-stats-tbody">
+                <!-- Populated dynamically by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             SCROLLABLE FEATURE 01: AI PICKLEBALL COACH (#sec-ai-coach)
+             ================================================================== -->
+        <section id="sec-ai-coach" class="scroll-feature-sec" data-scroll-section="ai-coach">
+          <div class="ghost-parallax-backdrop" aria-hidden="true">
+            <div class="ghost-row">
+              <span class="ghost-word" data-anim-words data-parallax-x="-3,3">17-KEYPOINT</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="3,-3">BIOMECHANICS</span>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-word ink-accent" data-anim-words data-parallax-x="-2,4">AI STROKE</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="4,-3">COACH</span>
+            </div>
+          </div>
+
+          <div class="feature-card-shell" data-inview data-y="36">
+            <div class="feature-top-grid">
+              <div class="feature-head-col">
+                <div class="feature-index-row">
+                  <span class="feature-num-chip">#01</span>
+                  <div class="baseline-eyebrow">
+                    <span class="eyebrow-dot"></span>
+                    <span>HOW IT WORKS · AI PICKLEBALL COACH</span>
+                  </div>
+                </div>
+                <h2 class="feature-stacked-h2" data-anim-lines data-stagger="110">
+                  <span class="clip-line"><span>ANALYSE YOUR OWN TRAINING.</span></span>
+                  <span class="clip-line"><span>RAISE YOUR <em>PERFORMANCE.</em></span></span>
+                </h2>
+              </div>
+              <div class="feature-desc-col">
+                <p class="feature-lead-p" data-anim-words data-stagger="22">
+                  Film one stroke on your phone. Pickviz measures your technique using 17-keypoint skeletal biomechanics and tells you exactly what to work on.
+                </p>
+              </div>
+            </div>
+
+            <div class="feature-specs-trio">
+              <article class="feature-spec-card" data-inview data-delay="0" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">STEP 1 • PHONE VIDEO</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Film One Stroke on Your Phone</h3>
+                <p>Record a single Forehand Dink, Third-Shot Drive, Volley, or Serve from your phone camera.</p>
+              </article>
+
+              <article class="feature-spec-card" data-inview data-delay="120" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">STEP 2 • 17-KEYPOINT AI</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Measures Your Technique</h3>
+                <p>Pretrained YOLO11-Pose tracks your knee bend, elbow angle, contact point in front of hip, and stance width.</p>
+              </article>
+
+              <article class="feature-spec-card" data-inview data-delay="240" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">STEP 3 • PRO FEEDBACK</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Tells You What to Work On</h3>
+                <p>Compares your joint angles against USAP Pro biomechanics and prescribes targeted drills.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             SCROLLABLE FEATURE 02: AUTOMATED USAP 0-0-2 SCORING (#sec-scoring)
+             ================================================================== -->
+        <section id="sec-scoring" class="scroll-feature-sec dark-tone" data-scroll-section="scoring">
+          <div class="ghost-parallax-backdrop" aria-hidden="true">
+            <div class="ghost-row">
+              <span class="ghost-word" data-anim-words data-parallax-x="-3,3">AUTONOMOUS</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="3,-3">SIDE-OUT</span>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-word ink-accent" data-anim-words data-parallax-x="-2,4">USAP 0-0-2</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="4,-3">SCORING</span>
+            </div>
+          </div>
+
+          <div class="feature-card-shell dark-shell" data-inview data-y="36">
+            <div class="feature-top-grid">
+              <div class="feature-head-col">
+                <div class="feature-index-row">
+                  <span class="feature-num-chip dark-chip">#02</span>
+                  <div class="baseline-eyebrow light">
+                    <span class="eyebrow-dot"></span>
+                    <span>USAP RULEBOOK ENGINE</span>
+                  </div>
+                </div>
+                <h2 class="feature-stacked-h2" data-anim-lines data-stagger="110">
+                  <span class="clip-line"><span>AUTOMATED USAP</span></span>
+                  <span class="clip-line"><span><em>0-0-2</em> SCORING</span></span>
+                </h2>
+              </div>
+              <div class="feature-desc-col">
+                <p class="feature-lead-p" data-anim-words data-stagger="22">
+                  Autonomous tournament point-counting state machine tracking Side-Out rotations, Server #1 / Server #2 transitions, Left/Right court swaps, and the Two-Bounce rule in real time.
+                </p>
+              </div>
+            </div>
+
+            <div class="feature-specs-trio">
+              <article class="feature-spec-card dark-spec" data-inview data-delay="0" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">RULE 4.A</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Two-Bounce Verification</h3>
+                <p>Verifies serve bounce and return bounce before allowing any volley.</p>
+              </article>
+
+              <article class="feature-spec-card dark-spec" data-inview data-delay="120" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">SIDE-OUT FSM</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>3-Number Score Call</h3>
+                <p>Automatically updates [Serving - Receiving - Server #] after every rally.</p>
+              </article>
+
+              <article class="feature-spec-card dark-spec" data-inview data-delay="240" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">SERVER ROTATION</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Left / Right Court Check</h3>
+                <p>Tracks P1–P4 positions to flag wrong-server or wrong-court faults.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             SCROLLABLE FEATURE 03: IN / OUT LINE CALLING VAR (#sec-line-var)
+             ================================================================== -->
+        <section id="sec-line-var" class="scroll-feature-sec" data-scroll-section="line-var">
+          <div class="ghost-parallax-backdrop" aria-hidden="true">
+            <div class="ghost-row">
+              <span class="ghost-word" data-anim-words data-parallax-x="-3,3">SUB-PIXEL</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="3,-3">PARABOLIC</span>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-word ink-accent" data-anim-words data-parallax-x="-2,4">HAWK-EYE</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="4,-3">LINE VAR</span>
+            </div>
+          </div>
+
+          <div class="feature-card-shell" data-inview data-y="36">
+            <div class="feature-top-grid">
+              <div class="feature-head-col">
+                <div class="feature-index-row">
+                  <span class="feature-num-chip">#03</span>
+                  <div class="baseline-eyebrow">
+                    <span class="eyebrow-dot"></span>
+                    <span>HAWK-EYE BOUNCE VAR</span>
+                  </div>
+                </div>
+                <h2 class="feature-stacked-h2" data-anim-lines data-stagger="110">
+                  <span class="clip-line"><span>IN / OUT LINE</span></span>
+                  <span class="clip-line"><span>CALLING <em>VAR</em></span></span>
+                </h2>
+              </div>
+              <div class="feature-desc-col">
+                <p class="feature-lead-p" data-anim-words data-stagger="22">
+                  Sub-pixel parabolic trajectory fitting and homography projection that pinpoints exact ball compression on the court and calls IN or OUT with millimeter margin.
+                </p>
+              </div>
+            </div>
+
+            <div class="feature-specs-trio">
+              <article class="feature-spec-card" data-inview data-delay="0" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">SUB-PIXEL FIT</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Parabolic Bounce Detection</h3>
+                <p>Fits a 5-frame curve around vertical velocity inflection points.</p>
+              </article>
+
+              <article class="feature-spec-card" data-inview data-delay="120" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">MILLIMETER VAR</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Baseline &amp; Sideline Margin</h3>
+                <p>Measures exact distance in millimeters from the ball contact ellipse to the line.</p>
+              </article>
+
+              <article class="feature-spec-card" data-inview data-delay="240" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">INSTANT REPLAY</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Auto-Zoom VAR Clip</h3>
+                <p>Generates a 0.25x slow-motion challenge replay for close calls.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             SCROLLABLE FEATURE 04: 7-FT KITCHEN FOOT-FAULT AI (#sec-kitchen-nvz)
+             ================================================================== -->
+        <section id="sec-kitchen-nvz" class="scroll-feature-sec dark-tone" data-scroll-section="kitchen-nvz">
+          <div class="ghost-parallax-backdrop" aria-hidden="true">
+            <div class="ghost-row">
+              <span class="ghost-word" data-anim-words data-parallax-x="-3,3">NON-VOLLEY</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="3,-3">7-FT ZONE</span>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-word ink-accent" data-anim-words data-parallax-x="-2,4">KITCHEN</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="4,-3">WATCHDOG</span>
+            </div>
+          </div>
+
+          <div class="feature-card-shell dark-shell" data-inview data-y="36">
+            <div class="feature-top-grid">
+              <div class="feature-head-col">
+                <div class="feature-index-row">
+                  <span class="feature-num-chip dark-chip">#04</span>
+                  <div class="baseline-eyebrow light">
+                    <span class="eyebrow-dot"></span>
+                    <span>USAP RULE 9 WATCHDOG</span>
+                  </div>
+                </div>
+                <h2 class="feature-stacked-h2" data-anim-lines data-stagger="110">
+                  <span class="clip-line"><span>7-FT KITCHEN</span></span>
+                  <span class="clip-line"><span><em>FOOT-FAULT</em> AI</span></span>
+                </h2>
+              </div>
+              <div class="feature-desc-col">
+                <p class="feature-lead-p" data-anim-words data-stagger="22">
+                  Real-time ankle and shoe keypoint tracking along the 7-foot Non-Volley Zone (Kitchen) line to detect foot touches during volleys and post-volley momentum.
+                </p>
+              </div>
+            </div>
+
+            <div class="feature-specs-trio">
+              <article class="feature-spec-card dark-spec" data-inview data-delay="0" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">POSE KEYPOINTS</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Shoe &amp; Toe Tracking</h3>
+                <p>Extracts left and right ankle/toe coordinates for all 4 players.</p>
+              </article>
+
+              <article class="feature-spec-card dark-spec" data-inview data-delay="120" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">RULE 9 LOGIC</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Volley vs Groundstroke</h3>
+                <p>Distinguishes airborne volleys from legal kitchen dinks after a bounce.</p>
+              </article>
+
+              <article class="feature-spec-card dark-spec" data-inview data-delay="240" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">MOMENTUM CHECK</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Post-Volley Landing</h3>
+                <p>Monitors player feet for 1.5s after paddle impact to catch momentum faults.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             SCROLLABLE FEATURE 05: SHOT SPEED & HEATMAP LAB (#sec-shot-analytics)
+             ================================================================== -->
+        <section id="sec-shot-analytics" class="scroll-feature-sec" data-scroll-section="shot-analytics">
+          <div class="ghost-parallax-backdrop" aria-hidden="true">
+            <div class="ghost-row">
+              <span class="ghost-word" data-anim-words data-parallax-x="-3,3">KINEMATICS</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="3,-3">VELOCITY</span>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-word ink-accent" data-anim-words data-parallax-x="-2,4">HEATMAP</span>
+              <span class="ghost-word" data-anim-words data-parallax-x="4,-3">SHOT LAB</span>
+            </div>
+          </div>
+
+          <div class="feature-card-shell" data-inview data-y="36">
+            <div class="feature-top-grid">
+              <div class="feature-head-col">
+                <div class="feature-index-row">
+                  <span class="feature-num-chip">#05</span>
+                  <div class="baseline-eyebrow">
+                    <span class="eyebrow-dot"></span>
+                    <span>KINEMATICS &amp; HEATMAPS</span>
+                  </div>
+                </div>
+                <h2 class="feature-stacked-h2" data-anim-lines data-stagger="110">
+                  <span class="clip-line"><span>SHOT SPEED &amp;</span></span>
+                  <span class="clip-line"><span><em>HEATMAP</em> LAB</span></span>
+                </h2>
+              </div>
+              <div class="feature-desc-col">
+                <p class="feature-lead-p" data-anim-words data-stagger="22">
+                  Automated shot classification (Kitchen Dinks, Third-Shot Drives, Volleys, Lobs, and Overhead Smashes) with live ball velocity in MPH/km/h and spatial court heatmaps.
+                </p>
+              </div>
+            </div>
+
+            <div class="feature-specs-trio">
+              <article class="feature-spec-card" data-inview data-delay="0" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">5 SHOT TYPES</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Dink / Drive / Smash AI</h3>
+                <p>Classifies every stroke from trajectory arc curvature and net clearance.</p>
+              </article>
+
+              <article class="feature-spec-card" data-inview data-delay="120" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">BALL VELOCITY</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Real-World Speed (km/h)</h3>
+                <p>Computes instantaneous and peak ball speed using 20×44 ft court scale.</p>
+              </article>
+
+              <article class="feature-spec-card" data-inview data-delay="240" data-hover-lift="-8">
+                <div class="spec-card-top">
+                  <span class="spec-step-tag">SPATIAL DENSITY</span>
+                  <span class="spec-arrow-circle" data-hover-arrow>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                </div>
+                <h3>Player Zone Heatmaps</h3>
+                <p>Shows % of match time spent in Kitchen, Transition, and Baseline zones.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- ====================================================================
+         SCROLLABLE SECTION: 3-TIER BUSINESS SUBSCRIPTION PAGE
+         (1. PADDLE FREE • 2. PADDLE PRO • 3. PADDLE PREMIUM)
+         ==================================================================== -->
+    <section id="page-subscriptions" class="page-view scroll-section" data-scroll-section="subscriptions">
+      <div class="page-container">
+        <div class="sub-hero-wrap">
+
+          <div class="sub-header-center">
+            <div class="baseline-eyebrow" style="justify-content:center;" data-inview>
+              <span class="eyebrow-dot"></span>
+              <span>TOURNAMENT &amp; CLUB MEMBERSHIPS</span>
+            </div>
+
+            <h2 class="sub-title-xl" data-anim-lines data-stagger="110">
+              <span class="clip-line"><span>BUILT FOR PLAYERS,</span></span>
+              <span class="clip-line"><span>CLUBS &amp; <em>TOURNAMENTS</em></span></span>
+            </h2>
+
+            <p data-anim-words data-stagger="20" style="color: var(--text-body); font-size: 16px; margin: 0 auto 18px; max-width: 680px;">
+              Scale from monthly recorded clip uploads to unlimited 4K match uploads and high-capacity live court AI officiating.
+            </p>
+
+            <!-- Monthly / Annual Billing Toggle -->
+            <div class="billing-toggle-pill" data-inview data-delay="140">
+              <button class="cycle-btn active" data-cycle="monthly">Monthly Billing</button>
+              <button class="cycle-btn" data-cycle="annual">
+                Annual Billing
+                <span class="save-tag">SAVE 20%</span>
+              </button>
+            </div>
+
+            <div id="sub-feedback-banner" class="auth-status-banner success hidden" style="margin-top: 18px; display: none;"></div>
+          </div>
+
+          <!-- 3-Tier Cards Grid -->
+          <div class="pricing-trio-grid">
+
+            <!-- TIER 1: PADDLE (FREE) -->
+            <article class="plan-card" data-inview data-delay="0" data-hover-lift="-10">
+              <div>
+                <div class="plan-visual-banner tier-free">
+                  <div>
+                    <span class="plan-tier-kicker">STARTER TIER</span>
+                    <h2 class="plan-tier-name">PADDLE</h2>
+                  </div>
+                  <!-- Animated Classic Graphite Pickleball Paddle SVG -->
+                  <svg class="paddle-svg-anim" viewBox="0 0 100 100" fill="none">
+                    <rect x="22" y="10" width="52" height="62" rx="18" fill="#1E293B" stroke="#0F172A" stroke-width="4"/>
+                    <rect x="42" y="72" width="12" height="22" rx="4" fill="#475569"/>
+                    <circle cx="66" cy="30" r="11" fill="#DFFF00" stroke="#0F172A" stroke-width="2.5"/>
+                    <circle cx="63" cy="28" r="2" fill="#0F172A"/>
+                    <circle cx="69" cy="32" r="2" fill="#0F172A"/>
+                  </svg>
+                </div>
+
+                <div class="plan-price-row">
+                  <span class="plan-price-val" data-monthly="$0" data-annual="$0">$0</span>
+                  <span class="plan-price-unit">/ month • Free forever</span>
+                </div>
+
+                <!-- Visual Quota Comparison Meters -->
+                <div class="quota-meters-box">
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Monthly Clip Uploads</span>
+                      <span>5 Clips / Mo</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill" style="width: 18%"></div>
+                    </div>
+                  </div>
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Live Clip Analysis</span>
+                      <span>Recorded Only (0 Live)</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill lime" style="width: 6%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <ul class="plan-feature-list">
+                  <li><span class="check-icon">✓</span> <span><strong>Limited Video Clip Uploads</strong> (5 match clips / month, up to 720p)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>AI Stroke Coach:</strong> Film 2 strokes / month on your phone</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>4-Player (P1–P4) &amp; Ball Tracking</strong> on uploaded clips</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Basic 2D Court Minimap</strong> &amp; player distance summary</span></li>
+                </ul>
+              </div>
+
+              <button class="plan-select-btn" data-select-tier="paddle">
+                Start Free with Paddle
+              </button>
+            </article>
+
+            <!-- TIER 2: PADDLE PRO (MOST POPULAR) -->
+            <article class="plan-card popular" data-inview data-delay="140" data-hover-lift="-10">
+              <div>
+                <div class="plan-visual-banner tier-pro">
+                  <div>
+                    <span class="plan-tier-kicker">MOST POPULAR • PRO</span>
+                    <h2 class="plan-tier-name">PADDLE PRO</h2>
+                  </div>
+                  <!-- Animated Carbon Orange Pickleball Paddle SVG -->
+                  <svg class="paddle-svg-anim" viewBox="0 0 100 100" fill="none">
+                    <rect x="22" y="10" width="52" height="62" rx="18" fill="#0E1116" stroke="#FFFFFF" stroke-width="4"/>
+                    <rect x="42" y="72" width="12" height="22" rx="4" fill="#FFFFFF"/>
+                    <circle cx="68" cy="28" r="13" fill="#DFFF00" stroke="#0E1116" stroke-width="2.5"/>
+                    <circle cx="65" cy="26" r="2.2" fill="#0E1116"/>
+                    <circle cx="71" cy="30" r="2.2" fill="#0E1116"/>
+                  </svg>
+                </div>
+
+                <div class="plan-price-row">
+                  <span class="plan-price-val" data-monthly="$29" data-annual="$23">$29</span>
+                  <span class="plan-price-unit">/ month • Competitive Players &amp; Coaches</span>
+                </div>
+
+                <!-- Visual Quota Comparison Meters -->
+                <div class="quota-meters-box">
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Monthly Clip Uploads</span>
+                      <span>50 Clips / Mo (1080p 60fps)</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill" style="width: 62%"></div>
+                    </div>
+                  </div>
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Live Clip Analysis</span>
+                      <span>15 Live Sessions / Mo</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill lime" style="width: 45%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <ul class="plan-feature-list">
+                  <li><span class="check-icon">✓</span> <span><strong>10× More Video Clip Uploads</strong> (50 clips / month in Full HD 1080p 60fps)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Includes Live Clip Analysis</strong> (15 live rally analysis sessions / month)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>AI Stroke Coach:</strong> 30 phone stroke biomechanics checks / month</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Player Spatial Heatmaps &amp; Zone %</strong> (Kitchen vs. Baseline control)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Automated In/Out Line VAR</strong> &amp; Shot Speed (MPH/km/h)</span></li>
+                </ul>
+              </div>
+
+              <button class="plan-select-btn" data-select-tier="paddle_pro">
+                Choose Paddle Pro +
+              </button>
+            </article>
+
+            <!-- TIER 3: PADDLE PREMIUM (UNLIMITED + MAX LIVE ANALYSIS) -->
+            <article class="plan-card premium" data-inview data-delay="280" data-hover-lift="-10">
+              <div>
+                <div class="plan-visual-banner tier-premium">
+                  <div>
+                    <span class="plan-tier-kicker">TOURNAMENT &amp; CLUB</span>
+                    <h2 class="plan-tier-name">PADDLE PREMIUM</h2>
+                  </div>
+                  <!-- Animated Optic Gold/Lime Kevlar Paddle SVG -->
+                  <svg class="paddle-svg-anim" viewBox="0 0 100 100" fill="none">
+                    <rect x="22" y="10" width="52" height="62" rx="18" fill="#0E1116" stroke="#DFFF00" stroke-width="4"/>
+                    <rect x="42" y="72" width="12" height="22" rx="4" fill="#DFFF00"/>
+                    <circle cx="68" cy="26" r="14" fill="#FF4D00" stroke="#FFFFFF" stroke-width="2.5"/>
+                    <circle cx="65" cy="24" r="2.2" fill="#FFFFFF"/>
+                    <circle cx="71" cy="28" r="2.2" fill="#FFFFFF"/>
+                  </svg>
+                </div>
+
+                <div class="plan-price-row">
+                  <span class="plan-price-val" data-monthly="$79" data-annual="$63">$79</span>
+                  <span class="plan-price-unit">/ month • Unlimited Club &amp; Pro Tour</span>
+                </div>
+
+                <!-- Visual Quota Comparison Meters -->
+                <div class="quota-meters-box">
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Monthly Clip Uploads</span>
+                      <span>UNLIMITED (4K 60fps)</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill" style="width: 100%"></div>
+                    </div>
+                  </div>
+                  <div class="quota-meter-row">
+                    <div class="quota-meter-top">
+                      <span>Live Clip Analysis</span>
+                      <span>UNLIMITED Live Streams</span>
+                    </div>
+                    <div class="quota-bar-track">
+                      <div class="quota-bar-fill lime" style="width: 100%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <ul class="plan-feature-list">
+                  <li><span class="check-icon">✓</span> <span><strong>UNLIMITED Video Clip Uploads</strong> (Full-length 4K 60fps tournament matches)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Maximum / Unlimited Live Clip Analysis</strong> (Far more live court streams than Paddle Pro)</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>UNLIMITED AI Stroke Coach</strong> + Pro Skeleton Technique Comparison</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>Live USAP 0-0-2 Automated Point Counting</strong> &amp; Side-Out Server Rotation</span></li>
+                  <li><span class="check-icon">✓</span> <span><strong>7-ft Kitchen (NVZ) Foot-Fault Watchdog</strong> &amp; Two-Bounce Rule AI</span></li>
+                </ul>
+              </div>
+
+              <button class="plan-select-btn" data-select-tier="paddle_premium">
+                Unlock Paddle Premium +
+              </button>
+            </article>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SCROLLABLE SECTION: DEDICATED PICKLEBALL SIGN UP & LOGIN SPLIT-SCREEN
+         ==================================================================== -->
+    <section id="page-auth" class="page-view scroll-section" data-scroll-section="signup">
+      <div class="page-container">
+        <div class="auth-split-stage">
+          <div class="auth-split-card" data-inview data-y="40">
+
+            <!-- Left Column: Dedicated Paddle-to-Paddle Kitchen Volley Animation -->
+            <div class="auth-visual-panel">
+              <div class="auth-canvas-holder">
+                <canvas id="auth-duel-canvas"></canvas>
+              </div>
+
+              <div class="auth-visual-overlay-bottom">
+                <h3>PICKVIZ ACCOUNT</h3>
+                <p>
+                  Watch our live Carbon-Paddle Kitchen Volley telemetry above while you sign in. Your account and chosen <strong>Paddle</strong>, <strong>Paddle Pro</strong>, or <strong>Paddle Premium</strong> subscription are synced directly with our PostgreSQL / SQLAlchemy database.
+                </p>
+              </div>
+            </div>
+
+            <!-- Right Column: Toggleable Sign Up & Log In Forms -->
+            <div class="auth-form-panel">
+
+              <div class="auth-mode-tabs">
+                <button id="tab-btn-signup" class="auth-tab-btn active" data-auth-mode="signup">
+                  Create Account (Sign Up)
+                </button>
+                <button id="tab-btn-login" class="auth-tab-btn" data-auth-mode="login">
+                  Log In
+                </button>
+              </div>
+
+              <div id="auth-alert-box" class="auth-status-banner hidden" style="display: none;"></div>
+
+              <!-- SIGN UP FORM -->
+              <form id="signup-form">
+                <h2 class="auth-form-title">JOIN PICKVIZ</h2>
+                <p class="auth-form-sub">Create your player or club account and select your starting Paddle tier.</p>
+
+                <div class="form-field">
+                  <label for="signup-name">Full Name</label>
+                  <input id="signup-name" type="text" placeholder="e.g., Ben Johns" required />
+                </div>
+
+                <div class="form-field">
+                  <label for="signup-email">Email Address</label>
+                  <input id="signup-email" type="email" placeholder="player@pickleballclub.com" required />
+                </div>
+
+                <div class="form-field">
+                  <label for="signup-role">Club or Player Role</label>
+                  <input id="signup-role" type="text" placeholder="e.g., Tournament Doubles Player / Coach" value="Tournament Doubles Player" />
+                </div>
+
+                <div class="form-field">
+                  <label for="signup-tier">Select Subscription Plan</label>
+                  <select id="signup-tier">
+                    <option value="paddle">Paddle (Free — 5 Clip Uploads / Mo)</option>
+                    <option value="paddle_pro" selected>Paddle Pro ($29/mo — 50 Uploads + 15 Live Clips)</option>
+                    <option value="paddle_premium">Paddle Premium ($79/mo — Unlimited Uploads + Unlimited Live AI)</option>
+                  </select>
+                </div>
+
+                <div class="form-field">
+                  <label for="signup-password">Password</label>
+                  <input id="signup-password" type="password" placeholder="Min. 4 characters" required />
+                </div>
+
+                <button type="submit" class="btn-orange-cta" style="width: 100%; justify-content: center;">
+                  <span>Create Account &amp; Activate Plan</span>
+                  <span>+</span>
+                </button>
+              </form>
+
+              <!-- LOG IN FORM -->
+              <form id="login-form" class="hidden" style="display: none;">
+                <h2 class="auth-form-title">WELCOME BACK</h2>
+                <p class="auth-form-sub">Log in to access your match clips, live court analyzer, and Paddle subscription.</p>
+
+                <div class="form-field">
+                  <label for="login-email">Email Address</label>
+                  <input id="login-email" type="email" placeholder="player@pickleballclub.com" required />
+                </div>
+
+                <div class="form-field">
+                  <label for="login-password">Password</label>
+                  <input id="login-password" type="password" placeholder="Enter your password" required />
+                </div>
+
+                <button type="submit" class="btn-orange-cta" style="width: 100%; justify-content: center;">
+                  <span>Log In to Court AI</span>
+                  <span>→</span>
+                </button>
+              </form>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         PAGE 4: DEDICATED "COMING SOON" PAGE VIEW FOR UPCOMING MENU FEATURES
+         ==================================================================== -->
+    <section id="page-coming-soon" class="page-view hidden">
+      <div class="page-container">
+        <div class="coming-soon-stage">
+          <div class="coming-soon-card">
+            <h1 id="soon-title-text" class="coming-soon-title">
+              AUTOMATED USAP 0-0-2 SCORING
+            </h1>
+
+            <p id="soon-desc-text" class="coming-soon-desc">
+              Autonomous tournament point-counting state machine tracking Side-Out rotations, Server #1 / Server #2 transitions, and the Two-Bounce rule in real time.
+            </p>
+
+            <div id="soon-spec-grid" class="soon-spec-grid">
+              <!-- Populated dynamically per feature by app.js -->
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+              <button class="btn-orange-cta" data-page="subscriptions">
+                <span>Included in Paddle Pro &amp; Premium</span>
+                <span>+</span>
+              </button>
+              <button class="btn-outline-secondary" data-page="home">
+                <span>← Back to Live Match Demo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="simple-footer">
+      <span class="footer-brand">
+        <img
+          class="footer-brand-icon"
+          src="/LOGO/pickleballvisualizer-icon.svg"
+          alt="Pickviz Icon"
+          width="28"
+          height="28"
+        />
+        <span><strong>Pickviz</strong> — Plans: Paddle (Free) • Paddle Pro • Paddle Premium</span>
+      </span>
+      <span id="footer-active-clip">Active Clip: match11.mp4 (9.63s Pro Rally) • match_mlp_base_preview.mp4 (10.0s Clean MLP HD)</span>
+    </footer>
+
+    <!-- ====================================================================
+         7. CENTER-COURT VOLLEY & SPIN MENU TRANSITION LOADER (CONTAINED & MATTE)
+         ==================================================================== -->
+    <div id="pickleball-menu-loader" class="pb-transition-overlay" aria-hidden="true">
+      <div class="pb-loader-backdrop"></div>
+      
+      <div class="pb-volley-card">
+        <!-- Contained Court Volley Stage -->
+        <div class="pb-court-stage">
+          <!-- Court Net Marker -->
+          <div class="pb-stage-net">
+            <span class="pb-net-tape"></span>
+            <span class="pb-net-mesh"></span>
+          </div>
+
+          <!-- Paddle Stroke Assembly (Left Side) -->
+          <div class="pb-paddle-actor">
+            <div class="pb-paddle-mini">
+              <div class="pb-mini-blade">
+                <span class="pb-mini-logo">⚡</span>
+              </div>
+              <div class="pb-mini-neck"></div>
+              <div class="pb-mini-handle"></div>
+            </div>
+          </div>
+
+          <!-- Soft Impact Tap Indicator -->
+          <div class="pb-soft-tap-ring"></div>
+
+          <!-- 64px Spinning Pickleball in Horizontal Volley Arc (NO screen throw) -->
+          <div class="pb-volley-ball-track">
+            <div class="pb-volley-ball">
+              <!-- Authentic 26 Perforated Holes -->
+              <div class="pb-ball-holes">
+                <span class="hole h1"></span><span class="hole h2"></span><span class="hole h3"></span>
+                <span class="hole h4"></span><span class="hole h5"></span><span class="hole h6"></span>
+                <span class="hole h7"></span><span class="hole h8"></span><span class="hole h9"></span>
+                <span class="hole h10"></span><span class="hole h11"></span><span class="hole h12"></span>
+                <span class="hole h13"></span><span class="hole h14"></span><span class="hole h15"></span>
+                <span class="hole h16"></span><span class="hole h17"></span><span class="hole h18"></span>
+                <span class="hole h19"></span><span class="hole h20"></span><span class="hole h21"></span>
+                <span class="hole h22"></span><span class="hole h23"></span><span class="hole h24"></span>
+                <span class="hole h25"></span><span class="hole h26"></span>
+              </div>
+              <div class="pb-ball-seam"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tactical Status HUD -->
+        <div class="pb-loader-hud">
+          <div class="pb-hud-pill">
+            <span class="pb-hud-dot"></span>
+            <span id="pb-loader-target-tag">PADDLE AI ENGINE</span>
+          </div>
+          <div id="pb-loader-title" class="pb-hud-title">SWITCHING COURT VIEW</div>
+          <div class="pb-hud-bar-shell">
+            <div class="pb-hud-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
